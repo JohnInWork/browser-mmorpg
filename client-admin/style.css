@@ -1,0 +1,60 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  background: #14141c;
+  color: #eee;
+  overflow: hidden;
+  height: 100vh;
+}
+.hidden { display: none !important; }
+
+/* --- Экран пароля --- */
+#auth {
+  position: fixed; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: radial-gradient(circle at 50% 30%, #2a2a3e, #14141c);
+}
+.auth-box {
+  background: #22222e; padding: 40px; border-radius: 16px;
+  text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,.5); width: 320px;
+}
+.auth-box h1 { font-size: 26px; margin-bottom: 8px; }
+.auth-box p { color: #999; margin-bottom: 24px; font-size: 14px; }
+.auth-box input {
+  width: 100%; padding: 12px 14px; border: 2px solid #3a3a4e;
+  border-radius: 10px; background: #1a1a24; color: #eee; font-size: 16px;
+  margin-bottom: 14px; outline: none;
+}
+.auth-box input:focus { border-color: #e0a93b; }
+.auth-box button {
+  width: 100%; padding: 12px; border: none; border-radius: 10px;
+  background: #e0a93b; color: #1a1a24; font-size: 16px; font-weight: 700; cursor: pointer;
+}
+.auth-box button:hover { background: #d49a2a; }
+.err { color: #e74c3c; margin-top: 10px; font-size: 14px; }
+
+/* --- Редактор --- */
+#editor { position: fixed; inset: 0; display: flex; flex-direction: column; }
+#toolbar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 16px; background: #22222e; border-bottom: 1px solid #333; font-size: 14px;
+}
+#toolbar .title { font-weight: 700; }
+#palette { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
+.pal-group { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #1f1f2a; border: 1px solid #333; border-radius: 10px; }
+.pal-cat { font-size: 11px; font-weight: 700; color: #9aa0b0; text-transform: uppercase; margin-right: 2px; }
+.swatch {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border: 2px solid transparent; border-radius: 8px;
+  background: #1a1a24; cursor: pointer; user-select: none;
+}
+.swatch.active { border-color: #fff; }
+.swatch .dot { width: 16px; height: 16px; border-radius: 4px; }
+#saveBtn {
+  padding: 8px 14px; border: none; border-radius: 8px;
+  background: #2ecc71; color: #0d2616; font-weight: 700; cursor: pointer;
+}
+#saveBtn:hover { background: #27b765; }
+#status { color: #2ecc71; font-weight: 600; }
+.hint { color: #777; margin-left: auto; }
+#canvas { flex: 1; display: block; background: #10131a; cursor: crosshair; }

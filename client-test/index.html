@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MMORPG — Тест (одиночка)</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, "Segoe UI", system-ui, sans-serif; background: #10131a; color: #eee; overflow: hidden; height: 100vh; }
+    #hud {
+      position: fixed; top: 10px; left: 10px; z-index: 10;
+      background: rgba(34,34,46,.85); padding: 8px 14px; border-radius: 10px; font-size: 13px;
+      display: flex; gap: 16px; align-items: center;
+    }
+    #hud b { color: #f1c40f; }
+    .hint { color: #888; }
+    #coords { color: #2ecc71; font-variant-numeric: tabular-nums; }
+    canvas { display: block; }
+    #warn { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: #14141c; }
+    #warn .box { background: #22222e; padding: 30px 40px; border-radius: 14px; max-width: 480px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="hud">
+    <span>🧪 <b>Тест (одиночка)</b></span>
+    <span id="coords">тайл: 0,0</span>
+    <span class="hint">Клик — идти к тайлу · WASD/стрелки — ходьба · колесо — зум · ПКМ-драг — камера</span>
+  </div>
+  <canvas id="canvas"></canvas>
+
+  <div id="warn"><div class="box">
+    <h2>Карта не найдена</h2>
+    <p style="margin-top:10px;color:#aaa">Файл <code>map-data.js</code> ещё не создан.<br>
+    Запусти сервер один раз (<code>npm start</code>) или сохрани карту в редакторе — он появится автоматически.</p>
+  </div></div>
+
+  <!-- Карта (генерируется сервером; если файла нет — будет использован дефолт) -->
+  <script src="map-data.js" onerror="window.__noMap=true"></script>
+  <script src="test.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MMORPG — Редактор карт (админ)</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Экран пароля -->
+  <div id="auth">
+    <div class="auth-box">
+      <h1>🔐 Редактор карт</h1>
+      <p>Доступ только для админов</p>
+      <input id="pwInput" type="password" placeholder="Пароль" autocomplete="off">
+      <button id="authBtn">Войти</button>
+      <div id="authErr" class="err hidden">Неверный пароль</div>
+    </div>
+  </div>
+
+  <!-- Редактор -->
+  <div id="editor" class="hidden">
+    <div id="toolbar">
+      <span class="title">🗺️ Редактор</span>
+      <div id="palette"></div>
+      <button id="saveBtn">💾 Сохранить</button>
+      <span id="status"></span>
+      <span class="hint">ЛКМ — рисовать · ПКМ-перетаскивание — двигать карту · колесо — зум</span>
+    </div>
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

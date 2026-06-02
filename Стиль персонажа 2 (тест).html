@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MMORPG — варианты телосложения (flat, без лиц)</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:-apple-system,"Segoe UI",system-ui,sans-serif;background:#13151c;color:#eee;padding:24px;}
+  h1{font-size:21px;margin-bottom:4px;} p.sub{color:#8a90a0;margin-bottom:20px;font-size:14px;max-width:780px;}
+  .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;max-width:1220px;}
+  @media(max-width:1040px){.grid{grid-template-columns:repeat(3,1fr);}}
+  .card{background:#1c2030;border:1px solid #2c3142;border-radius:14px;padding:8px 6px 10px;text-align:center;}
+  .stage{background:radial-gradient(ellipse at 50% 84%,#3a4250 0%,#1a1e28 72%);border-radius:10px;overflow:hidden;}
+  .name{font-size:12px;font-weight:600;margin-top:6px;}
+</style>
+</head>
+<body>
+  <h1>Разные телосложения — угловатее, руки/ноги раздвинуты, компактнее</h1>
+  <p class="sub">Это РАЗНЫЕ варианты тела (а не один и тот же). Стиль из референсов: плоско, 2 тона (свет слева), без лиц, без обводок. Все держат топор — для оценки рук. Скажи номер тела, который нравится.</p>
+  <div class="grid" id="grid"></div>
+<script>
+function shade(hex,p){const n=parseInt(hex.slice(1),16);let r=(n>>16)&255,g=(n>>8)&255,b=n&255;const t=p<0?0:255,a=Math.abs(p)/100;r=Math.round((t-r)*a+r);g=Math.round((t-g)*a+g);b=Math.round((t-b)*a+b);return'#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1);}
+let UID=0;
+function rr(x,y,w,h,r){r=Math.min(r,w/2,h/2);return `M${x+r} ${y} h${w-2*r} a${r} ${r} 0 0 1 ${r} ${r} v${h-2*r} a${r} ${r} 0 0 1 ${-r} ${r} h${-(w-2*r)} a${r} ${r} 0 0 1 ${-r} ${-r} v${-(h-2*r)} a${r} ${r} 0 0 1 ${r} ${-r} z`;}
+function ell(cx,cy,rx,ry){return `M${cx-rx} ${cy} a${rx} ${ry} 0 1 0 ${rx*2} 0 a${rx} ${ry} 0 1 0 ${-rx*2} 0 z`;}
+
+function fig(o){
+  const CX=110; let defs='',body=''; const L=c=>shade(c,9), D=c=>shade(c,-20);
+  function split(path,base){const id='cl'+(UID++);defs+=`<clipPath id="${id}"><path d="${path}"/></clipPath>`;body+=`<path d="${path}" fill="${L(base)}"/><g clip-path="url(#${id})"><rect x="${CX}" y="0" width="260" height="320" fill="${D(base)}"/></g>`;}
+  const {skin,hair,main,leg,boot,accent='#d6a93a'}=o;
+  const cap=o.round?'round':'butt', jr=o.round?'round':'miter', cr=o.corner;
+
+  body+=`<ellipse cx="110" cy="${o.feetY+7}" rx="${o.shHalf+16}" ry="9" fill="rgba(0,0,0,.25)"/>`;
+
+  // РУКИ: плечо → локоть (наружу) → кисть. Левая светлая, правая тёмная.
+  const aw=o.armW;
+  body+=`<path d="M${CX-o.shHalf+5} ${o.shY+5} L${CX-o.elbowX} ${o.elbowY} L${CX-o.handX} ${o.handY}" fill="none" stroke="${L(main)}" stroke-width="${aw}" stroke-linejoin="${jr}" stroke-linecap="${cap}"/>`;
+  body+=`<path d="M${CX+o.shHalf-5} ${o.shY+5} L${CX+o.elbowX} ${o.elbowY} L${CX+o.handX} ${o.handY}" fill="none" stroke="${D(main)}" stroke-width="${aw}" stroke-linejoin="${jr}" stroke-linecap="${cap}"/>`;
+  const hr=aw*0.6;
+  if(o.round){ body+=`<circle cx="${CX-o.handX}" cy="${o.handY}" r="${hr}" fill="${L(skin)}"/><circle cx="${CX+o.handX}" cy="${o.handY}" r="${hr}" fill="${D(skin)}"/>`; }
+  else { body+=`<path d="${rr(CX-o.handX-hr,o.handY-hr,hr*2,hr*2,cr)}" fill="${L(skin)}"/><path d="${rr(CX+o.handX-hr,o.handY-hr,hr*2,hr*2,cr)}" fill="${D(skin)}"/>`; }
+
+  // НОГИ (раздвинуты): левая светлая, правая тёмная
+  const legH=o.feetY-o.hipY;
+  body+=`<path d="${rr(CX-o.legGap-o.legW,o.hipY,o.legW,legH,cr)}" fill="${L(leg)}"/>`;
+  body+=`<path d="${rr(CX+o.legGap,o.hipY,o.legW,legH,cr)}" fill="${D(leg)}"/>`;
+  // БОТИНКИ
+  body+=`<path d="${rr(CX-o.legGap-o.legW-2,o.feetY-o.bootH,o.legW+5,o.bootH,cr)}" fill="${L(boot)}"/>`;
+  body+=`<path d="${rr(CX+o.legGap-3,o.feetY-o.bootH,o.legW+5,o.bootH,cr)}" fill="${D(boot)}"/>`;
+
+  // ТОРС (трапеция, сплит по центру)
+  const t=`M${CX-o.shHalf} ${o.shY} L${CX-o.shHalf+ (o.round?8:3)} ${o.shY-7} L${CX+o.shHalf-(o.round?8:3)} ${o.shY-7} L${CX+o.shHalf} ${o.shY} L${CX+o.waistHalf} ${o.waistY} L${CX-o.waistHalf} ${o.waistY} Z`;
+  split(t,main);
+  // ПОЯС
+  body+=`<path d="${rr(CX-o.waistHalf-1,o.waistY-9,o.waistHalf*2+2,10,Math.min(cr,3))}" fill="${L(boot)}"/>`;
+  body+=`<rect x="${CX-7}" y="${o.waistY-8}" width="14" height="8" fill="${accent}"/>`;
+
+  // ШЕЯ
+  body+=`<rect x="${CX-7}" y="${o.shY-15}" width="7" height="14" fill="${L(skin)}"/><rect x="${CX}" y="${o.shY-15}" width="7" height="14" fill="${D(skin)}"/>`;
+
+  // ГОЛОВА + ВОЛОСЫ (без лица)
+  const head = o.round ? ell(CX,o.hcy,o.hrx,o.hry) : rr(CX-o.hrx,o.hcy-o.hry,o.hrx*2,o.hry*2,cr);
+  split(head,skin);
+  // уши
+  if(o.round){ body+=`<circle cx="${CX-o.hrx}" cy="${o.hcy+2}" r="5" fill="${L(skin)}"/><circle cx="${CX+o.hrx}" cy="${o.hcy+2}" r="5" fill="${D(skin)}"/>`; }
+  // волосы-шапка сверху
+  const hairTop = o.hcy-o.hry, hp = o.round
+    ? `M${CX-o.hrx} ${o.hcy-2} Q${CX-o.hrx} ${hairTop-4} ${CX} ${hairTop-4} Q${CX+o.hrx} ${hairTop-4} ${CX+o.hrx} ${o.hcy-2} Q${CX} ${o.hcy-o.hry+6} ${CX-o.hrx} ${o.hcy-2} Z`
+    : rr(CX-o.hrx,hairTop-2,o.hrx*2,o.hry*0.9,cr);
+  split(hp,hair);
+
+  // ТОПОР в правой руке
+  body+=`<line x1="${CX+o.handX}" y1="${o.handY+12}" x2="${CX+o.handX}" y2="${o.handY-44}" stroke="${shade('#7a5230',9)}" stroke-width="7" stroke-linecap="${cap}"/>`;
+  body+=`<path d="M${CX+o.handX} ${o.handY-46} q24 -3 28 16 q-14 6 -28 1 z" fill="#cfd6dd"/>`;
+  body+=`<path d="M${CX+o.handX} ${o.handY-46} q24 -3 28 16 q-7 -14 -28 -16 z" fill="#9aa4b0"/>`;
+
+  return `<svg viewBox="0 0 220 300" width="180" height="245"><defs>${defs}</defs>${body}</svg>`;
+}
+
+// 6 РАЗНЫХ телосложений
+const V=[
+ {name:'1. Угловатый воин', round:false,corner:3, hrx:22,hry:23,hcy:54, shY:90,shHalf:42,waistY:150,waistHalf:34, armW:18,elbowX:54,elbowY:124,handX:50,handY:154, hipY:150,legW:20,legGap:5,bootH:16,feetY:248,
+  skin:'#f0c8a0',hair:'#5a3a22',main:'#9a4a2a',leg:'#5a4636',boot:'#3f2a18'},
+ {name:'2. Атлет (плечистый)', round:true,corner:10, hrx:22,hry:24,hcy:54, shY:90,shHalf:48,waistY:150,waistHalf:30, armW:19,elbowX:60,elbowY:126,handX:56,handY:156, hipY:150,legW:21,legGap:5,bootH:16,feetY:250,
+  skin:'#eec39a',hair:'#33303a',main:'#2f6f8a',leg:'#3a4450',boot:'#4a3018'},
+ {name:'3. Стройный', round:true,corner:8, hrx:19,hry:21,hcy:52, shY:90,shHalf:34,waistY:150,waistHalf:27, armW:13,elbowX:46,elbowY:128,handX:44,handY:162, hipY:150,legW:16,legGap:6,bootH:14,feetY:258,
+  skin:'#f3cfa6',hair:'#6e4426',main:'#3f7a45',leg:'#5a4636',boot:'#3f2a18'},
+ {name:'4. Коренастый', round:true,corner:12, hrx:24,hry:24,hcy:56, shY:94,shHalf:46,waistY:150,waistHalf:42, armW:21,elbowX:58,elbowY:124,handX:55,handY:150, hipY:150,legW:22,legGap:4,bootH:16,feetY:236,
+  skin:'#e8bf94',hair:'#caa24a',main:'#9a7b4a',leg:'#5a4636',boot:'#3f2a18'},
+ {name:'5. Геометрик (резкий)', round:false,corner:1, hrx:21,hry:22,hcy:54, shY:90,shHalf:40,waistY:150,waistHalf:40, armW:17,elbowX:52,elbowY:122,handX:52,handY:152, hipY:150,legW:20,legGap:6,bootH:15,feetY:248,
+  skin:'#f0c8a0',hair:'#2a2330',main:'#5b46a8',leg:'#3a3340',boot:'#26222e'},
+ {name:'6. Герой (баланс)', round:true,corner:8, hrx:22,hry:23,hcy:54, shY:90,shHalf:43,waistY:150,waistHalf:33, armW:17,elbowX:54,elbowY:126,handX:51,handY:156, hipY:150,legW:19,legGap:5,bootH:16,feetY:250,
+  skin:'#f0c8a0',hair:'#5a3a22',main:'#4f7fc4',leg:'#3a4450',boot:'#5a3c20'},
+];
+const grid=document.getElementById('grid');
+V.forEach(v=>{const c=document.createElement('div');c.className='card';c.innerHTML=`<div class="stage">${fig(v)}</div><div class="name">${v.name}</div>`;grid.appendChild(c);});
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "types": {
+    "friendly":   { "color": "#2ecc71", "maxHp": 25, "dmgMin": 0, "dmgMax": 0, "canAttack": false, "aggressive": false, "name": "Дружественный", "desc": "Мирное существо, его нельзя атаковать." },
+    "passive":    { "color": "#f1c40f", "maxHp": 16, "dmgMin": 1, "dmgMax": 3, "canAttack": true,  "aggressive": false, "sprite": "chicken", "loot": { "id": "rawChicken", "qty": 1 }, "name": "Курица", "desc": "Не нападает первой, но даёт сдачи. Даёт сырую курицу." },
+    "aggressive": { "color": "#e74c3c", "maxHp": 24, "dmgMin": 2, "dmgMax": 5, "canAttack": true,  "aggressive": true, "sprite": "wolf", "name": "Волк", "desc": "Нападает сам, если подойти вплотную. Быстрый и злой." },
+    "bear":       { "color": "#6b4a2b", "maxHp": 80, "dmgMin": 5, "dmgMax": 9, "canAttack": true,  "aggressive": true, "sprite": "bear", "armor": 2, "boss": true, "loot": { "id": "bearHelmet", "qty": 1 }, "name": "Медведь", "desc": "БОСС. Толстая шкура (броня 2) и мощные удары. С него падает Медвежий шлем." },
+    "trader":     { "color": "#c79a2a", "maxHp": 999, "dmgMin": 0, "dmgMax": 0, "canAttack": false, "aggressive": false, "npc": true, "name": "Торговец", "desc": "НПС. Подойди и продай ему ненужные предметы за золото." },
+    "questgiver":  { "color": "#3f9e63", "maxHp": 999, "dmgMin": 0, "dmgMax": 0, "canAttack": false, "aggressive": false, "npc": true, "quest": "npc_wood", "name": "Лесник", "desc": "НПС. Даёт задание собрать древесину." }
+  },
+  "spawns": [
+    { "x": 8,  "y": 4,  "type": "friendly" },
+    { "x": 16, "y": 6,  "type": "passive" },
+    { "x": 8,  "y": 12, "type": "aggressive" },
+    { "x": 20, "y": 13, "type": "bear" },
+    { "x": 12, "y": 9,  "type": "trader" },
+    { "x": 16, "y": 11, "type": "questgiver" }
+  ]
+}

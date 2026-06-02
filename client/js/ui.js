@@ -1,0 +1,400 @@
+// UI/HUD-помощники: панель игрока, панель цели боя, инвентарь/хотбар/экипировка, подсказки, цифры урона.
+import { S } from './state.js';
+import { itemIcon, itemName, itemPrice, SLOTS, SLOT_NAMES, ITEMS, CAT_NAMES, RARITY, itemRarity, rarityColor, UI_SVG } from './items.js';
+
+// Фон-плитка по редкости (с альфой) для слота с предметом; '' — сброс к стандартному фону
+function rarityBg(id) { return rarityColor(id) + '33'; }
+// Цвет названия по редкости (обычные — обычный светлый текст)
+function rarityNameColor(id) { return itemRarity(id) === 'common' ? '' : rarityColor(id); }
+
+export function addFloater(tx, ty, text, color) {
+  S.floaters.push({ wx: tx, wy: ty, text, color, t: 0 });
+}
+
+// Верхний левый: имя + HP игрока
+export function updateHpHud() {
+  const me = S.players[S.myId];
+  if (!me) return;
+  const nameEl = document.getElementById('pName');
+  const fill = document.getElementById('pHpFill');
+  const txt = document.getElementById('pHpText');
+  if (nameEl) nameEl.textContent = me.name;
+  if (fill) fill.style.width = Math.max(0, (me.hp / me.maxHp) * 100) + '%';
+  if (txt) txt.textContent = `${me.hp}/${me.maxHp}`;
+}
+
+export const TYPE_NAMES = { friendly: 'Дружественный', passive: 'Курица', aggressive: 'Волк', bear: 'Медведь' };
+
+// Золото игрока (иконкой + число)
+export function updateGold() {
+  const me = S.players[S.myId];
+  const el = document.getElementById('goldAmount');
+  if (el && me) el.textContent = me.gold != null ? me.gold : 0;
+}
+
+// Заполнить слоты инвентаря предметами (иконка + количество)
+export function renderInventory() {
+  const grid = document.getElementById('invGrid');
+  if (!grid) return;
+  const slots = grid.children;
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const stack = S.inventory[i];
+    if (stack) {
+      slot.innerHTML = itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '');
+      slot.draggable = true;
+      slot.dataset.itemId = stack.id;
+      slot.style.background = rarityBg(stack.id);
+    } else {
+      slot.innerHTML = '';
+      slot.draggable = false;
+      slot.dataset.itemId = '';
+      slot.style.background = '';
+    }
+    // подсветка инструмента, активированного прямо в рюкзаке
+    slot.classList.toggle('active', !!stack && stack.id === S.activeInvId);
+  }
+}
+
+// Заполнить хотбар предметами (стаки) + подсветить активный
+export function renderHotbar() {
+  const hb = document.getElementById('hotbar');
+  if (!hb) return;
+  const slots = hb.children;
+  for (let i = 0; i < slots.length; i++) {
+    const slot = slots[i];
+    const stack = S.hotbar[i];
+    slot.innerHTML = `<span class="num">${i + 1}</span>`
+      + (stack ? itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '') : '');
+    slot.draggable = !!stack;
+    slot.style.background = stack ? rarityBg(stack.id) : '';
+    slot.classList.toggle('active', S.activeSlot === i);
+  }
+}
+
+// Панель экипировки (слоты брони) + клик по слоту = снять
+export function renderEquipment() {
+  const grid = document.getElementById('equipGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  SLOTS.forEach(slot => {
+    const id = S.equipment[slot];
+    const row = document.createElement('div');
+    row.className = 'equip-row';
+    row.innerHTML = `<span class="lbl">${SLOT_NAMES[slot]}</span><div class="equip-slot${id ? ' filled' : ''}">${id ? itemIcon(id) : ''}</div>`;
+    const cell = row.querySelector('.equip-slot');
+    if (id) cell.style.background = rarityBg(id);
+    cell.addEventListener('click', () => { if (S.equipment[slot]) S.socket.emit('unequip', slot); });
+    grid.appendChild(row);
+  });
+}
+
+// Характеристики персонажа
+export function updateStats() {
+  const a = document.getElementById('statArmor'); if (a) a.textContent = S.armor || 0;
+  const me = S.players[S.myId]; const h = document.getElementById('statHp');
+  if (h && me) h.textContent = `${me.hp}/${me.maxHp}`;
+}
+
+// --- Окно торговли (плитка с выделением) ---
+let tradeOpen = false;
+const tradeSel = new Set(); // выбранные индексы инвентаря
+const TRADE_SLOTS = 32;
+
+export function isTradeOpen() { return tradeOpen; }
+export function openTrade() { tradeOpen = true; tradeSel.clear(); document.getElementById('tradePanel').classList.remove('hidden'); renderTrade(); }
+export function closeTrade() { tradeOpen = false; document.getElementById('tradePanel').classList.add('hidden'); }
+export function selectedTrade() { return Array.from(tradeSel); }
+export function clearTradeSel() { tradeSel.clear(); }
+export function selectAllTrade() { tradeSel.clear(); S.inventory.forEach((_, i) => tradeSel.add(i)); renderTrade(); }
+
+function updateTradeFooter() {
+  const me = S.players[S.myId];
+  let sum = 0; tradeSel.forEach(i => { const s = S.inventory[i]; if (s) sum += itemPrice(s.id) * (s.qty || 1); });
+  document.getElementById('tradeGold').textContent = (me && me.gold) || 0;
+  document.getElementById('tradeSelCount').textContent = tradeSel.size;
+  document.getElementById('tradeSelSum').textContent = sum;
+  document.getElementById('sellSelBtn').disabled = tradeSel.size === 0;
+}
+
+export function renderTrade() {
+  if (!tradeOpen) return;
+  const grid = document.getElementById('tradeGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < TRADE_SLOTS; i++) {
+    const stack = S.inventory[i];
+    const slot = document.createElement('div');
+    slot.className = 'slot' + (tradeSel.has(i) ? ' sel' : '');
+    if (stack) {
+      slot.innerHTML = itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '');
+      slot.style.background = rarityBg(stack.id);
+      slot.addEventListener('click', () => {
+        if (tradeSel.has(i)) tradeSel.delete(i); else tradeSel.add(i);
+        slot.classList.toggle('sel'); updateTradeFooter();
+      });
+    }
+    grid.appendChild(slot);
+  }
+  updateTradeFooter();
+}
+
+// --- Окно крафта (станции) ---
+let craftStation = null;
+const STATION_NAMES = { smelter: 'Плавильня', anvil: 'Наковальня', campfire: 'Костёр' };
+function countInv(id) { let n = 0; for (const s of S.inventory) if (s.id === id) n += s.qty || 1; return n; }
+export function isCraftOpen() { return !!craftStation; }
+export function openCraft(station) {
+  craftStation = station;
+  document.getElementById('craftTitle').textContent = STATION_NAMES[station] || 'Станция';
+  document.getElementById('craftPanel').classList.remove('hidden');
+  renderCraft();
+}
+export function closeCraft() { craftStation = null; document.getElementById('craftPanel').classList.add('hidden'); }
+
+// Закрыть все окна взаимодействия с НПС/станциями (вызывается, когда игрок отошёл/двинулся)
+export function closeInteractions() {
+  closeTrade();
+  closeCraft();
+  const qd = document.getElementById('questDialog'); if (qd) qd.classList.add('hidden');
+}
+export function renderCraft() {
+  if (!craftStation) return;
+  const list = document.getElementById('craftList');
+  const recipes = (S.recipes && S.recipes[craftStation]) || [];
+  list.innerHTML = '';
+  // Показываем ТОЛЬКО то, что игрок может создать прямо сейчас (есть все ресурсы)
+  let shown = 0;
+  recipes.forEach((r, i) => {
+    if (!r.in.every(ing => countInv(ing.id) >= ing.qty)) return;
+    shown++;
+    const ings = r.in.map(ing => `<span class="ing">${itemIcon(ing.id)} ${countInv(ing.id)}/${ing.qty}</span>`).join('');
+    const row = document.createElement('div');
+    row.className = 'craft-row';
+    row.innerHTML = `<span class="craft-out">${itemIcon(r.out)}</span>`
+      + `<span class="craft-info"><div class="cn">${itemName(r.out)}${r.outQty > 1 ? ` ×${r.outQty}` : ''}</div><div class="ci">${ings}</div></span>`
+      + `<button>Создать</button>`;
+    row.querySelector('button').addEventListener('click', () => S.socket.emit('craft', { station: craftStation, recipe: i }));
+    list.appendChild(row);
+  });
+  if (!shown) list.innerHTML = '<p class="craft-empty">Нет ресурсов для крафта. Загляни в «Энциклопедию» — там все рецепты.</p>';
+}
+
+// Подсказка-название сверху по центру
+export function showTip(text) {
+  const el = document.getElementById('tooltip');
+  if (!el) return;
+  el.textContent = text;
+  el.classList.remove('hidden');
+}
+export function hideTip() {
+  const el = document.getElementById('tooltip');
+  if (el) el.classList.add('hidden');
+}
+
+// Панель HP цели (показывается у игрока, пока идёт бой)
+export function updateTargetHud() {
+  const panel = document.getElementById('targetPanel');
+  if (!panel) return;
+  const id = S.combatTargetId;
+  const m = id ? S.mobs[id] : null;
+  if (!m || !m.alive) { panel.classList.add('hidden'); return; }
+  panel.classList.remove('hidden');
+  document.getElementById('tName').textContent = TYPE_NAMES[m.type] || 'Враг';
+  document.getElementById('tHpFill').style.width = Math.max(0, (m.hp / m.maxHp) * 100) + '%';
+  document.getElementById('tHpText').textContent = `${m.hp}/${m.maxHp}`;
+}
+
+// --- Чат / лента событий (категории: chat | system | loot | combat) ---
+const CHAT_MAX = 80;
+const chatLines = [];                                  // { cat, html }
+export const chatFilters = { chat: true, system: true, loot: true, combat: true };
+const escHtml = (s) => String(s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const safeColor = (c) => (/^#[0-9a-fA-F]{3,6}$/.test(c || '') ? c : '#9ec1ff');
+
+export function addChat(cat, html) {
+  chatLines.push({ cat, html });
+  if (chatLines.length > CHAT_MAX) chatLines.shift();
+  renderChatLog();
+}
+export function renderChatLog() {
+  const log = document.getElementById('chatLog');
+  if (!log) return;
+  log.innerHTML = chatLines
+    .filter(l => chatFilters[l.cat])
+    .map(l => `<div class="cl cl-${l.cat}">${l.html}</div>`).join('');
+  log.scrollTop = log.scrollHeight; // автопрокрутка вниз
+}
+export function chatPlayerMsg(name, text, color) {
+  addChat('chat', `<span class="cl-name" style="color:${safeColor(color)}">${escHtml(name)}:</span> ${escHtml(text)}`);
+}
+export function chatSystem(text) { addChat('system', escHtml(text)); }
+export function chatLoot(text)   { addChat('loot', escHtml(text)); }
+export function chatCombat(text) { addChat('combat', escHtml(text)); }
+
+// --- Энциклопедия (гайд): предметы, мобы, рецепты с переходами по ссылкам ---
+const GATHER_SRC = { wood: 'Срубить дерево (топор)', stone: 'Добыть киркой из камня', ore: 'Добыть киркой из жилы руды' };
+
+function recipeFor(itemId) {                                   // в каком верстаке и из чего создаётся
+  for (const st in S.recipes) { const list = S.recipes[st]; if (!Array.isArray(list)) continue; for (const r of list) if (r.out === itemId) return { station: st, recipe: r }; }
+  return null;
+}
+function usedIn(itemId) {                                      // в какие рецепты входит ингредиентом
+  const out = [];
+  for (const st in S.recipes) { const list = S.recipes[st]; if (!Array.isArray(list)) continue; for (const r of list) if (r.in.some(i => i.id === itemId)) out.push(r.out); }
+  return [...new Set(out)];
+}
+function droppedBy(itemId) {                                   // с каких мобов падает
+  const out = [];
+  for (const t in S.mobTypes) {
+    const lt = S.mobTypes[t].loot, drops = Array.isArray(lt) ? lt : (lt ? [lt] : []);
+    if (drops.some(d => d.id === itemId)) out.push(t);
+  }
+  return out;
+}
+function mobName(t) { return (S.mobTypes[t] && S.mobTypes[t].name) || TYPE_NAMES[t] || t; }
+function mobIcon(t) {
+  const c = (S.mobTypes[t] && S.mobTypes[t].color) || '#888';
+  const body = (S.mobTypes[t] && S.mobTypes[t].sprite === 'chicken') ? '#f6f5ef' : c;
+  return `<svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="9" fill="${body}"/><circle cx="9" cy="11" r="1.5" fill="#1a1a1a"/><circle cx="15" cy="11" r="1.5" fill="#1a1a1a"/></svg>`;
+}
+const link = (kind, id, inner) => `<span class="glink" data-k="${kind}" data-id="${id}">${inner}</span>`;
+const chip = (kind, id, icon, name) => {
+  const col = kind === 'item' ? rarityNameColor(id) : '';
+  const ns = col ? ` style="color:${col}"` : '';
+  return `<div class="g-chip glink" data-k="${kind}" data-id="${id}"><span class="g-ic">${icon}</span><span${ns}>${name}</span></div>`;
+};
+
+function guideIndexHtml() {
+  let h = '<p class="g-hint">Нажми на предмет или существо, чтобы узнать характеристики, из чего создаётся и где взять. Ингредиенты внутри — кликабельны.</p>';
+  for (const c of ['tool', 'weapon', 'armor', 'clothing', 'material', 'ingredient', 'food']) {
+    const ids = Object.keys(ITEMS).filter(id => ITEMS[id].cat === c);
+    if (!ids.length) continue;
+    h += `<div class="g-cat">${CAT_NAMES[c] || c}</div><div class="g-grid">` + ids.map(id => chip('item', id, itemIcon(id), itemName(id))).join('') + `</div>`;
+  }
+  const mobs = Object.keys(S.mobTypes);
+  if (mobs.length) h += `<div class="g-cat">Существа</div><div class="g-grid">` + mobs.map(t => chip('mob', t, mobIcon(t), mobName(t))).join('') + `</div>`;
+  return h;
+}
+function guideItemHtml(id) {
+  const it = ITEMS[id];
+  if (!it) return 'Нет данных';
+  const rc = itemRarity(id);
+  const badge = rc !== 'common' ? ` <span class="g-rar" style="background:${RARITY[rc].color}">${RARITY[rc].name}</span>` : '';
+  const ns = rc !== 'common' ? ` style="color:${RARITY[rc].color}"` : '';
+  let h = `<div class="g-head"><span class="g-bigic" style="background:${rarityBg(id)}">${itemIcon(id)}</span><div><div class="g-name"${ns}>${itemName(id)}${badge}</div><div class="g-sub">${CAT_NAMES[it.cat] || ''}</div></div></div>`;
+  if (it.desc) h += `<p class="g-desc">${it.desc}</p>`;
+  const stats = [];
+  if (it.damage) stats.push(`${UI_SVG.sword} Урон: <b>+${it.damage}</b>${it.hands === 2 ? ' (двуручный)' : ''}`);
+  if (it.armor) stats.push(`${UI_SVG.shield} Защита: <b>${it.armor}</b>`);
+  if (it.onHitHeal) stats.push(`${UI_SVG.star} За удар по врагу: <b>+${it.onHitHeal} HP</b>`);
+  if (it.heal) stats.push(`${UI_SVG.heart} Лечит: <b>+${it.heal}</b>`);
+  if (it.gathers) stats.push(`Добывает: <b>${it.gathers === 'tree' ? 'древесину' : 'камень/руду'}</b>`);
+  if (it.price) stats.push(`Цена продажи: <b>${it.price}</b> зол.`);
+  if (stats.length) h += `<div class="g-stats">${stats.map(s => `<div>${s}</div>`).join('')}</div>`;
+  const rf = recipeFor(id);
+  if (rf) h += `<div class="g-sec">Создаётся · ${STATION_NAMES[rf.station] || rf.station}</div><div class="g-row">`
+    + rf.recipe.in.map(ing => link('item', ing.id, `${itemIcon(ing.id)} ${itemName(ing.id)} ×${ing.qty}`)).join('') + `</div>`;
+  const src = [];
+  if (GATHER_SRC[id]) src.push(GATHER_SRC[id]);
+  droppedBy(id).forEach(t => src.push(`Выпадает с: ${link('mob', t, mobName(t))}`));
+  if (src.length) h += `<div class="g-sec">Где взять</div><div class="g-col">${src.map(s => `<div>${s}</div>`).join('')}</div>`;
+  const u = usedIn(id);
+  if (u.length) h += `<div class="g-sec">Используется в</div><div class="g-row">` + u.map(o => link('item', o, `${itemIcon(o)} ${itemName(o)}`)).join('') + `</div>`;
+  return h;
+}
+function guideMobHtml(t) {
+  const m = S.mobTypes[t];
+  if (!m) return 'Нет данных';
+  let h = `<div class="g-head"><span class="g-bigic">${mobIcon(t)}</span><div><div class="g-name">${mobName(t)}</div><div class="g-sub">Существо</div></div></div>`;
+  if (m.desc) h += `<p class="g-desc">${m.desc}</p>`;
+  const stats = [`${UI_SVG.heart} Здоровье: <b>${m.maxHp}</b>`];
+  if (m.canAttack && m.dmgMax) stats.push(`${UI_SVG.sword} Урон: <b>${m.dmgMin}–${m.dmgMax}</b>`);
+  if (m.armor) stats.push(`${UI_SVG.shield} Броня: <b>${m.armor}</b>`);
+  stats.push(`Поведение: <b>${m.aggressive ? 'агрессивное' : (m.canAttack ? 'даёт сдачи' : 'мирное')}</b>`);
+  if (m.boss) stats.push(`<b style="color:#e0863b">БОСС</b>`);
+  h += `<div class="g-stats">${stats.map(s => `<div>${s}</div>`).join('')}</div>`;
+  const lt = m.loot, drops = Array.isArray(lt) ? lt : (lt ? [lt] : []);
+  if (drops.length) h += `<div class="g-sec">Добыча</div><div class="g-row">`
+    + drops.map(d => link('item', d.id, `${itemIcon(d.id)} ${itemName(d.id)}${d.qty > 1 ? ` ×${d.qty}` : ''}`)).join('') + `</div>`;
+  return h;
+}
+
+export function renderGuide() {
+  const body = document.getElementById('guideBody');
+  if (!body) return;
+  if (!S.guideNav.length) S.guideNav = [{ kind: 'index' }];
+  const v = S.guideNav[S.guideNav.length - 1];
+  let html, title;
+  if (v.kind === 'item') { html = guideItemHtml(v.id); title = itemName(v.id); }
+  else if (v.kind === 'mob') { html = guideMobHtml(v.id); title = mobName(v.id); }
+  else { html = guideIndexHtml(); title = 'Энциклопедия'; }
+  body.innerHTML = html;
+  document.getElementById('guideTitle').textContent = title;
+  document.getElementById('guideBack').style.display = S.guideNav.length > 1 ? '' : 'none';
+}
+export function openGuide() { S.guideNav = [{ kind: 'index' }]; renderGuide(); }
+export function guideGo(kind, id) { if (!kind || !id) return; S.guideNav.push({ kind, id }); renderGuide(); }
+export function guideBack() { if (S.guideNav.length > 1) S.guideNav.pop(); renderGuide(); }
+
+// --- Квесты (категории: Сюжетные / Побочные / Выполненные) ---
+const questCats = { story: true, side: true, done: false }; // развёрнутость категорий
+export function toggleQuestCat(key) { questCats[key] = !questCats[key]; renderQuests(); }
+export function renderQuests() {
+  const body = document.getElementById('questBody');
+  if (!body) return;
+  const defs = S.questDefs || {};
+  const qs = S.quests || { story: 0, progress: 0, completed: [], active: {} };
+  const npcDefs = defs.npc ? Object.values(defs.npc) : [];
+  const findDef = (id) => [...(defs.story || []), ...npcDefs].find(q => q.id === id);
+
+  const storyActive = (defs.story && defs.story[qs.story]) ? [defs.story[qs.story]] : []; // текущий сюжетный
+  const sideActive = Object.keys(qs.active || {}).map(id => defs.npc && defs.npc[id]).filter(Boolean); // активные НПС-квесты
+  const completed = (qs.completed || []).map(findDef).filter(Boolean);                    // выполненные
+
+  const qrow = (q, mode) => {
+    let tag = '';
+    if (mode === 'storyActive') tag = ` <span class="q-prog">${qs.progress}/${q.count}</span>`;
+    else if (mode === 'sideActive') tag = ` <span class="q-prog">${qs.active[q.id]}/${q.count}</span>`;
+    else if (mode === 'done') tag = ` <span class="q-done">✓</span>`;
+    return `<div class="q-item${mode === 'done' ? ' done' : ''}"><div class="q-title">${q.title}${tag}</div>`
+      + `<div class="q-desc">${q.desc}</div><div class="q-reward">${UI_SVG.coin} ${q.reward}</div></div>`;
+  };
+  const cat = (key, title, items, mode) => {
+    const open = questCats[key];
+    return `<div class="q-cat" data-cat="${key}">${open ? '▾' : '▸'} ${title} <span class="q-count">${items.length}</span></div>`
+      + (open ? `<div class="q-list">${items.length ? items.map(q => qrow(q, mode)).join('') : '<div class="q-empty">Пусто</div>'}</div>` : '');
+  };
+  body.innerHTML = cat('story', 'Сюжетные', storyActive, 'storyActive')
+    + cat('side', 'Побочные', sideActive, 'sideActive')
+    + cat('done', 'Выполненные', completed, 'done');
+}
+
+// --- Диалог квеста от НПС (взять / отказаться / спасибо) ---
+export function openQuestDialog(npcType) {
+  const qid = S.mobTypes[npcType] && S.mobTypes[npcType].quest;
+  const def = qid && S.questDefs.npc && S.questDefs.npc[qid];
+  const panel = document.getElementById('questDialog');
+  if (!def || !panel) return;
+  const status = (S.quests.completed || []).includes(qid) ? 'done'
+    : (S.quests.active && S.quests.active[qid] != null) ? 'active' : 'offer';
+  let html = `<button class="popup-close" id="qdClose">✕</button><h3>${def.title}</h3>`;
+  if (status === 'offer') {
+    html += `<p class="qd-desc">${def.desc}</p>`
+      + `<div class="qd-reward">Награда: ${UI_SVG.coin} ${def.reward}</div>`
+      + `<div class="qd-btns"><button id="qdAccept" class="qd-accept">Взять</button><button id="qdDecline">Отказаться</button></div>`;
+  } else if (status === 'active') {
+    html += `<p class="qd-desc">${def.desc}</p>`
+      + `<div class="qd-prog">Прогресс: ${S.quests.active[qid]}/${def.count}</div>`
+      + `<div class="qd-btns"><button id="qdDecline">Закрыть</button></div>`;
+  } else {
+    html += `<p class="qd-desc">${def.thanks || 'Спасибо за помощь!'}</p>`
+      + `<div class="qd-btns"><button id="qdDecline">Закрыть</button></div>`;
+  }
+  panel.innerHTML = html;
+  panel.classList.remove('hidden');
+  const close = () => panel.classList.add('hidden');
+  panel.querySelector('#qdClose').addEventListener('click', close);
+  panel.querySelector('#qdDecline').addEventListener('click', close);
+  const acc = panel.querySelector('#qdAccept');
+  if (acc) acc.addEventListener('click', () => { S.socket.emit('acceptQuest', qid); close(); });
+}

@@ -1,0 +1,265 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+  background: #1a1a24;
+  color: #eee;
+  overflow: hidden;
+  height: 100vh;
+}
+
+.hidden { display: none !important; }
+
+/* --- Экран входа --- */
+#login {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #181822;
+}
+.create-box {
+  background: #22222e; padding: 26px 30px; border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.5); width: 600px; max-width: 94vw;
+}
+.create-box h1 { font-size: 24px; margin-bottom: 18px; text-align: center; }
+.create-cols { display: flex; gap: 24px; }
+.preview {
+  flex: 0 0 200px; background: #2a313d;
+  border-radius: 12px; display: flex; align-items: center; justify-content: center; padding: 10px;
+}
+.preview svg { width: 100%; height: 280px; }
+.controls { flex: 1; display: flex; flex-direction: column; }
+.controls label { font-size: 12px; color: #9aa0b0; margin: 12px 0 5px; font-weight: 600; }
+.controls input {
+  width: 100%; padding: 11px 13px; border: 2px solid #3a3a4e; border-radius: 10px;
+  background: #1a1a24; color: #eee; font-size: 15px; outline: none;
+}
+.controls input:focus { border-color: #5b8def; }
+.swatches { display: flex; flex-wrap: wrap; gap: 7px; }
+.swatch-c { width: 28px; height: 28px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; }
+.swatch-c.sel { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt { padding: 6px 11px; border-radius: 8px; background: #1a1a24; border: 2px solid #3a3a4e; cursor: pointer; font-size: 13px; }
+.opt.sel { border-color: #5b8def; color: #fff; }
+.soon { margin-top: 16px; color: #6a7080; font-size: 13px; font-style: italic; }
+#playBtn {
+  margin-top: 20px; width: 100%; padding: 13px; border: none; border-radius: 10px;
+  background: #5b8def; color: #fff; font-size: 16px; font-weight: 700; cursor: pointer;
+}
+#playBtn:hover { background: #4a7ad6; }
+@media (max-width: 560px){ .create-cols{ flex-direction: column; } .preview{ flex-basis:auto; } .preview svg{ height:200px; } }
+
+/* --- Игра --- */
+#game { position: fixed; inset: 0; }
+#canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  background: #10131a;
+  touch-action: none;        /* палец по канвасу не скроллит/не зумит страницу */
+}
+
+/* Верхний левый: игрок + цель боя */
+#topLeft { position: absolute; top: 12px; left: 12px; z-index: 5; display: flex; flex-direction: column; gap: 8px; }
+.panel {
+  background: rgba(20,20,28,.78); padding: 8px 10px; border-radius: 10px;
+  width: 190px; box-shadow: 0 2px 12px rgba(0,0,0,.45); backdrop-filter: blur(2px);
+}
+.pname { font-weight: 700; font-size: 14px; margin-bottom: 5px; }
+.hpbar { position: relative; height: 16px; background: #2a2a36; border-radius: 8px; overflow: hidden; }
+.hpbar .fill { position: absolute; inset: 0; width: 100%; background: #2ecc71; transition: width .15s; }
+.hpbar .fill.enemy { background: #e74c3c; }
+.hpbar .hptext { position: relative; display: block; text-align: center; font-size: 11px; line-height: 16px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,.85); }
+
+/* Верхний правый: онлайн */
+#online { position: absolute; top: 12px; right: 12px; z-index: 5; background: rgba(20,20,28,.7); padding: 5px 10px; border-radius: 8px; font-size: 13px; color: #2ecc71; font-weight: 600; }
+
+/* Низ центр: хотбар */
+#hotbar { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); z-index: 5; display: flex; gap: 8px; }
+.slot {
+  width: 52px; height: 52px; background: rgba(20,20,28,.82); border: 2px solid #3a3a4e;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  color: #555; font-size: 12px; position: relative; user-select: none;
+}
+.slot .num { position: absolute; top: 2px; left: 5px; font-size: 10px; color: #888; pointer-events: none; }
+.slot .qty { position: absolute; bottom: 1px; right: 4px; font-size: 11px; font-weight: 700; color: #fff; text-shadow: 0 1px 2px #000; pointer-events: none; }
+.slot svg { pointer-events: none; }
+.slot.active { border-color: #f1c40f; box-shadow: 0 0 0 2px rgba(241,196,15,.35); }
+.slot[draggable="true"] { cursor: grab; }
+
+/* Низ право: инвентарь + меню */
+#bottomRight { position: absolute; bottom: 14px; right: 14px; z-index: 5; display: flex; gap: 8px; }
+.iconbtn { width: 52px; height: 52px; border: none; border-radius: 10px; background: #2a2a3e; color: #fff; font-size: 22px; cursor: pointer; }
+.iconbtn:hover { background: #3a3a52; }
+.iconbtn.active { background: #5b8def; }
+
+/* Попапы (инвентарь, меню) */
+.popup { position: absolute; bottom: 80px; right: 14px; z-index: 10; background: #22222e; border: 1px solid #3a3a4e; border-radius: 12px; padding: 16px; min-width: 220px; box-shadow: 0 10px 36px rgba(0,0,0,.55); }
+.popup h3 { margin-bottom: 12px; font-size: 16px; }
+#logoutBtn { width: 100%; padding: 10px; border: none; border-radius: 8px; background: #e74c3c; color: #fff; font-weight: 700; font-size: 14px; cursor: pointer; }
+#logoutBtn:hover { background: #d44637; }
+.invgrid { display: grid; grid-template-columns: repeat(8, 40px); gap: 5px; }
+.invgrid .slot { width: 40px; height: 40px; }
+
+/* Панель персонажа */
+.char-cols { display: flex; gap: 18px; }
+.equip-grid { display: grid; grid-template-columns: repeat(2, auto); gap: 8px 14px; }
+.equip-row { display: flex; align-items: center; gap: 8px; }
+.equip-row .lbl { font-size: 11px; color: #9aa0b0; width: 56px; }
+.equip-slot { width: 44px; height: 44px; background: rgba(20,20,28,.85); border: 2px solid #3a3a4e; border-radius: 9px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.equip-slot.filled { border-color: #5b8def; }
+.char-stats { min-width: 150px; display: flex; flex-direction: column; gap: 7px; }
+.char-stats .stat { display: flex; justify-content: space-between; font-size: 14px; }
+.char-stats .stat b { color: #fff; }
+.char-stats .stat.muted { color: #6a7080; }
+.char-stats .stat.muted b { color: #6a7080; }
+
+/* Окно торговли */
+#tradePanel { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%,-50%); }
+.popup-close { position: absolute; top: 10px; right: 12px; background: none; border: none; color: #9aa0b0; font-size: 16px; cursor: pointer; }
+.popup-close:hover { color: #fff; }
+.trade-hint { color: #8a90a0; font-size: 12px; margin: -6px 0 12px; }
+#tradeGrid .slot { cursor: pointer; }
+#tradeGrid .slot.sel { border-color: #2ecc71; box-shadow: 0 0 0 2px rgba(46,204,113,.35); }
+#tradeFooter { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+#tradeFooter b { color: #f1c40f; }
+#tradeFooter .coin { vertical-align: middle; }
+.trade-sel { font-size: 12px; color: #9aa0b0; margin-right: auto; }
+#selectAllBtn { padding: 9px 12px; border: none; border-radius: 8px; background: #2a2a3e; color: #fff; font-weight: 600; cursor: pointer; font-size: 13px; }
+#selectAllBtn:hover { background: #3a3a52; }
+#sellSelBtn { padding: 9px 16px; border: none; border-radius: 8px; background: #2ecc71; color: #0d2616; font-weight: 700; cursor: pointer; }
+#sellSelBtn:hover { background: #27b765; }
+#sellSelBtn:disabled { background: #2a3a30; color: #5a6a5e; cursor: default; }
+
+/* Окно крафта */
+#craftPanel { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%,-50%); min-width: 320px; }
+#craftList { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+.craft-row { display: flex; align-items: center; gap: 10px; background: #1a1a24; border-radius: 9px; padding: 8px; }
+.craft-out { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: #14141c; border-radius: 8px; }
+.craft-info { flex: 1; }
+.craft-info .cn { font-size: 13px; font-weight: 600; }
+.craft-info .ci { font-size: 11px; color: #9aa0b0; display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+.craft-info .ci .ing { display: inline-flex; align-items: center; gap: 2px; }
+.craft-info .ci .ing.lack { color: #e0584a; }
+.craft-info .ci .ing svg { width: 16px; height: 16px; }
+.craft-row button { padding: 7px 13px; border: none; border-radius: 8px; background: #5b8def; color: #fff; font-weight: 700; cursor: pointer; font-size: 13px; }
+.craft-row button:hover { background: #4a7ad6; }
+.craft-row button:disabled { background: #2a2f3a; color: #5a606c; cursor: default; }
+
+/* Золото под инвентарём (иконкой, без слова) */
+#goldRow { display: flex; align-items: center; gap: 6px; margin-top: 12px; font-weight: 700; font-size: 15px; }
+#goldRow .coin { display: block; }
+#goldAmount { color: #f1c40f; }
+
+/* Подсказка-название сверху по центру */
+#tooltip {
+  position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 8;
+  background: rgba(20,20,28,.9); padding: 6px 14px; border-radius: 8px;
+  font-size: 14px; font-weight: 600; pointer-events: none; white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,.5);
+}
+
+/* Чат / лента событий — низ слева */
+#chat {
+  position: absolute; left: 12px; bottom: 12px; z-index: 9;
+  width: 300px; max-width: 42vw; display: flex; flex-direction: column; gap: 5px;
+  font-size: 12.5px;
+}
+#chatBar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(20,20,28,.82); border: 1px solid #3a3a4e; border-radius: 9px;
+  padding: 5px 10px; cursor: pointer; user-select: none;
+}
+#chatBar .chat-title { font-weight: 700; color: #cfd6e4; }
+.chat-btns { display: flex; gap: 2px; }
+.chat-btns button { background: none; border: none; padding: 3px; cursor: pointer; display: flex; border-radius: 6px; }
+.chat-btns button:hover { background: rgba(255,255,255,.08); }
+#chatToggle svg { transition: transform .15s; }
+#chat.collapsed #chatToggle svg { transform: rotate(-90deg); }
+#chatFilters {
+  background: rgba(20,20,28,.92); border: 1px solid #3a3a4e; border-radius: 9px;
+  padding: 7px 10px; display: flex; flex-direction: column; gap: 5px; color: #cfd6e4;
+}
+#chatFilters label { display: flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
+#chatFilters input { accent-color: #5b8def; cursor: pointer; }
+#chatLog {
+  background: rgba(20,20,28,.72); border: 1px solid #3a3a4e; border-radius: 9px;
+  padding: 7px 10px; height: 150px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 3px; color: #dfe4ee;
+}
+#chatLog .cl { line-height: 1.32; word-break: break-word; }
+#chatLog .cl-system { color: #8b93a3; font-style: italic; }
+#chatLog .cl-loot { color: #d6a960; }
+#chatLog .cl-combat { color: #e07a7a; }
+#chatLog .cl-name { font-weight: 700; }
+#chatInput {
+  background: rgba(20,20,28,.9); border: 1px solid #3a3a4e; border-radius: 9px;
+  padding: 7px 10px; color: #fff; font-size: 13px; outline: none;
+}
+#chatInput:focus { border-color: #5b8def; }
+#chat.collapsed #chatFilters,
+#chat.collapsed #chatLog,
+#chat.collapsed #chatInput { display: none; }
+
+/* Энциклопедия */
+.craft-empty { color: #9aa0b0; font-size: 13px; max-width: 240px; }
+#guidePanel { width: 340px; max-width: 92vw; max-height: 70vh; display: flex; flex-direction: column; padding: 12px 14px; }
+.g-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.g-bar h3 { margin: 0; }
+.g-back { background: #2a2a3e; border: none; color: #cfd6e4; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.g-back:hover { background: #3a3a52; }
+#guideBody { overflow-y: auto; }
+.g-hint { color: #9aa0b0; font-size: 12px; line-height: 1.4; margin-bottom: 10px; }
+.g-cat { color: #e6c07a; font-weight: 700; font-size: 13px; margin: 12px 0 6px; }
+.g-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.g-chip { display: flex; align-items: center; gap: 6px; background: rgba(20,20,28,.85); border: 1px solid #3a3a4e; border-radius: 9px; padding: 5px 9px 5px 5px; cursor: pointer; font-size: 12.5px; }
+.g-chip:hover { border-color: #5b8def; background: #262636; }
+.g-ic { display: flex; width: 26px; height: 26px; align-items: center; justify-content: center; }
+.g-ic svg { width: 26px; height: 26px; }
+.g-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.g-bigic { display: flex; width: 44px; height: 44px; align-items: center; justify-content: center; background: rgba(20,20,28,.85); border: 1px solid #3a3a4e; border-radius: 10px; }
+.g-bigic svg { width: 34px; height: 34px; }
+.g-name { font-size: 17px; font-weight: 700; }
+.g-sub { font-size: 12px; color: #9aa0b0; }
+.g-desc { font-size: 13px; line-height: 1.45; color: #dfe4ee; margin-bottom: 8px; }
+.g-stats { display: flex; flex-direction: column; gap: 3px; font-size: 13px; color: #cfd6e4; margin-bottom: 6px; }
+.g-stats b { color: #fff; }
+.g-sec { color: #e6c07a; font-weight: 700; font-size: 12px; margin: 10px 0 5px; }
+.g-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.g-col { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #cfd6e4; }
+.g-ing { display: inline-flex; align-items: center; gap: 5px; background: rgba(20,20,28,.7); border: 1px solid #3a3a4e; border-radius: 8px; padding: 3px 8px 3px 4px; font-size: 12.5px; }
+.g-ing svg { width: 22px; height: 22px; }
+.g-rar { font-size: 11px; font-weight: 700; color: #1a1a24; padding: 1px 8px; border-radius: 6px; vertical-align: middle; }
+
+/* Маленькие UI-иконки вместо эмодзи */
+.uic { width: 14px; height: 14px; vertical-align: -2px; display: inline-block; }
+
+/* Диалог квеста от НПС */
+#questDialog { left: 50%; right: auto; top: 90px; bottom: auto; transform: translateX(-50%); width: 330px; max-width: 92vw; }
+.qd-desc { font-size: 13px; line-height: 1.5; color: #dfe4ee; margin: 6px 0 10px; }
+.qd-reward, .qd-prog { font-size: 13px; color: #f1c40f; font-weight: 600; margin-bottom: 12px; }
+.qd-btns { display: flex; gap: 8px; }
+.qd-btns button { flex: 1; padding: 9px; border: none; border-radius: 8px; background: #3a3a4e; color: #fff; font-weight: 700; cursor: pointer; font-size: 13px; }
+.qd-btns button:hover { filter: brightness(1.12); }
+.qd-accept { background: #2ecc71; color: #10131a; }
+
+/* Квесты */
+#questPanel { width: 300px; max-width: 92vw; max-height: 70vh; display: flex; flex-direction: column; }
+#questBody { overflow-y: auto; }
+.q-cat { font-weight: 700; color: #e6c07a; font-size: 13px; padding: 7px 4px; cursor: pointer; user-select: none; border-top: 1px solid #2a2a3a; }
+.q-cat:first-child { border-top: none; }
+.q-count { color: #8b93a3; font-weight: 600; font-size: 12px; }
+.q-list { display: flex; flex-direction: column; gap: 6px; padding: 2px 0 6px; }
+.q-empty { color: #8b93a3; font-size: 12px; font-style: italic; padding: 2px 4px; }
+.q-item { background: rgba(20,20,28,.6); border: 1px solid #3a3a4e; border-left: 3px solid #5b8def; border-radius: 8px; padding: 7px 10px; }
+.q-item.done { border-left-color: #3ad07a; opacity: .8; }
+.q-title { font-weight: 700; font-size: 13px; }
+.q-prog { color: #f1c40f; font-size: 12px; }
+.q-done { color: #3ad07a; }
+.q-desc { font-size: 12px; color: #b9c0cc; margin: 2px 0; }
+.q-reward { font-size: 12px; color: #f1c40f; font-weight: 600; }
+.glink { cursor: pointer; }
+.glink:hover { color: #9ec1ff; }
+.g-ing.glink:hover, .g-row .glink:hover { border-color: #5b8def; }

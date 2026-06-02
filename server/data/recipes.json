@@ -1,0 +1,21 @@
+{
+  "_note": "Рецепты по станциям. smelter (плавильня): руда→слитки. anvil (наковальня): слитки→броня/инструменты. campfire (костёр): сырая еда→приготовленная.",
+  "smelter": [
+    { "out": "ingot", "outQty": 1, "in": [{ "id": "ore", "qty": 2 }] }
+  ],
+  "campfire": [
+    { "out": "cookedChicken", "outQty": 1, "in": [{ "id": "rawChicken", "qty": 1 }] }
+  ],
+  "anvil": [
+    { "out": "helmet", "in": [{ "id": "ingot", "qty": 2 }] },
+    { "out": "chest",  "in": [{ "id": "ingot", "qty": 4 }] },
+    { "out": "gloves", "in": [{ "id": "ingot", "qty": 1 }] },
+    { "out": "pants",  "in": [{ "id": "ingot", "qty": 3 }] },
+    { "out": "boots",  "in": [{ "id": "ingot", "qty": 2 }] },
+    { "out": "axe",     "in": [{ "id": "ingot", "qty": 1 }, { "id": "wood", "qty": 2 }] },
+    { "out": "pickaxe", "in": [{ "id": "ingot", "qty": 1 }, { "id": "wood", "qty": 2 }] },
+    { "out": "ironSword",      "in": [{ "id": "ingot", "qty": 2 }, { "id": "wood", "qty": 1 }] },
+    { "out": "ironGreatsword", "in": [{ "id": "ingot", "qty": 4 }, { "id": "wood", "qty": 1 }] },
+    { "out": "ironShield",     "in": [{ "id": "ingot", "qty": 3 }] }
+  ]
+}
