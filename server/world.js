@@ -75,6 +75,7 @@ function normMob(m) {
     hp: clampN(m.hp, 1, 9999, 20), armor: clampN(m.armor, 0, 99, 0),
     dmgMin: clampN(m.dmgMin, 0, 999, 1), dmgMax: clampN(m.dmgMax, 0, 999, 3),
     respawn: clampN(m.respawn, 1, 3600, 10),     // секунды
+    size: clampN(m.size, 8, 200, 0),             // размер в игре (0 = размер текстуры по умолчанию)
     loot,
   };
 }

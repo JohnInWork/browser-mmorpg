@@ -362,8 +362,8 @@ function drawHpBar(cx, topY, hp, maxHp) {
   ctx.fillRect(x, y, w * frac, h);
 }
 
-function drawChicken(cx, cy, m) {
-  const ctx = S.ctx, z = SCALE * 0.5;   // курица мелкая (в 2 раза меньше прочих мобов)
+function drawChicken(cx, cy, m, s = 1) {
+  const ctx = S.ctx, z = SCALE * 0.5 * s;   // курица мелкая; s — множитель размера из настроек моба
   // тень
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 3 * z, 14 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
@@ -377,8 +377,8 @@ function drawChicken(cx, cy, m) {
   if (m.hp < m.maxHp) drawHpBar(cx, cy - 34 * z, m.hp, m.maxHp);
 }
 
-function drawWolf(cx, cy, m) {
-  const ctx = S.ctx, z = SCALE;
+function drawWolf(cx, cy, m, s = 1) {
+  const ctx = S.ctx, z = SCALE * s;
   // тень
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 18 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
@@ -396,8 +396,8 @@ function drawWolf(cx, cy, m) {
   if (m.hp < m.maxHp) drawHpBar(cx, top + 8 * z, m.hp, m.maxHp);
 }
 
-function drawBear(cx, cy, m) {
-  const ctx = S.ctx, z = SCALE;
+function drawBear(cx, cy, m, s = 1) {
+  const ctx = S.ctx, z = SCALE * s;
   // тень
   ctx.fillStyle = 'rgba(0,0,0,.32)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 5 * z, 24 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
@@ -419,7 +419,7 @@ function drawBear(cx, cy, m) {
 function drawSpriteMob(cx, cy, m) {
   const ctx = S.ctx, z = SCALE;
   const tex = MOB_TEX_BY_ID[m.sprite], img = mobTexImg[m.sprite];
-  const sz = ((tex && tex.size) || 46) * z, top = cy + 7 * z - sz;
+  const sz = (m.size || (tex && tex.size) || 46) * z, top = cy + 7 * z - sz;
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, sz * 0.4, sz * 0.16, 0, 0, Math.PI * 2); ctx.fill();
   if (img && img._ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; ctx.drawImage(img, cx - sz / 2, top, sz, sz); ctx.restore(); }
@@ -428,10 +428,13 @@ function drawSpriteMob(cx, cy, m) {
 }
 
 function drawMob(cx, cy, m) {
-  if (m.sprite === 'chicken') return drawChicken(cx, cy, m);
-  if (m.sprite === 'wolf') return drawWolf(cx, cy, m);
-  if (m.sprite === 'bear') return drawBear(cx, cy, m);
-  if (m.sprite && mobTexImg[m.sprite]) return drawSpriteMob(cx, cy, m);   // новая текстура из реестра
+  // множитель размера: своя настройка моба относительно базового размера текстуры (s=1 — без изменений)
+  const baseSize = (MOB_TEX_BY_ID[m.sprite] && MOB_TEX_BY_ID[m.sprite].size) || 46;
+  const s = m.size ? m.size / baseSize : 1;
+  if (m.sprite === 'chicken') return drawChicken(cx, cy, m, s);
+  if (m.sprite === 'wolf') return drawWolf(cx, cy, m, s);
+  if (m.sprite === 'bear') return drawBear(cx, cy, m, s);
+  if (m.sprite && mobTexImg[m.sprite]) return drawSpriteMob(cx, cy, m);   // новая текстура (size — абсолютный)
   const ctx = S.ctx, z = SCALE;
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 15 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();

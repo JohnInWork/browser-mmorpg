@@ -487,7 +487,8 @@ function drawAnvil(cx, cy) {
 function drawMobMarker(cx, cy, m) {                    // существо в редакторе: спрайт/кружок + подпись + значок агрессии
   const z = zoom, sprite = m.sprite || 'wolf', info = SPRITE_INFO[sprite] || { name: 'Существо', color: '#888' }, img = MOB_IMG[sprite];
   const label = m.name || info.name;
-  if (img && img._ready) { const W = 30 * z, H = 30 * z; ctx.drawImage(img, cx - W / 2, cy + 8 * z - H, W, H); }
+  const scale = m.size ? m.size / mobTexSize(sprite) : 1;
+  if (img && img._ready) { const W = 30 * z * scale, H = 30 * z * scale; ctx.drawImage(img, cx - W / 2, cy + 8 * z - H, W, H); }
   else {
     ctx.fillStyle = info.color; ctx.beginPath(); ctx.arc(cx, cy - 8 * z, 9 * z, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 1.5 * z; ctx.stroke();
@@ -735,7 +736,8 @@ function openNpcEditor(x, y, existing) {
 // --- Конструктор моба ---
 const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Шлем'], ['chest', 'Нагрудник'], ['gloves', 'Перчатки'], ['pants', 'Поножи'], ['boots', 'Сапоги']];
 const MOB_SPRITE_OPTS = MOB_TEXTURES.map(t => [t.id, t.name]);
-function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, loot: [] }; }
+function mobTexSize(id) { return (MOB_TEX_BY_ID[id] && MOB_TEX_BY_ID[id].size) || 46; }
+function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, size: 0, loot: [] }; }
 function makeLootBlock(l) {
   l = l || { id: 'rawChicken', qty: 1, chance: 1 };
   const el = document.createElement('div');
@@ -773,6 +775,7 @@ function openMobEditor(x, y, existing, toLibrary) {
           <label class="npc-f">Урон мин<input id="mDmgMin" type="number" min="0" value="${data.dmgMin}"></label>
           <label class="npc-f">Урон макс<input id="mDmgMax" type="number" min="0" value="${data.dmgMax}"></label>
           <label class="npc-f">Респавн, сек<input id="mResp" type="number" min="1" value="${data.respawn}"></label>
+          <label class="npc-f">Размер<input id="mSize" type="number" min="8" max="200" value="${data.size || mobTexSize(data.sprite)}"></label>
         </div>
         <div class="npc-f">Лут (предмет · кол-во · шанс)<div id="mLoot"></div><button id="mAddLoot" class="npc-addq">+ Добавить лут</button></div>
         <div class="npc-btns">
@@ -784,8 +787,12 @@ function openMobEditor(x, y, existing, toLibrary) {
     </div>`;
   ov.classList.remove('hidden');
   const $ = (id) => ov.querySelector('#' + id);
-  // выбор текстуры
+  // выбор текстуры (при смене подставляем размер по умолчанию для этой текстуры, если поле не правили вручную)
+  let curTexDef = mobTexSize(data.sprite);
   ov.querySelectorAll('.mob-sprite').forEach(b => b.addEventListener('click', () => {
+    const nd = mobTexSize(b.dataset.sprite);
+    if (parseInt($('mSize').value, 10) === curTexDef) $('mSize').value = nd;
+    curTexDef = nd;
     data.sprite = b.dataset.sprite;
     ov.querySelectorAll('.mob-sprite').forEach(o => o.classList.remove('sel')); b.classList.add('sel');
     $('mobPreview').src = texSvg(data.sprite);
@@ -806,6 +813,7 @@ function openMobEditor(x, y, existing, toLibrary) {
     data.dmgMin = Math.max(0, parseInt($('mDmgMin').value, 10) || 0);
     data.dmgMax = Math.max(0, parseInt($('mDmgMax').value, 10) || 0);
     data.respawn = Math.max(1, parseInt($('mResp').value, 10) || 10);
+    data.size = Math.max(8, Math.min(200, parseInt($('mSize').value, 10) || mobTexSize(data.sprite)));
     data.loot = [...lootBox.querySelectorAll('.mob-loot-row')].map(readLootBlock);
     setMob(x, y, data);
     if (toLibrary) {   // новый моб → в библиотеку + сразу выбран для штамповки

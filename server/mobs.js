@@ -21,7 +21,7 @@ function resolveMob(s) {
       name: s.name || '', sprite: s.sprite || 'wolf', kind: s.sprite || 'wolf',
       canAttack: aggro !== 'friendly', aggressive: aggro === 'aggressive',
       maxHp: s.hp || 20, armor: s.armor || 0, dmgMin: s.dmgMin || 0, dmgMax: s.dmgMax || 0,
-      respawnMs: (s.respawn || 10) * 1000, loot,
+      respawnMs: (s.respawn || 10) * 1000, size: s.size || 0, loot,
       color: SPRITE_COLOR[s.sprite] || '#888', label: s.name || SPRITE_NAMES[s.sprite] || 'Существо',
     };
   }
@@ -31,7 +31,7 @@ function resolveMob(s) {
     name: t.name || '', sprite: t.sprite || null, kind: t.sprite || s.type,
     canAttack: t.canAttack !== false, aggressive: !!t.aggressive,
     maxHp: t.maxHp || 20, armor: t.armor || 0, dmgMin: t.dmgMin || 0, dmgMax: t.dmgMax || 0,
-    respawnMs: RESPAWN_MS, loot,
+    respawnMs: RESPAWN_MS, size: 0, loot,
     color: t.color || '#888', label: t.name || 'Существо',
   };
 }
@@ -72,7 +72,7 @@ function publicMobs() {
   const out = {};
   for (const id in mobs) {
     const m = mobs[id];
-    out[id] = { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: m.alive, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label };
+    out[id] = { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, size: m.size, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: m.alive, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label };
   }
   return out;
 }
@@ -85,7 +85,7 @@ function kill(io, m) {
   }
   m._respawn = setTimeout(() => {
     m._respawn = null; m.alive = true; m.hp = m.maxHp;
-    io.emit('mobRespawned', { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: true, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label });
+    io.emit('mobRespawned', { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, size: m.size, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: true, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label });
   }, m.respawnMs || RESPAWN_MS);
 }
 
