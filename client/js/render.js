@@ -419,6 +419,27 @@ function drawNpc(cx, cy, appearance, equipment, marker) {
   }
 }
 
+// Маркер квеста авторского НПС: '!' если у него есть невзятый квест
+function authNpcMarker(n) {
+  if (!n.quest) return null;
+  const qid = n.quest.id;
+  if ((S.quests.completed || []).includes(qid)) return null;
+  if (S.quests.active && S.quests.active[qid] != null) return '?';   // взят, но не сдан
+  return '!';
+}
+// Авторский НПС: персонаж со своей внешностью/экипировкой + имя + маркер квеста
+function drawAuthNpc(cx, cy, n) {
+  const ctx = S.ctx;
+  drawNpc(cx, cy, n.appearance, n.equipment, authNpcMarker(n));
+  if (n.name) {   // имя над головой (маленькое, с тенью)
+    const topY = cy + 5 - CHAR_H * CHAR_FEET;
+    ctx.fillStyle = '#fff'; ctx.font = `${Math.round(11 * (SCALE / 1.6))}px sans-serif`; ctx.textAlign = 'center';
+    ctx.shadowColor = 'rgba(0,0,0,.9)'; ctx.shadowBlur = 3;
+    ctx.fillText(n.name, cx, topY - 14 * (SCALE / 1.6));
+    ctx.shadowBlur = 0;
+  }
+}
+
 export function render() {
   if (!S.MAP) return;
   const ctx = S.ctx;
@@ -485,6 +506,7 @@ export function render() {
   }
   // Мобы и игроки — только из текущей локации
   for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive && m.location === S.location) drawables.push({ d: m.x + m.y + 0.15, kind: 'mob', m }); }
+  for (const n of (S.npcs || [])) drawables.push({ d: n.x + n.y + 0.16, kind: 'authNpc', n });   // авторские НПС
   for (const id in S.players) { const p = S.players[id]; if ((p.location || 'surface') === S.location) drawables.push({ d: p.rx + p.ry + 0.2, kind: 'player', p, isMe: id === S.myId }); }
   drawables.sort((a, b) => a.d - b.d);
 
@@ -513,6 +535,7 @@ export function render() {
       else if (o.m.type === 'questgiver') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), FORESTER_APP, FORESTER_EQUIP, npcMarker(o.m));
       else drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
     }
+    else if (o.kind === 'authNpc') drawAuthNpc(ox + isoX(o.n.x, o.n.y), oy + isoY(o.n.x, o.n.y), o.n);
     else drawPlayer(ox + isoX(o.p.rx, o.p.ry), oy + isoY(o.p.rx, o.p.ry), o.p, o.isMe);
   }
 

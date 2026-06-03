@@ -1,6 +1,6 @@
 // Сетевой слой клиента: подписка на события сервера и обновление состояния.
 import { S } from './state.js';
-import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests } from './ui.js';
+import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, openSign } from './ui.js';
 import { itemName } from './items.js';
 
 // Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
@@ -16,6 +16,7 @@ export function setupNet() {
     S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height; S.myId = data.you.id;
     S.location = data.location || 'surface';
     S.signs = data.signs || [];
+    S.npcs = data.npcs || [];
     for (const id in data.players) {
       const p = data.players[id];
       S.players[id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null };
@@ -41,13 +42,18 @@ export function setupNet() {
     S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
     if (data.location) S.location = data.location;
     S.signs = data.signs || [];
+    S.npcs = data.npcs || [];
     S.depletedNodes.clear(); // деревья пересозданы редактором
   });
+
+  // Обновлённые определения квестов (после правки НПС в редакторе)
+  socket.on('questDefs', (defs) => { if (defs) S.questDefs = defs; });
 
   // Переход в другую локацию (по лестнице): заменить карту, переставить себя
   socket.on('changeLocation', (data) => {
     S.location = data.location; S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
     S.signs = data.signs || [];
+    S.npcs = data.npcs || [];
     const me = S.players[S.myId];
     if (me) { me.x = data.x; me.y = data.y; me.rx = data.x; me.ry = data.y; me.location = data.location; }
     S.path = []; S.targetTile = null; S.pendingAction = null;
@@ -101,6 +107,13 @@ export function setupNet() {
   socket.on('loot', (l) => {
     if (l && l.gold != null) chatLoot(`+${l.gold} золота`);
     else if (l && l.id) chatLoot(`+${l.qty || 1} ${itemName(l.id)}`);
+  });
+
+  // Разговор с НПС: сервер ответил (завершён talk-квест → финальный текст; иначе — обычная реплика)
+  socket.on('talkResult', ({ x, y, completed, text }) => {
+    if (completed && text) { openSign(text); return; }
+    const npc = (S.npcs || []).find(n => n.x === x && n.y === y);   // обычный разговор — показать реплику
+    if (npc && npc.dialogue) openSign(npc.dialogue);
   });
 
   // Квесты

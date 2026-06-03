@@ -621,17 +621,21 @@ export function renderQuests() {
 }
 
 // --- Диалог квеста от НПС (взять / отказаться / спасибо) ---
-export function openQuestDialog(npcType) {
-  const qid = S.mobTypes[npcType] && S.mobTypes[npcType].quest;
-  const def = qid && S.questDefs.npc && S.questDefs.npc[qid];
+// arg: строка-тип моба (легаси questgiver) ИЛИ объект авторского НПС с .quest
+export function openQuestDialog(arg) {
+  let def;
+  if (arg && typeof arg === 'object' && arg.quest) def = arg.quest;                 // авторский НПС
+  else { const qid = S.mobTypes[arg] && S.mobTypes[arg].quest; def = qid && S.questDefs.npc && S.questDefs.npc[qid]; }
   const panel = document.getElementById('questDialog');
   if (!def || !panel) return;
+  const qid = def.id;
+  const rewardLine = `Награда: ${UI_SVG.coin} ${def.reward}` + (def.rewardItem ? ` + ${escHtml(itemName(def.rewardItem.id))}${def.rewardItem.qty > 1 ? ' ×' + def.rewardItem.qty : ''}` : '');
   const status = (S.quests.completed || []).includes(qid) ? 'done'
     : (S.quests.active && S.quests.active[qid] != null) ? 'active' : 'offer';
-  let html = `<button class="popup-close" id="qdClose">✕</button><h3>${def.title}</h3>`;
+  let html = `<button class="popup-close" id="qdClose">✕</button><h3>${escHtml(def.title)}</h3>`;
   if (status === 'offer') {
-    html += `<p class="qd-desc">${def.desc}</p>`
-      + `<div class="qd-reward">Награда: ${UI_SVG.coin} ${def.reward}</div>`
+    html += `<p class="qd-desc">${escHtml(def.desc)}</p>`
+      + `<div class="qd-reward">${rewardLine}</div>`
       + `<div class="qd-btns"><button id="qdAccept" class="qd-accept">Взять</button><button id="qdDecline">Отказаться</button></div>`;
   } else if (status === 'active') {
     html += `<p class="qd-desc">${def.desc}</p>`

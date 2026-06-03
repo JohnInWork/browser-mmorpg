@@ -32,6 +32,7 @@ function setup(io) {
         resources.build();                           // карта изменилась — пересобрать ноды
         mobsMod.rebuild(io);                          // и мобов (расставлены в редакторе)
         socket.emit('saveResult', { ok: true });
+        io.emit('questDefs', quests.clientDefs());    // авторские квесты могли измениться
         for (const pid in playersMod.players)         // каждому игроку — свежая карта его локации
           io.to(pid).emit('mapUpdated', world.locState(playersMod.players[pid].location));
         console.log('  💾 Карты сохранены админом');
@@ -44,7 +45,7 @@ function setup(io) {
     // --- Обычный игрок ---
     const player = playersMod.create(socket.id);
 
-    socket.emit('init', { ...world.locState(player.location), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, skills: skillsMod.clientSkills(player), questDefs: QUESTS });
+    socket.emit('init', { ...world.locState(player.location), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, skills: skillsMod.clientSkills(player), questDefs: quests.clientDefs() });
     socket.broadcast.emit('playerJoined', player);
     io.emit('count', playersMod.count());
 
@@ -138,6 +139,10 @@ function setup(io) {
       for (const id in mobsMod.mobs) {
         const m = mobsMod.mobs[id];
         if (m.alive && m.type === 'trader' && m.location === player.location && adjOrtho(player.x, player.y, m.x, m.y)) return true;
+      }
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {   // авторские НПС-торговцы
+        const n = world.npcAt(player.location, player.x + dx, player.y + dy);
+        if (n && n.trader) return true;
       }
       return false;
     };
@@ -287,6 +292,23 @@ function setup(io) {
     socket.on('acceptQuest', (id) => {
       if (typeof id === 'string' && quests.acceptNpc(player, id)) {
         socket.emit('questUpdate', quests.clientState(player));
+      }
+    });
+
+    // Поговорить с НПС (подошёл вплотную) — завершает активный talk-квест, если этот НПС его цель
+    socket.on('talkNpc', ({ x, y } = {}) => {
+      const npc = world.npcAt(player.location, x, y);
+      if (!npc || !adjOrtho(player.x, player.y, npc.x, npc.y)) return;
+      const label = (npc.link && npc.link.trim()) ? npc.link.trim() : npc.name;
+      const r = quests.recordTalk(player, label) || (npc.link ? quests.recordTalk(player, npc.name) : null);
+      if (r && r.done) {
+        if (r.rewardItem) playersMod.addItem(player, r.rewardItem.id, r.rewardItem.qty);
+        socket.emit('inventoryUpdate', playersMod.invState(player));
+        socket.emit('questUpdate', quests.clientState(player));
+        socket.emit('questDone', { title: r.quest.title, reward: r.reward });
+        socket.emit('talkResult', { x: npc.x, y: npc.y, completed: true, text: npc.talkText || r.quest.thanks });
+      } else {
+        socket.emit('talkResult', { x: npc.x, y: npc.y, completed: false });
       }
     });
 

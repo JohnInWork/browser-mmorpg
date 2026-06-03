@@ -26,12 +26,25 @@ export function mobAt(x, y) {
   for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive && m.location === S.location && m.x === x && m.y === y) return m; }
   return null;
 }
+// Авторский НПС на клетке (текущая локация) или null
+function npcAt(x, y) { return (S.npcs || []).find(n => n.x === x && n.y === y) || null; }
+// Есть ли у игрока активный talk-квест, цель которого — этот НПС (по метке/имени)?
+function talkQuestTargeting(n) {
+  const defs = S.questDefs && S.questDefs.npc;
+  if (!defs || !n) return false;
+  const labels = [n.link, n.name].filter(Boolean).map(s => String(s).trim());
+  for (const id in (S.quests.active || {})) {
+    const d = defs[id];
+    if (d && d.type === 'talk' && labels.includes(String(d.target).trim())) return true;
+  }
+  return false;
+}
 // Игрок под клеткой (по видимой позиции) — для подсказки с ником при наведении (только текущая локация)
 function playerAt(x, y) {
   for (const id in S.players) { const p = S.players[id]; if ((p.location || 'surface') === S.location && Math.round(p.rx) === x && Math.round(p.ry) === y) return p; }
   return null;
 }
-function canStep(x, y) { return isWalkable(x, y) && !mobAt(x, y); }
+function canStep(x, y) { return isWalkable(x, y) && !mobAt(x, y) && !npcAt(x, y); }
 function adjOrtho(ax, ay, bx, by) { return Math.abs(ax - bx) + Math.abs(ay - by) === 1; }
 
 // --- Слой ввода (фундамент под мобильный тач) ---
@@ -126,9 +139,11 @@ export function setupInput() {
     const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
     const m = mobAt(t.x, t.y);
     const pl = playerAt(t.x, t.y);
+    const npc = npcAt(t.x, t.y);
     const node = nodeAt(t.x, t.y);
     const st = stationAt(t.x, t.y);
     if (m) { showTip(mobLabel(m.type)); canvas.style.cursor = 'pointer'; }
+    else if (npc) { showTip(npc.name); canvas.style.cursor = 'pointer'; }
     else if (pl) { showTip(pl.name); canvas.style.cursor = 'pointer'; }
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
     else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
@@ -174,6 +189,15 @@ export function setupInput() {
       if (!ap) return;
       S.socket.emit('engage', m.id);                 // намерение драться: этот моб не ударит первым
       S.pendingAction = { kind: 'attack', id: m.id };
+      S.path = ap.path; S.targetTile = null;
+      return;
+    }
+    // Клик по авторскому НПС — подойти и взаимодействовать (квест/торговля/разговор)
+    const npc = npcAt(t.x, t.y);
+    if (npc) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      S.pendingAction = { kind: 'npc', x: t.x, y: t.y };
       S.path = ap.path; S.targetTile = null;
       return;
     }
@@ -284,6 +308,14 @@ function decideStep() {
       addFloater(me.x, me.y, a.text, a.color || '#fff'); // дошли до объекта — показать сообщение
     } else if (a.kind === 'sign') {
       openSign(a.text);                                  // дошли до таблички — показать текст
+    } else if (a.kind === 'npc') {
+      const npc = npcAt(a.x, a.y);
+      if (npc && adjOrtho(me.x, me.y, a.x, a.y)) {
+        if (talkQuestTargeting(npc)) S.socket.emit('talkNpc', { x: a.x, y: a.y });   // завершить talk-квест
+        else if (npc.quest) openQuestDialog(npc);                                    // квестодатель
+        else if (npc.trader) openTrade();                                            // торговец
+        else S.socket.emit('talkNpc', { x: a.x, y: a.y });                           // обычный разговор/реплика
+      }
     }
     S.pendingAction = null;
     return;

@@ -39,7 +39,7 @@ function mobAt(loc, x, y) {
 }
 
 // Клетка проходима для игрока в его локации: карта проходима И нет живого моба той же локации
-function playerCanStep(loc, x, y) { return world.isWalkable(loc, x, y) && !mobAt(loc, x, y); }
+function playerCanStep(loc, x, y) { return world.isWalkable(loc, x, y) && !mobAt(loc, x, y) && !world.npcAt(loc, x, y); }
 
 // Снимок мобов для клиентов
 function publicMobs() {

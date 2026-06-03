@@ -8,12 +8,17 @@ const skills = require('./skills');
 
 // Продвинуть квесты игрока по убийству моба типа mobType
 function questProgress(io, pid, p, mobType) {
-  const r = quests.recordKill(p, mobType);
-  if (!r) return;
-  if (r.done) {
-    io.to(pid).emit('questDone', { title: r.quest.title, reward: r.reward });
-    io.to(pid).emit('inventoryUpdate', invState(p)); // обновить золото
+  const results = quests.recordKill(p, mobType);
+  if (!results.length) return;
+  let changed = false;
+  for (const r of results) {
+    if (r.done) {
+      if (r.rewardItem) addItem(p, r.rewardItem.id, r.rewardItem.qty); // награда-предмет (авторские квесты)
+      io.to(pid).emit('questDone', { title: r.quest.title, reward: r.reward });
+      changed = true;
+    }
   }
+  if (changed) io.to(pid).emit('inventoryUpdate', invState(p)); // обновить золото/предметы
   io.to(pid).emit('questUpdate', quests.clientState(p));
 }
 

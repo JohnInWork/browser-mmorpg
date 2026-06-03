@@ -68,3 +68,33 @@ body {
 .loc-del { color: #e74c3c; font-weight: 700; }
 .sid-lbl { font-size: 13px; color: #cfd6e4; display: inline-flex; align-items: center; gap: 6px; }
 .sid-lbl input { background: #1a1a24; border: 1px solid #3a3a4e; color: #eee; border-radius: 6px; padding: 4px; }
+
+/* --- Конструктор НПС --- */
+.npc-overlay { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+.npc-modal { display: flex; gap: 18px; background: #22222e; border: 1px solid #3a3a4e; border-radius: 14px; padding: 20px; width: 720px; max-width: 95vw; max-height: 92vh; overflow-y: auto; box-shadow: 0 16px 50px rgba(0,0,0,.6); }
+.npc-left { flex: 0 0 200px; display: flex; flex-direction: column; gap: 10px; }
+.npc-preview { width: 200px; height: 200px; background: #1a1a24; border: 1px solid #3a3a4e; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.npc-preview svg { width: 86%; height: 86%; }
+.npc-skins { display: flex; flex-wrap: wrap; gap: 6px; }
+.npc-skin { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
+.npc-skin.sel { border-color: #fff; }
+.npc-eqgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.npc-eq { display: flex; flex-direction: column; font-size: 11px; color: #9aa0b0; gap: 2px; }
+.npc-eq select { background: #1a1a24; border: 1px solid #3a3a4e; color: #eee; border-radius: 6px; padding: 4px; font-size: 12px; }
+.npc-right { flex: 1; display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+.npc-right h3 { font-size: 17px; }
+.npc-f { display: flex; flex-direction: column; font-size: 12px; color: #cfd6e4; gap: 3px; }
+.npc-f input, .npc-f textarea, .npc-f select { background: #1a1a24; border: 1px solid #3a3a4e; color: #eee; border-radius: 7px; padding: 7px; font-size: 13px; font-family: inherit; resize: vertical; }
+.npc-inline { display: flex; align-items: center; gap: 6px; }
+.npc-inline select { flex: 1; }
+.npc-inline input { width: 56px; }
+.npc-chk { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #eee; cursor: pointer; }
+.npc-quest { display: flex; flex-direction: column; gap: 8px; padding: 10px; background: #1f1f2a; border: 1px solid #333; border-radius: 10px; }
+.npc-btns { display: flex; gap: 10px; justify-content: flex-end; margin-top: 4px; }
+.npc-btns button { padding: 9px 16px; border-radius: 9px; border: none; font-size: 13px; font-weight: 700; cursor: pointer; }
+.m-ok { background: #2ecc71; color: #0d2616; }
+.m-ok:hover { background: #27b765; }
+.m-cancel { background: #33333f; color: #cfd6e4; }
+.m-cancel:hover { background: #3e3e4e; }
+.m-danger { background: #e74c3c; color: #fff; margin-right: auto; }
+.m-danger:hover { background: #d63a2a; }

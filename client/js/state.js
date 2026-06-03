@@ -36,6 +36,7 @@ export const S = {
   bank: { slots: [], level: 0, maxLevel: 5, nextCost: null }, // личное хранилище (сундук)
   depletedNodes: new Set(), // "x,y" истощённых ресурсов (пень/обломки)
   signs: [],              // таблички текущей локации: [{x,y,text}] (текст для игрока по клику)
+  npcs: [],               // НПС текущей локации: [{id,x,y,name,link,appearance,equipment,trader,dialogue,quest}]
   items: {},              // данные предметов (с сервера — единый источник; см. items.js для иконок/цветов)
   skills: {},             // навыки игрока (с сервера): { key: {name,desc,trains,xp,level,levelXp,nextXp,max} }
   recipes: { smelter: [], anvil: [], campfire: [] }, // рецепты крафта (с сервера)

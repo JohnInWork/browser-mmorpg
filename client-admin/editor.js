@@ -1,7 +1,28 @@
 // MMORPG — редактор карт (только для админа)
 // Подключается как mode=admin, проходит проверку пароля, рисует и сохраняет карту.
+import { buildCharacterSVG, getCharImage, PALETTES, DEFAULT_APPEARANCE, CHAR_RATIO, CHAR_FEET } from '/js/character.js';
 
 const socket = io({ query: { mode: 'admin' } });
+
+// --- Данные для конструктора НПС ---
+// Экипируемые предметы по слотам (id → имя). Только те, у кого есть визуал на персонаже.
+const EQUIP_ITEMS = {
+  helmet: [['', '— нет —'], ['helmet', 'Шлем'], ['bearHelmet', 'Медвежий шлем']],
+  chest: [['', '— нет —'], ['chest', 'Нагрудник'], ['merchantRobe', 'Кафтан торговца'], ['forestTunic', 'Лесная туника']],
+  gloves: [['', '— нет —'], ['gloves', 'Перчатки'], ['blueGloves', 'Синие перчатки']],
+  pants: [['', '— нет —'], ['pants', 'Поножи'], ['goldPants', 'Золотые штаны'], ['brownPants', 'Кожаные штаны'], ['redPants', 'Красные штаны']],
+  boots: [['', '— нет —'], ['boots', 'Сапоги'], ['leatherBoots', 'Кожаные сапоги']],
+  cloak: [['', '— нет —'], ['cloak', 'Плащ']],
+  mainHand: [['', '— нет —'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч']],
+  offHand: [['', '— нет —'], ['ironShield', 'Железный щит']],
+};
+const SLOT_NAMES = { helmet: 'Шлем', chest: 'Тело', gloves: 'Перчатки', pants: 'Ноги', boots: 'Обувь', cloak: 'Плащ', mainHand: 'Прав. рука', offHand: 'Лев. рука' };
+const EQUIP_ORDER = ['helmet', 'chest', 'gloves', 'pants', 'boots', 'cloak', 'mainHand', 'offHand'];
+const GATHER_TARGETS = [['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['sand', 'Песок']];
+const KILL_TARGETS = [['passive', 'Курица'], ['aggressive', 'Волк'], ['bear', 'Медведь']];
+// Предметы, которые можно выдать в награду
+const REWARD_ITEMS = [['', '— нет —'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['sand', 'Песок'],
+  ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['helmet', 'Шлем'], ['chest', 'Нагрудник']];
 
 // --- DOM ---
 const paletteEl = document.getElementById('palette');
@@ -56,6 +77,7 @@ const CATEGORIES = [
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 28, name: 'Фонарь', color: '#f0c24a' }, { id: 29, name: 'Мост', color: '#a9743f' }, { id: 30, name: 'Табличка', color: '#9a6b3a' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
+  { name: 'НПС', items: [ { id: 'npc', name: 'Создать НПС', color: '#e0a93b' } ] },
   { name: 'Существа', items: [ { id: 'mob:passive', name: 'Курица', color: '#f1c40f' }, { id: 'mob:aggressive', name: 'Волк', color: '#888c94' }, { id: 'mob:bear', name: 'Медведь', color: '#6b4a2b' }, { id: 'mob:friendly', name: 'Мирный', color: '#2ecc71' }, { id: 'mob:trader', name: 'Торговец', color: '#c79a2a' }, { id: 'mob:questgiver', name: 'Лесник', color: '#3f9e63' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' }, { id: -2, name: 'Изменить (текст/связь)', color: '#3aa' } ] },
 ];
@@ -76,7 +98,7 @@ socket.on('mapData', (data) => {
     const L = data.locations[k];
     LOCS[k] = { map: L.map.map(r => r.slice()), floor: (L.floor || deriveFloor(L.map)).map(r => r.slice()),
                 teleports: (L.teleports || []).map(e => ({ ...e })), mobs: (L.mobs || []).map(m => ({ ...m })),
-                signs: (L.signs || []).map(s => ({ ...s })), W: L.width, H: L.height };
+                signs: (L.signs || []).map(s => ({ ...s })), npcs: (L.npcs || []).map(n => JSON.parse(JSON.stringify(n))), W: L.width, H: L.height };
   }
   switchLoc(LOCS.surface ? 'surface' : Object.keys(LOCS)[0]);
 });
@@ -109,7 +131,7 @@ function blankLocation() {
     for (let x = 0; x < W; x++) { const b = (x === 0 || y === 0 || x === W - 1 || y === H - 1); mr.push(b ? 2 : 0); fr.push(0); }
     map.push(mr); floor.push(fr);
   }
-  return { map, floor, teleports: [], mobs: [], signs: [], W, H };
+  return { map, floor, teleports: [], mobs: [], signs: [], npcs: [], W, H };
 }
 function addLocation() {
   const name = (prompt('Название новой локации:', '') || '').trim();
@@ -152,7 +174,8 @@ function applyResize() {
   const tele = LOCS[curLoc].teleports.filter(e => e.x < w && e.y < h);   // выкинуть телепорты за границей
   const mobs = LOCS[curLoc].mobs.filter(m => m.x < w && m.y < h);
   const signs = LOCS[curLoc].signs.filter(s => s.x < w && s.y < h);
-  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, signs, W: w, H: h };
+  const npcs = LOCS[curLoc].npcs.filter(n => n.x < w && n.y < h);
+  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, signs, npcs, W: w, H: h };
   switchLoc(curLoc);
 }
 mapWInput.addEventListener('change', applyResize);
@@ -168,6 +191,10 @@ function setMob(x, y, type) { removeMob(x, y); LOCS[curLoc].mobs.push({ x, y, ty
 function removeSign(x, y) { LOCS[curLoc].signs = LOCS[curLoc].signs.filter(s => !(s.x === x && s.y === y)); }
 function setSign(x, y, text) { removeSign(x, y); LOCS[curLoc].signs.push({ x, y, text: String(text || '') }); }
 function signAt(x, y) { return LOCS[curLoc].signs.find(s => s.x === x && s.y === y); }
+// НПС текущей локации
+function removeNpc(x, y) { LOCS[curLoc].npcs = LOCS[curLoc].npcs.filter(n => !(n.x === x && n.y === y)); }
+function setNpc(x, y, data) { removeNpc(x, y); LOCS[curLoc].npcs.push({ ...data, x, y }); }
+function npcAt(x, y) { return LOCS[curLoc].npcs.find(n => n.x === x && n.y === y); }
 socket.on('saveResult', ({ ok }) => {
   statusEl.textContent = ok ? '✓ Сохранено' : '✗ Ошибка';
   setTimeout(() => { statusEl.textContent = ''; }, 2000);
@@ -187,6 +214,12 @@ function drawIcon(c, id) {
     if (mi && mi._ready) return void c.drawImage(mi, 3, 1, 24, 24);
     c.fillStyle = info.color; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill(); c.strokeStyle = '#1a1a24'; c.lineWidth = 1; c.stroke();
     c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
+  }
+  if (id === 'npc') {   // человечек (создать НПС)
+    c.fillStyle = '#f3cfa6'; c.beginPath(); c.arc(15, 9, 4.5, 0, TAU); c.fill();           // голова
+    c.fillStyle = '#3a78c2'; c.beginPath(); c.moveTo(15, 13); c.lineTo(22, 25); c.lineTo(8, 25); c.closePath(); c.fill(); // тело
+    c.fillStyle = '#e0a93b'; c.beginPath(); c.arc(23, 7, 3, 0, TAU); c.fill();              // звёздочка-«+» намёк
+    c.fillStyle = '#1a1a24'; c.font = 'bold 7px sans-serif'; c.textAlign = 'center'; c.fillText('+', 23, 9.5); return;
   }
   if (id === -1) { c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
   if (id === -2) { // карандаш «изменить»
@@ -232,7 +265,7 @@ function buildPalette() {
 
 saveBtn.addEventListener('click', () => {
   const out = {};
-  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs, signs: LOCS[k].signs };
+  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs, signs: LOCS[k].signs, npcs: LOCS[k].npcs };
   socket.emit('saveMap', { locations: out });
 });
 
@@ -267,7 +300,7 @@ canvas.addEventListener('mousedown', (e) => {
   else if (e.button === 0) {
     // Инструменты с диалогом (табличка/изменить) — только одиночный клик, БЕЗ протяжки:
     // prompt() блокирует поток и «съедает» mouseup, иначе курсор продолжал бы рисовать.
-    const dialogTool = (selected === SIGN || selected === EDIT);
+    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc');
     if (!dialogTool) painting = true;
     paintAt(e, true);   // true = одиночный клик (можно спросить текст/правку)
   }
@@ -302,11 +335,12 @@ function paintAt(e, isClick) {
   const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
   if (selected === EDIT) { if (isClick) editParams(t.x, t.y); return; }  // «Изменить»: правка параметров поставленного объекта
+  if (selected === 'npc') { if (isClick) openNpcEditor(t.x, t.y, npcAt(t.x, t.y) || null); return; } // создать/править НПС
   if (typeof selected === 'string' && selected.startsWith('mob:')) { // существо: ставим маркер (тайл не меняем)
     setMob(t.x, t.y, selected.slice(4)); return;
   }
-  if (selected === ERASE) {                          // ластик: убрать объект/моба, оставить пол
-    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y);
+  if (selected === ERASE) {                          // ластик: убрать объект/моба/НПС, оставить пол
+    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y); removeNpc(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
     FLOOR[t.y][t.x] = selected;
     if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
@@ -326,6 +360,8 @@ function paintAt(e, isClick) {
 
 // «Изменить» — правка параметров уже поставленного объекта на клетке
 function editParams(x, y) {
+  const npc = npcAt(x, y);
+  if (npc) { openNpcEditor(x, y, npc); return; }      // НПС — открыть его конструктор
   const t = MAP[y][x];
   if (t === SIGN) {
     const cur = signAt(x, y);
@@ -336,7 +372,7 @@ function editParams(x, y) {
     const sid = prompt('ID связи (порталы/лестницы с одинаковым ID соединены):', te ? te.sid : '');
     if (sid !== null) setTele(x, y, sid.trim() || '1');
   } else {
-    alert('На этой клетке нечего настраивать.\nИзменяемые объекты: табличка (текст), порталы и лестницы (ID связи).');
+    alert('На этой клетке нечего настраивать.\nИзменяемые объекты: НПС, табличка (текст), порталы и лестницы (ID связи).');
   }
 }
 
@@ -477,7 +513,132 @@ function render() {
   // Существа (поверх объектов)
   const ms = (LOCS[curLoc] && LOCS[curLoc].mobs) || [];
   for (const m of ms) drawMobMarker(panX + isoX(m.x, m.y), panY + isoY(m.x, m.y), m.type);
+  // Авторские НПС (поверх объектов)
+  const ns = (LOCS[curLoc] && LOCS[curLoc].npcs) || [];
+  for (const n of ns) drawNpcMarker(panX + isoX(n.x, n.y), panY + isoY(n.x, n.y), n);
 
   requestAnimationFrame(render);
+}
+
+// --- Конструктор НПС (модальное окно) ---
+const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const escAttr = escHtml;
+function npcDefaults() { return { name: 'НПС', link: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, dialogue: '', talkText: '', quest: null }; }
+function questDefaults() { return { title: 'Задание', desc: '', type: 'gather', target: 'wood', count: 5, reward: 50, rewardItem: null, thanks: 'Спасибо!' }; }
+
+function openNpcEditor(x, y, existing) {
+  const data = existing ? JSON.parse(JSON.stringify(existing)) : npcDefaults();
+  if (!data.appearance) data.appearance = { skin: PALETTES.skin[0] };
+  if (!data.equipment) data.equipment = {};
+  const q = data.quest ? { ...questDefaults(), ...data.quest } : questDefaults();
+  const ov = document.getElementById('npcOverlay');
+  const opt = (arr, sel) => arr.map(([v, l]) => `<option value="${escAttr(v)}"${v === sel ? ' selected' : ''}>${escHtml(l)}</option>`).join('');
+  const skinSw = PALETTES.skin.map(c => `<span class="npc-skin${data.appearance.skin === c ? ' sel' : ''}" data-c="${c}" style="background:${c}"></span>`).join('');
+  const equipRows = EQUIP_ORDER.map(slot => `<label class="npc-eq"><span>${SLOT_NAMES[slot]}</span><select data-slot="${slot}">${opt(EQUIP_ITEMS[slot], data.equipment[slot] || '')}</select></label>`).join('');
+  ov.innerHTML = `
+    <div class="npc-modal">
+      <div class="npc-left">
+        <div class="npc-preview" id="npcPreview"></div>
+        <div class="npc-skins" id="npcSkins">${skinSw}</div>
+        <div class="npc-eqgrid">${equipRows}</div>
+      </div>
+      <div class="npc-right">
+        <h3>${existing ? 'Изменить НПС' : 'Создать НПС'}</h3>
+        <label class="npc-f">Имя<input id="npcName" type="text" maxlength="24" value="${escAttr(data.name)}"></label>
+        <label class="npc-f">Метка связи<input id="npcLink" type="text" maxlength="24" value="${escAttr(data.link)}" placeholder="для квеста «поговори с…» (иначе имя)"></label>
+        <label class="npc-chk"><input id="npcTrader" type="checkbox"${data.trader ? ' checked' : ''}> Торговец (можно продавать предметы)</label>
+        <label class="npc-f">Реплика при разговоре<textarea id="npcDialogue" maxlength="300" rows="2">${escHtml(data.dialogue)}</textarea></label>
+        <label class="npc-f">Финальный диалог talk-квеста<textarea id="npcTalk" maxlength="300" rows="2" placeholder="покажется, когда игрок придёт сюда завершить квест «поговори с…»">${escHtml(data.talkText)}</textarea></label>
+        <label class="npc-chk"><input id="npcHasQuest" type="checkbox"${data.quest ? ' checked' : ''}> Даёт квест</label>
+        <div id="npcQuestBox" class="npc-quest${data.quest ? '' : ' hidden'}">
+          <label class="npc-f">Название квеста<input id="qTitle" type="text" value="${escAttr(q.title)}"></label>
+          <label class="npc-f">Описание (что делать)<textarea id="qDesc" rows="2">${escHtml(q.desc)}</textarea></label>
+          <label class="npc-f">Тип<select id="qType">${opt([['gather', 'Собрать предмет'], ['kill', 'Убить мобов'], ['talk', 'Поговорить с НПС']], q.type)}</select></label>
+          <div id="qTargetBox" class="npc-f"></div>
+          <label class="npc-f" id="qCountRow">Количество<input id="qCount" type="number" min="1" value="${q.count}"></label>
+          <label class="npc-f">Награда — золото<input id="qReward" type="number" min="0" value="${q.reward}"></label>
+          <label class="npc-f">Награда — предмет<span class="npc-inline"><select id="qRItem">${opt(REWARD_ITEMS, q.rewardItem ? q.rewardItem.id : '')}</select>×<input id="qRQty" type="number" min="1" value="${q.rewardItem ? q.rewardItem.qty : 1}"></span></label>
+          <label class="npc-f">Текст благодарности<textarea id="qThanks" rows="2">${escHtml(q.thanks)}</textarea></label>
+        </div>
+        <div class="npc-btns">
+          ${existing ? '<button id="npcDelete" class="m-danger">Удалить</button>' : ''}
+          <button id="npcCancel" class="m-cancel">Отмена</button>
+          <button id="npcSave" class="m-ok">Сохранить</button>
+        </div>
+      </div>
+    </div>`;
+  ov.classList.remove('hidden');
+
+  const $ = (id) => ov.querySelector('#' + id);
+  const preview = () => { $('npcPreview').innerHTML = buildCharacterSVG(data.appearance, data.equipment); };
+  preview();
+
+  // Внешность: кожа
+  ov.querySelectorAll('.npc-skin').forEach(sw => sw.addEventListener('click', () => {
+    data.appearance.skin = sw.dataset.c;
+    ov.querySelectorAll('.npc-skin').forEach(s => s.classList.remove('sel')); sw.classList.add('sel');
+    preview();
+  }));
+  // Экипировка
+  ov.querySelectorAll('select[data-slot]').forEach(sel => sel.addEventListener('change', () => {
+    const slot = sel.dataset.slot; if (sel.value) data.equipment[slot] = sel.value; else delete data.equipment[slot];
+    preview();
+  }));
+  // Поле цели квеста зависит от типа
+  const renderTarget = (type) => {
+    const box = $('qTargetBox');
+    if (type === 'talk') box.innerHTML = `Метка/имя НПС-цели<input id="qTarget" type="text" value="${escAttr(q.type === 'talk' ? q.target : '')}" placeholder="напр. Кузнец или 123">`;
+    else if (type === 'kill') box.innerHTML = `Кого убить<select id="qTarget">${opt(KILL_TARGETS, q.type === 'kill' ? q.target : 'passive')}</select>`;
+    else box.innerHTML = `Что собрать<select id="qTarget">${opt(GATHER_TARGETS, q.type === 'gather' ? q.target : 'wood')}</select>`;
+    $('qCountRow').style.display = (type === 'talk') ? 'none' : '';
+  };
+  renderTarget(q.type);
+  $('qType').addEventListener('change', () => renderTarget($('qType').value));
+  $('npcHasQuest').addEventListener('change', () => $('npcQuestBox').classList.toggle('hidden', !$('npcHasQuest').checked));
+
+  const close = () => { ov.classList.add('hidden'); ov.innerHTML = ''; };
+  $('npcCancel').addEventListener('click', close);
+  if (existing) $('npcDelete').addEventListener('click', () => { removeNpc(x, y); close(); });
+  $('npcSave').addEventListener('click', () => {
+    data.name = ($('npcName').value || 'НПС').trim().slice(0, 24);
+    data.link = ($('npcLink').value || '').trim().slice(0, 24);
+    data.trader = $('npcTrader').checked;
+    data.dialogue = ($('npcDialogue').value || '').slice(0, 300);
+    data.talkText = ($('npcTalk').value || '').slice(0, 300);
+    if ($('npcHasQuest').checked) {
+      const type = $('qType').value;
+      const rItem = $('qRItem').value;
+      data.quest = {
+        title: ($('qTitle').value || 'Задание').slice(0, 60),
+        desc: ($('qDesc').value || '').slice(0, 300),
+        type,
+        target: ($('qTarget').value || '').trim(),
+        count: type === 'talk' ? 1 : Math.max(1, parseInt($('qCount').value, 10) || 1),
+        reward: Math.max(0, parseInt($('qReward').value, 10) || 0),
+        rewardItem: rItem ? { id: rItem, qty: Math.max(1, parseInt($('qRQty').value, 10) || 1) } : null,
+        thanks: ($('qThanks').value || 'Спасибо!').slice(0, 300),
+      };
+    } else data.quest = null;
+    setNpc(x, y, data);
+    close();
+  });
+}
+
+// НПС в редакторе: персонаж со своей внешностью/экипировкой + имя + значок роли
+function drawNpcMarker(cx, cy, n) {
+  const z = zoom;
+  const ent = getCharImage(n.appearance || DEFAULT_APPEARANCE, n.equipment || {});
+  const H = 46 * z, W = H * CHAR_RATIO, topY = cy + 4 * z - H * CHAR_FEET;
+  if (ent.ready) ctx.drawImage(ent.img, cx - W / 2, topY, W, H);
+  else { ctx.fillStyle = '#f3cfa6'; ctx.beginPath(); ctx.arc(cx, cy - 10 * z, 6 * z, 0, Math.PI * 2); ctx.fill(); }
+  // имя
+  ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(11 * z)}px sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText(n.name || 'НПС', cx, topY - 4 * z);
+  // значки ролей
+  let badge = '';
+  if (n.quest) badge += '!';
+  if (n.trader) badge += '$';
+  if (n.talkText) badge += '?';
+  if (badge) { ctx.fillStyle = '#f1c40f'; ctx.font = `bold ${Math.round(12 * z)}px sans-serif`; ctx.fillText(badge, cx, topY - 16 * z); }
 }
 requestAnimationFrame(render);

@@ -8,6 +8,14 @@ const DEFAULT_MAP = require('./data/default-map.json');
 const MOB_DATA = require('./data/mobs.json');
 const MOB_TYPES = new Set(Object.keys(MOB_DATA.types || {}));           // допустимые типы мобов
 const DEFAULT_SURFACE_MOBS = (MOB_DATA.spawns || []).map(s => ({ x: s.x, y: s.y, type: s.type })); // стартовые мобы Поверхности
+const questsMod = require('./quests');                                  // реестр авторских квестов (с НПС)
+
+// Собрать все авторские квесты с НПС всех локаций в реестр движка квестов
+function rebuildQuestRegistry() {
+  const defs = {};
+  for (const ln in locations) for (const n of (locations[ln].npcs || [])) if (n.quest) defs[n.quest.id] = { ...n.quest, npc: n.name, location: ln };
+  questsMod.setAuthored(defs);
+}
 
 const MAPS_DIR = path.join(__dirname, 'maps');
 const MAP_FILE = path.join(MAPS_DIR, 'world.json');
@@ -46,18 +54,56 @@ function defaultMines() {
   return { map, floor, teleports: [{ x: 3, y: 3, sid: 1 }], mobs: [] };
 }
 
-function normLoc(L) {
+const EQUIP_SLOTS = ['helmet', 'chest', 'gloves', 'pants', 'boots', 'cloak', 'mainHand', 'offHand'];
+const QUEST_TYPES = new Set(['gather', 'kill', 'talk']);
+
+// Нормализовать одного НПС (приводим к безопасному виду; квесту даём стабильный id)
+function normNpc(n, loc, idx) {
+  const x = n.x | 0, y = n.y | 0;
+  const appearance = (n.appearance && typeof n.appearance === 'object') ? { ...n.appearance } : {};
+  const equipment = {};
+  if (n.equipment && typeof n.equipment === 'object') for (const s of EQUIP_SLOTS) if (n.equipment[s]) equipment[s] = String(n.equipment[s]);
+  let quest = null;
+  if (n.quest && typeof n.quest === 'object' && QUEST_TYPES.has(n.quest.type)) {
+    const q = n.quest;
+    quest = {
+      id: `q_${loc}_${x}_${y}`,
+      title: String(q.title || 'Задание'),
+      desc: String(q.desc || ''),
+      type: q.type,
+      target: String(q.target || ''),          // gather: itemId; kill: тип моба; talk: метка/имя НПС
+      count: q.type === 'talk' ? 1 : Math.max(1, q.count | 0),
+      reward: Math.max(0, q.reward | 0),        // золото
+      rewardItem: (q.rewardItem && q.rewardItem.id) ? { id: String(q.rewardItem.id), qty: Math.max(1, q.rewardItem.qty | 0) } : null,
+      thanks: String(q.thanks || 'Спасибо за помощь!'),
+    };
+  }
+  return {
+    id: `n_${loc}_${x}_${y}`,
+    x, y,
+    name: String(n.name || 'НПС').slice(0, 24),
+    link: String(n.link || '').slice(0, 24),     // метка для talk-квестов (пусто → используется имя)
+    appearance, equipment,
+    trader: !!n.trader,
+    dialogue: String(n.dialogue || '').slice(0, 300),
+    talkText: String(n.talkText || '').slice(0, 300), // финальный диалог, если этот НПС завершает talk-квест
+    quest,
+  };
+}
+
+function normLoc(L, locName) {
   const map = L.map, floor = Array.isArray(L.floor) ? L.floor : deriveFloor(map);
   // mobs: undefined = поле отсутствовало (легаси, подсеем позже); массив = используем как есть
   const mobs = Array.isArray(L.mobs) ? L.mobs.map(m => ({ x: m.x, y: m.y, type: m.type })) : undefined;
   const signs = Array.isArray(L.signs) ? L.signs.map(s => ({ x: s.x, y: s.y, text: String(s.text || '') })) : [];
-  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, signs, H: map.length, W: map[0].length };
+  const npcs = Array.isArray(L.npcs) ? L.npcs.map((n, i) => normNpc(n, locName || 'loc', i)) : [];
+  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, signs, npcs, H: map.length, W: map[0].length };
 }
 
 function saveToDisk() {
   if (!fs.existsSync(MAPS_DIR)) fs.mkdirSync(MAPS_DIR, { recursive: true });
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [] };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], npcs: locations[k].npcs || [] };
   fs.writeFileSync(MAP_FILE, JSON.stringify({ locations: out }));
 }
 
@@ -72,20 +118,21 @@ function writeTestMapJs() {
 
 // Разобрать сохранённое: новый формат {locations}, старый {map,floor}, или массив
 function parse(raw) {
-  if (raw && raw.locations) { const out = {}; for (const k in raw.locations) out[k] = normLoc(raw.locations[k]); return out; }
-  if (raw && Array.isArray(raw.map)) return { surface: normLoc(raw) };
-  if (Array.isArray(raw)) return { surface: normLoc({ map: raw }) };
+  if (raw && raw.locations) { const out = {}; for (const k in raw.locations) out[k] = normLoc(raw.locations[k], k); return out; }
+  if (raw && Array.isArray(raw.map)) return { surface: normLoc(raw, 'surface') };
+  if (Array.isArray(raw)) return { surface: normLoc({ map: raw }, 'surface') };
   return null;
 }
 
 function load() {
   let parsed = null;
   try { parsed = parse(JSON.parse(fs.readFileSync(MAP_FILE, 'utf8'))); } catch (e) { parsed = null; }
-  if (!parsed) parsed = { surface: normLoc(defaultSurface()), mines: normLoc(defaultMines()) }; // дефолт только при первом запуске
-  if (!parsed[START]) parsed[START] = normLoc(defaultSurface()); // Поверхность обязательна
+  if (!parsed) parsed = { surface: normLoc(defaultSurface(), 'surface'), mines: normLoc(defaultMines(), 'mines') }; // дефолт только при первом запуске
+  if (!parsed[START]) parsed[START] = normLoc(defaultSurface(), START); // Поверхность обязательна
   // Миграция: если у локации не было поля mobs (старый формат) — подсеять (Поверхности — стартовых мобов)
   for (const k in parsed) if (parsed[k].mobs === undefined) parsed[k].mobs = (k === START ? DEFAULT_SURFACE_MOBS.map(m => ({ ...m })) : []);
   locations = parsed;
+  rebuildQuestRegistry();
   saveToDisk();
   writeTestMapJs();
   console.log(`  → Локаций загружено: ${Object.keys(locations).join(', ')}`);
@@ -143,17 +190,30 @@ function teleportTarget(loc, x, y) {
   return null;
 }
 
+// Публичный вид НПС для игрока (talkText не отдаём — он выдаётся сервером при завершении talk-квеста)
+function publicNpc(n) {
+  return { id: n.id, x: n.x, y: n.y, name: n.name, link: n.link, appearance: n.appearance, equipment: n.equipment, trader: n.trader, dialogue: n.dialogue, quest: n.quest || null };
+}
+function npcsOf(loc) { const L = locations[loc]; return L ? (L.npcs || []).map(publicNpc) : []; }
+function npcAt(loc, x, y) { const L = locations[loc]; if (!L) return null; return (L.npcs || []).find(n => n.x === x && n.y === y) || null; }
+// Найти НПС по метке связи (или имени) в указанной локации (для talk-квестов)
+function npcByLink(loc, label) {
+  const L = locations[loc]; if (!L || !label) return null;
+  const t = String(label).trim();
+  return (L.npcs || []).find(n => String(n.link || '').trim() === t || String(n.name || '').trim() === t) || null;
+}
+
 // Снимок одной локации для игрового клиента
 function locState(loc) {
   const L = locations[loc] || locations[START];
   const name = locations[loc] ? loc : START;
-  return { location: name, map: L.map, floor: L.floor, signs: L.signs || [], width: L.W, height: L.H };
+  return { location: name, map: L.map, floor: L.floor, signs: L.signs || [], npcs: (L.npcs || []).map(publicNpc), width: L.W, height: L.H };
 }
 
 // Все локации для редактора
 function editorState() {
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], width: locations[k].W, height: locations[k].H };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], npcs: locations[k].npcs || [], width: locations[k].W, height: locations[k].H };
   return { locations: out };
 }
 
@@ -187,13 +247,17 @@ function setLocations(payload) {
     const signs = Array.isArray(L.signs)
       ? L.signs.filter(s => Number.isInteger(s.x) && Number.isInteger(s.y) && typeof s.text === 'string').map(s => ({ x: s.x, y: s.y, text: s.text.slice(0, 300) }))
       : [];
-    next[k] = { map, floor, teleports, mobs, signs, H: map.length, W: map[0].length };
+    const npcs = Array.isArray(L.npcs)
+      ? L.npcs.filter(n => Number.isInteger(n.x) && Number.isInteger(n.y)).map(n => normNpc(n, k))
+      : [];
+    next[k] = { map, floor, teleports, mobs, signs, npcs, H: map.length, W: map[0].length };
   }
   if (!next[START]) return false;                 // Поверхность обязательна (стартовая локация)
   locations = next;
+  rebuildQuestRegistry();
   saveToDisk();
   writeTestMapJs();
   return true;
 }
 
-module.exports = { load, isWalkable, randomSpawn, pickSpawn, spawnPoints, mobSpawns, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap };
+module.exports = { load, isWalkable, randomSpawn, pickSpawn, spawnPoints, mobSpawns, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap, npcsOf, npcAt, npcByLink };

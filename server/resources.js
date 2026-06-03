@@ -64,6 +64,7 @@ function start(io) {
       const up = skills.addXp(p, n.skill, n.xp);            // опыт навыка за добытый ресурс
       io.to(pid).emit('skillUpdate', { skill: up.skill, ...skills.one(p, up.skill), leveledUp: up.leveledUp });
       const qg = quests.recordGather(p, n.gives);          // продвинуть НПС-квест на сбор (награда внутри)
+      if (qg && qg.done && qg.rewardItem) addItem(p, qg.rewardItem.id, qg.rewardItem.qty); // награда-предмет
       io.to(pid).emit('inventoryUpdate', invState(p));      // включает золото-награду, если квест выполнен
       io.to(pid).emit('loot', { id: n.gives, qty: 1 });
       if (qg) {
