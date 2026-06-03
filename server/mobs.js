@@ -9,18 +9,28 @@ const TYPES = data.types;
 const mobs = {}; // id -> { id, x, y, type, hp, maxHp, color, alive }
 let seq = 0;
 
+// Спавн мобов из карт (расставлены в редакторе, хранятся по локациям в world)
 function create() {
-  for (const s of data.spawns) {
-    const loc = s.location || 'surface';
-    if (!world.isWalkable(loc, s.x, s.y)) {
-      console.log(`  ⚠ моб на непроходимой клетке ${loc} ${s.x},${s.y} — пропущен`);
-      continue;
-    }
+  for (const s of world.mobSpawns()) {
+    if (!world.isWalkable(s.location, s.x, s.y)) continue;     // на непроходимой клетке — пропустить
     const def = TYPES[s.type];
-    if (!def) { console.log(`  ⚠ неизвестный тип моба "${s.type}" — пропущен`); continue; }
+    if (!def) continue;
     const id = 'm' + (seq++);
-    mobs[id] = { id, x: s.x, y: s.y, location: s.location || 'surface', type: s.type, hp: def.maxHp, maxHp: def.maxHp, color: def.color, sprite: def.sprite || null, alive: true };
+    mobs[id] = { id, x: s.x, y: s.y, location: s.location, type: s.type, hp: def.maxHp, maxHp: def.maxHp, color: def.color, sprite: def.sprite || null, alive: true };
   }
+}
+
+// Очистить всех мобов (и отменить таймеры респауна) — перед пересборкой
+function clear() {
+  for (const id in mobs) { if (mobs[id]._respawn) clearTimeout(mobs[id]._respawn); delete mobs[id]; }
+}
+
+// Пересобрать мобов после правки карт в редакторе + разослать клиентам
+function rebuild(io) {
+  clear();
+  create();
+  for (const pid in players) { players[pid].target = null; players[pid].turn = null; }
+  io.emit('mobsReset', publicMobs());
 }
 
 function mobAt(loc, x, y) {
@@ -47,10 +57,10 @@ function kill(io, m) {
   for (const pid in players) {
     if (players[pid] && players[pid].target === m.id) { players[pid].target = null; players[pid].turn = null; }
   }
-  setTimeout(() => {
-    m.alive = true; m.hp = m.maxHp;
+  m._respawn = setTimeout(() => {
+    m._respawn = null; m.alive = true; m.hp = m.maxHp;
     io.emit('mobRespawned', { id: m.id, x: m.x, y: m.y, location: m.location, type: m.type, hp: m.hp, maxHp: m.maxHp, color: m.color, sprite: m.sprite, alive: true });
   }, RESPAWN_MS);
 }
 
-module.exports = { mobs, TYPES, create, mobAt, playerCanStep, publicMobs, kill };
+module.exports = { mobs, TYPES, create, clear, rebuild, mobAt, playerCanStep, publicMobs, kill };

@@ -34,6 +34,9 @@ const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const i
 const chestImg = new Image(); chestImg._ready = false; chestImg.onload = () => { chestImg._ready = true; }; chestImg.src = '/assets/chest.svg';
 const anvilImg = new Image(); anvilImg._ready = false; anvilImg.onload = () => { anvilImg._ready = true; }; anvilImg.src = '/assets/anvil.svg';
 const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload = () => { campfireImg._ready = true; }; campfireImg.src = '/assets/campfire.svg';
+const mkImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; };
+const MOB_IMG = { passive: mkImg('/assets/chicken.svg'), aggressive: mkImg('/assets/wolf.svg'), bear: mkImg('/assets/bear.svg') };
+const MOB_INFO = { passive: { name: 'Курица', color: '#f1c40f' }, aggressive: { name: 'Волк', color: '#888' }, bear: { name: 'Медведь', color: '#6b4a2b' }, friendly: { name: 'Мирный', color: '#2ecc71' }, trader: { name: 'Торговец', color: '#c79a2a' }, questgiver: { name: 'Лесник', color: '#3f9e63' } };
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 let zoom = 1;
 let panX = 0, panY = 0; // экранное смещение начала координат
@@ -47,6 +50,7 @@ const CATEGORIES = [
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
+  { name: 'Существа', items: [ { id: 'mob:passive', name: 'Курица', color: '#f1c40f' }, { id: 'mob:aggressive', name: 'Волк', color: '#888c94' }, { id: 'mob:bear', name: 'Медведь', color: '#6b4a2b' }, { id: 'mob:friendly', name: 'Мирный', color: '#2ecc71' }, { id: 'mob:trader', name: 'Торговец', color: '#c79a2a' }, { id: 'mob:questgiver', name: 'Лесник', color: '#3f9e63' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
 ];
 let selected = 0; // выбранный id тайла
@@ -64,7 +68,7 @@ socket.on('mapData', (data) => {
   for (const k in (data.locations || {})) {
     const L = data.locations[k];
     LOCS[k] = { map: L.map.map(r => r.slice()), floor: (L.floor || deriveFloor(L.map)).map(r => r.slice()),
-                teleports: (L.teleports || []).map(e => ({ ...e })), W: L.width, H: L.height };
+                teleports: (L.teleports || []).map(e => ({ ...e })), mobs: (L.mobs || []).map(m => ({ ...m })), W: L.width, H: L.height };
   }
   switchLoc(LOCS.surface ? 'surface' : Object.keys(LOCS)[0]);
 });
@@ -97,7 +101,7 @@ function blankLocation() {
     for (let x = 0; x < W; x++) { const b = (x === 0 || y === 0 || x === W - 1 || y === H - 1); mr.push(b ? 2 : 0); fr.push(0); }
     map.push(mr); floor.push(fr);
   }
-  return { map, floor, teleports: [], W, H };
+  return { map, floor, teleports: [], mobs: [], W, H };
 }
 function addLocation() {
   const name = (prompt('Название новой локации:', '') || '').trim();
@@ -138,7 +142,8 @@ function applyResize() {
     nm.push(mr); nf.push(fr);
   }
   const tele = LOCS[curLoc].teleports.filter(e => e.x < w && e.y < h);   // выкинуть телепорты за границей
-  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, W: w, H: h };
+  const mobs = LOCS[curLoc].mobs.filter(m => m.x < w && m.y < h);
+  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, W: w, H: h };
   switchLoc(curLoc);
 }
 mapWInput.addEventListener('change', applyResize);
@@ -147,6 +152,9 @@ mapHInput.addEventListener('change', applyResize);
 function removeTele(x, y) { LOCS[curLoc].teleports = LOCS[curLoc].teleports.filter(e => !(e.x === x && e.y === y)); }
 function setTele(x, y, sid) { removeTele(x, y); LOCS[curLoc].teleports.push({ x, y, sid }); }
 function teleAt(x, y) { return LOCS[curLoc].teleports.find(e => e.x === x && e.y === y); }
+// Мобы текущей локации
+function removeMob(x, y) { LOCS[curLoc].mobs = LOCS[curLoc].mobs.filter(m => !(m.x === x && m.y === y)); }
+function setMob(x, y, type) { removeMob(x, y); LOCS[curLoc].mobs.push({ x, y, type }); }
 socket.on('saveResult', ({ ok }) => {
   statusEl.textContent = ok ? '✓ Сохранено' : '✗ Ошибка';
   setTimeout(() => { statusEl.textContent = ''; }, 2000);
@@ -180,7 +188,7 @@ function buildPalette() {
 
 saveBtn.addEventListener('click', () => {
   const out = {};
-  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports };
+  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs };
   socket.emit('saveMap', { locations: out });
 });
 
@@ -243,8 +251,11 @@ function paintAt(e) {
   const r = canvas.getBoundingClientRect();
   const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
-  if (selected === ERASE) {                          // ластик: убрать объект, оставить пол
-    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y);
+  if (typeof selected === 'string' && selected.startsWith('mob:')) { // существо: ставим маркер (тайл не меняем)
+    setMob(t.x, t.y, selected.slice(4)); return;
+  }
+  if (selected === ERASE) {                          // ластик: убрать объект/моба, оставить пол
+    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
     FLOOR[t.y][t.x] = selected;
     if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
@@ -308,6 +319,18 @@ function drawRock(cx, cy, ore) {
 function drawAnvil(cx, cy) {
   const z = zoom, W = 32 * z, H = 32 * z, top = cy - H / 2 - 5 * z;
   if (anvilImg._ready) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
+}
+function drawMobMarker(cx, cy, type) {                 // существо в редакторе: спрайт/кружок + подпись
+  const z = zoom, info = MOB_INFO[type] || { name: type, color: '#888' }, img = MOB_IMG[type];
+  if (img && img._ready) { const W = 30 * z, H = 30 * z; ctx.drawImage(img, cx - W / 2, cy + 8 * z - H, W, H); }
+  else {
+    ctx.fillStyle = info.color; ctx.beginPath(); ctx.arc(cx, cy - 8 * z, 9 * z, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 1.5 * z; ctx.stroke();
+    ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(cx - 3 * z, cy - 9 * z, 1.4 * z, 0, Math.PI * 2); ctx.arc(cx + 3 * z, cy - 9 * z, 1.4 * z, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.font = `bold ${Math.round(10 * z)}px sans-serif`; ctx.textAlign = 'center';
+  ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 3 * z; ctx.strokeText(info.name, cx, cy + 16 * z);
+  ctx.fillStyle = '#fff'; ctx.fillText(info.name, cx, cy + 16 * z);
 }
 function drawSmelter(cx, cy) {
   const z = zoom;
@@ -423,6 +446,10 @@ function render() {
     else if (o.k === 19) drawSpawn(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else drawRock(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.k === 6);
   }
+  // Существа (поверх объектов)
+  const ms = (LOCS[curLoc] && LOCS[curLoc].mobs) || [];
+  for (const m of ms) drawMobMarker(panX + isoX(m.x, m.y), panY + isoY(m.x, m.y), m.type);
+
   requestAnimationFrame(render);
 }
 requestAnimationFrame(render);

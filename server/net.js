@@ -30,6 +30,7 @@ function setup(io) {
         if (!socket.isAdmin) return;                 // ГЛАВНАЯ защита: без прав — игнор
         if (!world.setLocations(payload)) { socket.emit('saveResult', { ok: false }); return; }
         resources.build();                           // карта изменилась — пересобрать ноды
+        mobsMod.rebuild(io);                          // и мобов (расставлены в редакторе)
         socket.emit('saveResult', { ok: true });
         for (const pid in playersMod.players)         // каждому игроку — свежая карта его локации
           io.to(pid).emit('mapUpdated', world.locState(playersMod.players[pid].location));

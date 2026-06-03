@@ -5,6 +5,9 @@ const path = require('path');
 const fs = require('fs');
 const { BLOCKED, TILES } = require('./config');
 const DEFAULT_MAP = require('./data/default-map.json');
+const MOB_DATA = require('./data/mobs.json');
+const MOB_TYPES = new Set(Object.keys(MOB_DATA.types || {}));           // допустимые типы мобов
+const DEFAULT_SURFACE_MOBS = (MOB_DATA.spawns || []).map(s => ({ x: s.x, y: s.y, type: s.type })); // стартовые мобы Поверхности
 
 const MAPS_DIR = path.join(__dirname, 'maps');
 const MAP_FILE = path.join(MAPS_DIR, 'world.json');
@@ -25,7 +28,7 @@ let locations = {};   // { name: { map, floor, teleports, W, H } }
 function defaultSurface() {
   const map = clone(DEFAULT_MAP);
   map[3][5] = TILES.STAIRS_DOWN;                // лестница вниз → в Шахты (sid 1)
-  return { map, floor: deriveFloor(map), teleports: [{ x: 5, y: 3, sid: 1 }] };
+  return { map, floor: deriveFloor(map), teleports: [{ x: 5, y: 3, sid: 1 }], mobs: DEFAULT_SURFACE_MOBS.map(m => ({ ...m })) };
 }
 function defaultMines() {
   const W = 20, H = 14, map = [], floor = [];
@@ -40,18 +43,20 @@ function defaultMines() {
   }
   [[6, 4], [6, 5], [13, 8], [13, 9], [9, 10]].forEach(([x, y]) => { map[y][x] = TILES.WALL; }); // колонны
   map[3][3] = TILES.STAIRS_UP;                   // лестница наверх → на Поверхность (sid 1)
-  return { map, floor, teleports: [{ x: 3, y: 3, sid: 1 }] };
+  return { map, floor, teleports: [{ x: 3, y: 3, sid: 1 }], mobs: [] };
 }
 
 function normLoc(L) {
   const map = L.map, floor = Array.isArray(L.floor) ? L.floor : deriveFloor(map);
-  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], H: map.length, W: map[0].length };
+  // mobs: undefined = поле отсутствовало (легаси, подсеем позже); массив = используем как есть
+  const mobs = Array.isArray(L.mobs) ? L.mobs.map(m => ({ x: m.x, y: m.y, type: m.type })) : undefined;
+  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, H: map.length, W: map[0].length };
 }
 
 function saveToDisk() {
   if (!fs.existsSync(MAPS_DIR)) fs.mkdirSync(MAPS_DIR, { recursive: true });
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [] };
   fs.writeFileSync(MAP_FILE, JSON.stringify({ locations: out }));
 }
 
@@ -77,6 +82,8 @@ function load() {
   try { parsed = parse(JSON.parse(fs.readFileSync(MAP_FILE, 'utf8'))); } catch (e) { parsed = null; }
   if (!parsed) parsed = { surface: normLoc(defaultSurface()), mines: normLoc(defaultMines()) }; // дефолт только при первом запуске
   if (!parsed[START]) parsed[START] = normLoc(defaultSurface()); // Поверхность обязательна
+  // Миграция: если у локации не было поля mobs (старый формат) — подсеять (Поверхности — стартовых мобов)
+  for (const k in parsed) if (parsed[k].mobs === undefined) parsed[k].mobs = (k === START ? DEFAULT_SURFACE_MOBS.map(m => ({ ...m })) : []);
   locations = parsed;
   saveToDisk();
   writeTestMapJs();
@@ -117,6 +124,13 @@ function pickSpawn(loc) {
   return randomSpawn(loc);
 }
 
+// Все размещения мобов из карт (по всем локациям) — для спавна
+function mobSpawns() {
+  const out = [];
+  for (const ln in locations) for (const m of (locations[ln].mobs || [])) out.push({ location: ln, x: m.x, y: m.y, type: m.type });
+  return out;
+}
+
 // Куда ведёт телепорт на (loc,x,y): ищем парный по sid в любой локации
 function teleportTarget(loc, x, y) {
   const L = locations[loc]; if (!L) return null;
@@ -138,7 +152,7 @@ function locState(loc) {
 // Все локации для редактора
 function editorState() {
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, width: locations[k].W, height: locations[k].H };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], width: locations[k].W, height: locations[k].H };
   return { locations: out };
 }
 
@@ -166,7 +180,10 @@ function setLocations(payload) {
       ? L.teleports.filter(e => Number.isInteger(e.x) && Number.isInteger(e.y) && e.sid != null && String(e.sid).trim() !== '')
           .map(e => ({ x: e.x, y: e.y, sid: String(e.sid).trim() }))   // связь — строка-метка (число или слово)
       : [];
-    next[k] = { map, floor, teleports, H: map.length, W: map[0].length };
+    const mobs = Array.isArray(L.mobs)
+      ? L.mobs.filter(m => Number.isInteger(m.x) && Number.isInteger(m.y) && MOB_TYPES.has(m.type)).map(m => ({ x: m.x, y: m.y, type: m.type }))
+      : [];
+    next[k] = { map, floor, teleports, mobs, H: map.length, W: map[0].length };
   }
   if (!next[START]) return false;                 // Поверхность обязательна (стартовая локация)
   locations = next;
@@ -175,4 +192,4 @@ function setLocations(payload) {
   return true;
 }
 
-module.exports = { load, isWalkable, randomSpawn, pickSpawn, spawnPoints, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap };
+module.exports = { load, isWalkable, randomSpawn, pickSpawn, spawnPoints, mobSpawns, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap };

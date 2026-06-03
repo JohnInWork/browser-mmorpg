@@ -124,6 +124,12 @@ export function setupNet() {
     if (id === S.combatTargetId) updateTargetHud();
   });
   socket.on('mobRespawned', (m) => { S.mobs[m.id] = { ...m, alive: true, flash: 0 }; });
+  // Мобы пересобраны (правка карт в редакторе) — заменить весь набор
+  socket.on('mobsReset', (mobs) => {
+    S.mobs = {};
+    for (const id in mobs) S.mobs[id] = { ...mobs[id], flash: 0 };
+    S.combatTargetId = null; updateTargetHud();
+  });
   socket.on('combatTarget', (mobId) => { S.combatTargetId = mobId; updateTargetHud(); });
 
   // Агрессивный моб напал (проход мимо) — остановить героя и завязать бой
