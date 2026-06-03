@@ -90,6 +90,24 @@ function setup(io) {
       }
       player.x = x; player.y = y;
       io.emit('playerMoved', { id: socket.id, x, y });
+      // Прошёл вплотную к агрессивному мобу (не тому, на кого сам идёт драться) — моб нападает первым и останавливает героя
+      if (!player.target) {
+        for (const mid in mobsMod.mobs) {
+          const mob = mobsMod.mobs[mid];
+          if (mob.alive && mobsMod.TYPES[mob.type].aggressive && mob.id !== player.engaging && adjOrtho(x, y, mob.x, mob.y)) {
+            player.target = mob.id; player.turn = 'mob'; player.gathering = null;
+            socket.emit('aggro', { mobId: mob.id });       // клиент: стоп движение, завязать бой
+            break;
+          }
+        }
+      }
+    });
+
+    // Игрок выбрал моба для атаки (клик) — намерение драться: этот моб не бьёт первым
+    socket.on('engage', (mobId) => {
+      const m = mobsMod.mobs[mobId];
+      if (!m || !m.alive || !mobsMod.TYPES[m.type].canAttack) return;
+      player.engaging = mobId;
     });
 
     // Игрок атакует моба (клиент подвёл персонажа вплотную и шлёт mobId)
@@ -99,11 +117,12 @@ function setup(io) {
       if (!mobsMod.TYPES[m.type].canAttack) return;       // дружественных бить нельзя
       if (!adjOrtho(player.x, player.y, m.x, m.y)) return; // только вплотную
       player.gathering = null;                             // бой прерывает рубку
-      // Я кликнул — напал первым: мой ход первый (если это новая цель)
-      if (player.target !== mobId) { player.target = mobId; player.turn = 'player'; }
+      player.engaging = null;
+      // Я кликнул и подошёл — напал первым: мой ход ВСЕГДА первый
+      player.target = mobId; player.turn = 'player';
     });
 
-    socket.on('stopAttack', () => { player.target = null; player.turn = null; player.gathering = null; });
+    socket.on('stopAttack', () => { player.target = null; player.turn = null; player.gathering = null; player.engaging = null; });
 
     // --- Торговля (рядом с торговцем можно продать предметы) ---
     const nearTrader = () => {

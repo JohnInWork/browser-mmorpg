@@ -158,6 +158,7 @@ export function setupInput() {
       }
       const ap = approachTo(m.x, m.y);
       if (!ap) return;
+      S.socket.emit('engage', m.id);                 // намерение драться: этот моб не ударит первым
       S.pendingAction = { kind: 'attack', id: m.id };
       S.path = ap.path; S.targetTile = null;
       return;

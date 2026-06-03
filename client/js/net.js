@@ -89,6 +89,12 @@ export function setupNet() {
   socket.on('mobRespawned', (m) => { S.mobs[m.id] = { ...m, alive: true, flash: 0 }; });
   socket.on('combatTarget', (mobId) => { S.combatTargetId = mobId; updateTargetHud(); });
 
+  // Агрессивный моб напал (проход мимо) — остановить героя и завязать бой
+  socket.on('aggro', ({ mobId }) => {
+    S.path = []; S.targetTile = null; S.pendingAction = null;
+    S.combatTargetId = mobId; updateTargetHud();
+  });
+
   socket.on('combatHit', ({ target, id, hp, dmg }) => {
     if (target === 'mob') {
       const m = S.mobs[id];

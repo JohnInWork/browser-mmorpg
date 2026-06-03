@@ -31,13 +31,17 @@ function grantMobLoot(io, pid, p, m) {
 function start(io) {
   const mobs = mobsMod.mobs;
   setInterval(() => {
-    // 1) агрессивные мобы цепляют тех, кто стоит на прямой соседней клетке (моб начал → его ход)
+    // 1) агрессивные мобы цепляют тех, кто стоит на прямой соседней клетке (моб начал → его ход).
+    //    Пропускаем моба, на которого игрок сам идёт драться (player.engaging) — тогда первым бьёт игрок.
     for (const id in mobs) {
       const m = mobs[id];
       if (!m.alive || !mobsMod.TYPES[m.type].aggressive) continue;
       for (const pid in players) {
         const p = players[pid];
-        if (p.hp > 0 && !p.target && adjOrtho(p.x, p.y, m.x, m.y)) { p.target = m.id; p.turn = 'mob'; }
+        if (p.hp > 0 && !p.target && p.engaging !== m.id && adjOrtho(p.x, p.y, m.x, m.y)) {
+          p.target = m.id; p.turn = 'mob';
+          io.to(pid).emit('aggro', { mobId: m.id });       // остановить героя
+        }
       }
     }
     // 2) по каждому игроку с целью — РОВНО ОДИН удар того, чей сейчас ход

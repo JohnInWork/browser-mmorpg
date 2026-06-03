@@ -55,6 +55,7 @@ function create(id) {
     equipment: { helmet: null, chest: null, gloves: null, pants: null, boots: null, cloak: null, mainHand: null, offHand: null },
     target: null,      // id моба, которого бьём
     turn: null,        // 'player' | 'mob' — чей удар
+    engaging: null,    // id моба, на которого игрок сам идёт драться (он не бьёт первым)
     gathering: null,   // id ресурс-ноды (дерева), которую рубим
     quests: { story: 0, progress: 0, completed: [], active: {} }, // story-цепочка + npc-квесты (active: id→прогресс)
   };
