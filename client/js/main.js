@@ -3,7 +3,7 @@ import { S } from './state.js';
 import { setupNet } from './net.js';
 import { setupInput, update } from './input.js';
 import { render } from './render.js';
-import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat } from './ui.js';
+import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu } from './ui.js';
 import { buildCharacterSVG, PALETTES } from './character.js';
 import { itemType } from './items.js';
 
@@ -61,6 +61,7 @@ setupNet();
 setupInput();
 setupUi();
 setupChat();
+setupItemMenu();
 buildCreator();
 
 // --- Интерфейс: хотбар, инвентарь, меню ---
@@ -108,6 +109,11 @@ function setupUi() {
       if (t === 'armor' || t === 'weapon' || t === 'shield') S.socket.emit('equip', i);
       else if (t === 'tool') S.socket.emit('activateInv', i);
       else if (t === 'food') S.socket.emit('eat', i);
+    });
+    // ПКМ по предмету — контекстное меню (разделить / вики / в чат / уничтожить)
+    slot.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (S.inventory[i]) openItemMenu(i, e.clientX, e.clientY);
     });
     invGrid.appendChild(slot);
   }

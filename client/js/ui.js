@@ -56,6 +56,139 @@ export function renderInventory() {
   }
 }
 
+// --- Контекстное меню предмета в рюкзаке (ПКМ) ---
+let ctxIndex = null;
+export function openItemMenu(invIndex, x, y) {
+  const stack = S.inventory[invIndex];
+  if (!stack) return;
+  ctxIndex = invIndex;
+  const def = ITEMS[stack.id] || {};
+  const canSplit = def.stackable && stack.qty > 1;
+  const items = [];
+  if (canSplit) items.push({ key: 'split', label: 'Разделить' });
+  items.push({ key: 'wiki', label: 'Посмотреть в вики' });
+  items.push({ key: 'chat', label: 'Отправить в чат' });
+  items.push({ key: 'destroy', label: 'Уничтожить', danger: true });
+  const menu = document.getElementById('ctxMenu');
+  menu.innerHTML = `<div class="ctx-head">${escHtml(itemName(stack.id))}${stack.qty > 1 ? ` ×${stack.qty}` : ''}</div>`
+    + items.map(it => `<button class="ctx-item${it.danger ? ' danger' : ''}" data-act="${it.key}">${it.label}</button>`).join('');
+  menu.classList.remove('hidden');                                   // показать, чтобы измерить размер
+  const w = menu.offsetWidth, h = menu.offsetHeight;
+  menu.style.left = Math.max(6, Math.min(x, window.innerWidth - w - 8)) + 'px';
+  menu.style.top = Math.max(6, Math.min(y, window.innerHeight - h - 8)) + 'px';
+}
+export function closeItemMenu() {
+  const menu = document.getElementById('ctxMenu');
+  if (menu) menu.classList.add('hidden');
+  ctxIndex = null;
+}
+function ctxAction(act) {
+  const idx = ctxIndex;
+  closeItemMenu();
+  const stack = S.inventory[idx];
+  if (!stack) return;
+  if (act === 'wiki') showItemInGuide(stack.id);
+  else if (act === 'chat') insertItemLinkToChat(stack.id);
+  else if (act === 'split') openSplitDialog(idx);
+  else if (act === 'destroy') openDestroyDialog(idx);
+}
+
+// --- Модальное окно (разделить стак / подтвердить уничтожение) ---
+function openModal(html) {
+  document.getElementById('modalBox').innerHTML = html;
+  document.getElementById('modalOverlay').classList.remove('hidden');
+}
+export function closeModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
+
+function openSplitDialog(invIndex) {
+  const stack = S.inventory[invIndex];
+  if (!stack || stack.qty < 2) return;
+  const max = stack.qty - 1, def = Math.floor(stack.qty / 2);
+  openModal(`
+    <h3>Разделить стак</h3>
+    <p class="modal-sub">${escHtml(itemName(stack.id))} ×${stack.qty}</p>
+    <div class="split-row">
+      <button class="split-step" data-d="-1">−</button>
+      <input id="splitRange" type="range" min="1" max="${max}" value="${def}">
+      <button class="split-step" data-d="1">+</button>
+    </div>
+    <div class="split-amt">Отделить: <b id="splitVal">${def}</b> · останется <span id="splitRest">${stack.qty - def}</span></div>
+    <div class="modal-btns">
+      <button class="m-cancel" data-act="cancel">Отмена</button>
+      <button class="m-ok" data-act="split-ok">Разделить</button>
+    </div>`);
+  const box = document.getElementById('modalBox');
+  const range = box.querySelector('#splitRange');
+  const upd = () => {
+    const v = Math.max(1, Math.min(max, parseInt(range.value, 10) || 1));
+    range.value = v;
+    box.querySelector('#splitVal').textContent = v;
+    box.querySelector('#splitRest').textContent = stack.qty - v;
+  };
+  range.addEventListener('input', upd);
+  box.querySelectorAll('.split-step').forEach(b => b.addEventListener('click', () => {
+    range.value = (parseInt(range.value, 10) || 1) + parseInt(b.dataset.d, 10); upd();
+  }));
+  box.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.act === 'split-ok') S.socket.emit('splitStack', { invIndex, amount: parseInt(range.value, 10) });
+    closeModal();
+  }));
+}
+
+function openDestroyDialog(invIndex) {
+  const stack = S.inventory[invIndex];
+  if (!stack) return;
+  openModal(`
+    <h3>Уничтожить предмет?</h3>
+    <p class="modal-sub"><b>${escHtml(itemName(stack.id))}${stack.qty > 1 ? ` ×${stack.qty}` : ''}</b> будет безвозвратно удалён.</p>
+    <div class="modal-btns">
+      <button class="m-cancel" data-act="cancel">Отмена</button>
+      <button class="m-danger" data-act="destroy-ok">Уничтожить</button>
+    </div>`);
+  document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.act === 'destroy-ok') S.socket.emit('destroyStack', { invIndex });
+    closeModal();
+  }));
+}
+
+// Вставить ссылку-предмет в поле чата (не отправляя — игрок жмёт Enter сам)
+export function insertItemLinkToChat(id) {
+  const input = document.getElementById('chatInput');
+  if (!input) return;
+  const cur = input.value;
+  const sep = cur && !cur.endsWith(' ') ? ' ' : '';
+  input.value = cur + sep + `[[${id}]]` + ' ';
+  document.getElementById('chat')?.classList.remove('collapsed');     // развернуть чат, если свёрнут
+  input.focus();
+}
+
+// Открыть энциклопедию на странице конкретного предмета
+export function showItemInGuide(id) {
+  if (!ITEMS[id]) return;
+  closeItemMenu();
+  ['invPanel', 'charPanel', 'menuPanel', 'questPanel', 'questDialog', 'craftPanel', 'tradePanel']
+    .forEach(p => document.getElementById(p)?.classList.add('hidden'));
+  document.querySelectorAll('#bottomRight button.active').forEach(b => b.classList.remove('active'));
+  document.getElementById('guideBtn')?.classList.add('active');
+  document.getElementById('guidePanel').classList.remove('hidden');
+  S.guideNav = [{ kind: 'index' }, { kind: 'item', id }];
+  renderGuide();
+}
+
+// Навесить обработчики меню/модалки/ссылок (вызывается один раз при инициализации)
+export function setupItemMenu() {
+  const menu = document.getElementById('ctxMenu');
+  menu.addEventListener('click', (e) => { const b = e.target.closest('.ctx-item'); if (b) ctxAction(b.dataset.act); });
+  document.addEventListener('mousedown', (e) => {
+    if (!menu.classList.contains('hidden') && !menu.contains(e.target)) closeItemMenu();
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { closeItemMenu(); closeModal(); } });
+  const ov = document.getElementById('modalOverlay');
+  ov.addEventListener('mousedown', (e) => { if (e.target === ov) closeModal(); });
+  const log = document.getElementById('chatLog');
+  if (log) log.addEventListener('click', (e) => { const a = e.target.closest('.chat-itemlink'); if (a) showItemInGuide(a.dataset.id); });
+}
+
 // Заполнить хотбар предметами (стаки) + подсветить активный
 export function renderHotbar() {
   const hb = document.getElementById('hotbar');
@@ -224,8 +357,15 @@ export function renderChatLog() {
     .map(l => `<div class="cl cl-${l.cat}">${l.html}</div>`).join('');
   log.scrollTop = log.scrollHeight; // автопрокрутка вниз
 }
+// Ссылка-предмет внутри сообщения чата: токен [[id]] → кликабельный чип (иконка + цветное имя)
+function itemChip(id) {
+  return `<span class="chat-itemlink" data-id="${id}" style="color:${rarityColor(id)}"><span class="cil-ic">${itemIcon(id)}</span>${escHtml(itemName(id))}</span>`;
+}
+function renderItemTokens(escaped) {
+  return escaped.replace(/\[\[(\w+)\]\]/g, (m, id) => (ITEMS[id] ? itemChip(id) : m));
+}
 export function chatPlayerMsg(name, text, color) {
-  addChat('chat', `<span class="cl-name" style="color:${safeColor(color)}">${escHtml(name)}:</span> ${escHtml(text)}`);
+  addChat('chat', `<span class="cl-name" style="color:${safeColor(color)}">${escHtml(name)}:</span> ${renderItemTokens(escHtml(text))}`);
 }
 export function chatSystem(text) { addChat('system', escHtml(text)); }
 export function chatLoot(text)   { addChat('loot', escHtml(text)); }

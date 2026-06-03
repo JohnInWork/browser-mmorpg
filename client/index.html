@@ -179,6 +179,14 @@
         <button id="sellSelBtn">Продать</button>
       </div>
     </div>
+
+    <!-- Контекстное меню предмета (ПКМ в рюкзаке) -->
+    <div id="ctxMenu" class="ctx hidden"></div>
+
+    <!-- Модальное окно: разделить стак / подтвердить уничтожение -->
+    <div id="modalOverlay" class="modal-overlay hidden">
+      <div id="modalBox" class="modal-box"></div>
+    </div>
   </div>
 
   <script src="/socket.io/socket.io.js"></script>

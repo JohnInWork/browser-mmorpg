@@ -240,6 +240,40 @@ body {
 /* Маленькие UI-иконки вместо эмодзи */
 .uic { width: 14px; height: 14px; vertical-align: -2px; display: inline-block; }
 
+/* Контекстное меню предмета (ПКМ в рюкзаке) */
+.ctx { position: fixed; z-index: 50; min-width: 172px; background: #22222e; border: 1px solid #3a3a4e; border-radius: 10px; padding: 5px; box-shadow: 0 12px 32px rgba(0,0,0,.6); }
+.ctx-head { font-size: 12px; color: #9aa0b0; padding: 4px 8px 7px; border-bottom: 1px solid #33333f; margin-bottom: 4px; white-space: nowrap; }
+.ctx-item { display: block; width: 100%; text-align: left; background: none; border: none; color: #e6e9ef; font-size: 13px; padding: 7px 9px; border-radius: 7px; cursor: pointer; }
+.ctx-item:hover { background: #2f2f40; }
+.ctx-item.danger { color: #e74c3c; }
+.ctx-item.danger:hover { background: rgba(231,76,60,.16); }
+
+/* Модальное окно (разделить стак / подтвердить уничтожение) */
+.modal-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); }
+.modal-box { background: #22222e; border: 1px solid #3a3a4e; border-radius: 14px; padding: 20px; width: 300px; box-shadow: 0 16px 50px rgba(0,0,0,.6); }
+.modal-box h3 { font-size: 16px; margin-bottom: 8px; }
+.modal-sub { font-size: 13px; color: #b9c0cc; margin-bottom: 14px; line-height: 1.45; }
+.split-row { display: flex; align-items: center; gap: 10px; }
+.split-row input[type=range] { flex: 1; accent-color: #5b8def; }
+.split-step { width: 30px; height: 30px; border-radius: 8px; border: 1px solid #3a3a4e; background: #1a1a24; color: #fff; font-size: 18px; line-height: 1; cursor: pointer; }
+.split-step:hover { background: #2f2f40; }
+.split-amt { font-size: 13px; color: #cfd6e4; margin: 12px 0 16px; }
+.split-amt b { color: #fff; }
+.modal-btns { display: flex; gap: 10px; justify-content: flex-end; }
+.modal-btns button { padding: 8px 14px; border-radius: 9px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; }
+.m-cancel { background: #33333f; color: #cfd6e4; }
+.m-cancel:hover { background: #3e3e4e; }
+.m-ok { background: #2ecc71; color: #0d2616; }
+.m-ok:hover { background: #27b765; }
+.m-danger { background: #e74c3c; color: #fff; }
+.m-danger:hover { background: #d63a2a; }
+
+/* Ссылка-предмет в чате */
+.chat-itemlink { cursor: pointer; font-weight: 600; white-space: nowrap; }
+.chat-itemlink:hover { text-decoration: underline; }
+.cil-ic { display: inline-flex; vertical-align: -3px; width: 16px; height: 16px; }
+.cil-ic svg, .cil-ic img { width: 16px; height: 16px; }
+
 /* Диалог квеста от НПС */
 #questDialog { left: 50%; right: auto; top: 90px; bottom: auto; transform: translateX(-50%); width: 330px; max-width: 92vw; }
 .qd-desc { font-size: 13px; line-height: 1.5; color: #dfe4ee; margin: 6px 0 10px; }

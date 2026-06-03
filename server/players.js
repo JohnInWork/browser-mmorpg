@@ -166,6 +166,26 @@ function unequipItem(p, slot) {
   return true;
 }
 
+// Разделить стак: отнять amount у стака и положить новый стак тем же предметом
+const INV_CAP = 32;
+function splitStack(p, invIndex, amount) {
+  if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
+  if (p.inventory.length >= INV_CAP) return false;          // нет свободной клетки под новый стак
+  const s = p.inventory[invIndex];
+  amount = Math.floor(Number(amount));
+  if (!s || !(s.qty > 1) || !(amount >= 1) || amount >= s.qty) return false;
+  s.qty -= amount;
+  p.inventory.push({ id: s.id, qty: amount });
+  return true;
+}
+
+// Уничтожить стак целиком
+function destroyStack(p, invIndex) {
+  if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
+  p.inventory.splice(invIndex, 1);
+  return true;
+}
+
 // Снимок инвентаря/экипировки/статов для клиента
 function invState(p) {
   return {
@@ -183,4 +203,4 @@ function respawn(io, p) {
   io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp });
 }
 
-module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, invState, ITEMS };
+module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, splitStack, destroyStack, invState, ITEMS };

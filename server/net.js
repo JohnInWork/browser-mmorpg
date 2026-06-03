@@ -232,6 +232,16 @@ function setup(io) {
       }
     });
 
+    socket.on('splitStack', ({ invIndex, amount } = {}) => {
+      if (playersMod.splitStack(player, invIndex, amount))
+        socket.emit('inventoryUpdate', playersMod.invState(player));
+    });
+
+    socket.on('destroyStack', ({ invIndex } = {}) => {
+      if (playersMod.destroyStack(player, invIndex))
+        socket.emit('inventoryUpdate', playersMod.invState(player));
+    });
+
     socket.on('disconnect', () => {
       if (announced) io.emit('chatMessage', { cat: 'system', text: `${player.name} вышел из игры` });
       playersMod.remove(socket.id);
