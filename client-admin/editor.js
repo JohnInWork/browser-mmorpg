@@ -60,7 +60,12 @@ const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload 
 const mkImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; onAsset(); }; im.src = src; return im; };
 const MOB_IMG = { chicken: mkImg('/assets/chicken.svg'), wolf: mkImg('/assets/wolf.svg'), bear: mkImg('/assets/bear.svg') };
 const SPRITE_INFO = { chicken: { name: 'Курица', color: '#f1c40f' }, wolf: { name: 'Волк', color: '#888c94' }, bear: { name: 'Медведь', color: '#6b4a2b' } };
-let mobClipboard = null;     // буфер копирования моба (для штамповки много/на другие карты)
+// Библиотека сохранённых мобов: создал моба → он попадает сюда и появляется в палитре отдельной кнопкой.
+// Живёт в localStorage (между перезагрузками и на всех картах).
+let savedMobs = [];
+try { savedMobs = JSON.parse(localStorage.getItem('mmorpg_savedMobs') || '[]'); } catch (e) { savedMobs = []; }
+function persistSavedMobs() { try { localStorage.setItem('mmorpg_savedMobs', JSON.stringify(savedMobs)); } catch (e) {} }
+function mobLabelFor(m) { return (m && m.name) || (m && SPRITE_INFO[m.sprite] && SPRITE_INFO[m.sprite].name) || 'Моб'; }
 // Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
 const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg') };
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
@@ -110,7 +115,7 @@ const CATEGORIES = [
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
   { name: 'НПС', items: [ { id: 'npc', name: 'Создать НПС', color: '#e0a93b' } ] },
-  { name: 'Существа', items: [ { id: 'mob', name: 'Создать моба', color: '#c0392b' }, { id: 'mobpaste', name: 'Вставить моба', color: '#8e44ad' } ] },
+  { name: 'Существа', items: [ { id: 'mob', name: 'Создать моба', color: '#c0392b' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' }, { id: -2, name: 'Изменить (текст/связь)', color: '#3aa' } ] },
 ];
 let selected = 0; // выбранный id тайла
@@ -248,9 +253,11 @@ function drawIcon(c, id) {
     c.fillStyle = '#888c94'; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill();
     c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
   }
-  if (id === 'mobpaste') { // вставить моба — два силуэта (штамп копий)
-    const mi = MOB_IMG.wolf; if (mi && mi._ready) { c.globalAlpha = 0.5; c.drawImage(mi, 1, 4, 18, 18); c.globalAlpha = 1; c.drawImage(mi, 9, 2, 20, 20); return; }
-    c.fillStyle = '#8e44ad'; c.fillRect(7, 9, 14, 14); return;
+  if (typeof id === 'string' && id.startsWith('mobstamp:')) { // сохранённый моб — рисуем его спрайт
+    const m = savedMobs[+id.slice(9)], mi = m && MOB_IMG[m.sprite];
+    if (mi && mi._ready) return void c.drawImage(mi, 3, 2, 24, 24);
+    c.fillStyle = '#888c94'; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill();
+    c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
   }
   if (id === 'npc') {   // человечек (создать НПС)
     c.fillStyle = '#f3cfa6'; c.beginPath(); c.arc(15, 9, 4.5, 0, TAU); c.fill();           // голова
@@ -296,6 +303,29 @@ function buildPalette() {
       });
       group.appendChild(el);
     });
+    // В группу «Существа» добавляем кнопку на каждого сохранённого моба (выбираешь — штампуешь его)
+    if (cat.name === 'Существа') {
+      savedMobs.forEach((m, i) => {
+        const sid = 'mobstamp:' + i;
+        const el = document.createElement('div');
+        el.className = 'swatch' + (sid === selected ? ' active' : '');
+        el.title = 'ЛКМ — выбрать и ставить · ПКМ — удалить из библиотеки';
+        const ic = document.createElement('canvas'); ic.width = 30; ic.height = 30; ic.className = 'dot-ic';
+        drawIcon(ic.getContext('2d'), sid);
+        iconCanvases.push({ c: ic, id: sid });
+        el.appendChild(ic);
+        el.appendChild(document.createTextNode(' ' + mobLabelFor(m)));
+        el.addEventListener('click', () => {
+          selected = sid;
+          document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active')); el.classList.add('active');
+        });
+        el.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          if (confirm(`Удалить моба «${mobLabelFor(m)}» из библиотеки?`)) { savedMobs.splice(i, 1); persistSavedMobs(); if (selected === sid) selected = 'mob'; buildPalette(); }
+        });
+        group.appendChild(el);
+      });
+    }
     paletteEl.appendChild(group);
   });
 }
@@ -373,8 +403,10 @@ function paintAt(e, isClick) {
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
   if (selected === EDIT) { if (isClick) editParams(t.x, t.y); return; }  // «Изменить»: правка параметров поставленного объекта
   if (selected === 'npc') { if (isClick) openNpcEditor(t.x, t.y, npcAt(t.x, t.y) || null); return; } // создать/править НПС
-  if (selected === 'mob') { if (isClick) openMobEditor(t.x, t.y, mobAt(t.x, t.y) || null); return; }   // конструктор моба
-  if (selected === 'mobpaste') { if (mobClipboard) setMob(t.x, t.y, JSON.parse(JSON.stringify(mobClipboard))); return; } // штамп копии (можно протяжкой)
+  if (selected === 'mob') { if (isClick) openMobEditor(t.x, t.y, null, true); return; }                 // конструктор НОВОГО моба (в библиотеку)
+  if (typeof selected === 'string' && selected.startsWith('mobstamp:')) {                              // штамп выбранного из библиотеки (можно протяжкой)
+    const m = savedMobs[+selected.slice(9)]; if (m) setMob(t.x, t.y, JSON.parse(JSON.stringify(m))); return;
+  }
   if (selected === ERASE) {                          // ластик: убрать объект/моба/НПС, оставить пол
     MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y); removeNpc(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
@@ -717,7 +749,7 @@ function readLootBlock(el) {
   return { id, qty, chance };
 }
 
-function openMobEditor(x, y, existing) {
+function openMobEditor(x, y, existing, toLibrary) {
   const data = existing ? JSON.parse(JSON.stringify(existing)) : mobDefaults();
   if (!Array.isArray(data.loot)) data.loot = [];
   const ov = document.getElementById('npcOverlay');
@@ -773,7 +805,10 @@ function openMobEditor(x, y, existing) {
     data.respawn = Math.max(1, parseInt($('mResp').value, 10) || 10);
     data.loot = [...lootBox.querySelectorAll('.mob-loot-row')].map(readLootBlock);
     setMob(x, y, data);
-    mobClipboard = JSON.parse(JSON.stringify(data));   // в буфер — теперь можно штамповать «Вставить моба»
+    if (toLibrary) {   // новый моб → в библиотеку + сразу выбран для штамповки
+      savedMobs.push(JSON.parse(JSON.stringify(data))); persistSavedMobs();
+      selected = 'mobstamp:' + (savedMobs.length - 1); buildPalette();
+    }
     close();
   });
 }
