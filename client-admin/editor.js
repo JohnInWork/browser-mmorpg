@@ -4,9 +4,6 @@
 const socket = io({ query: { mode: 'admin' } });
 
 // --- DOM ---
-const authEl = document.getElementById('auth');
-const editorEl = document.getElementById('editor');
-const authBtn = document.getElementById('authBtn');
 const paletteEl = document.getElementById('palette');
 const saveBtn = document.getElementById('saveBtn');
 const statusEl = document.getElementById('status');
@@ -46,21 +43,16 @@ let selected = 0; // выбранный id тайла
 const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
-// --- Вход (без пароля): кнопка сразу открывает редактор ---
-function enterEditor() {
-  socket.emit('adminAuth');            // сервер выдаёт права (саму карту мог уже прислать на connect)
-  authEl.classList.add('hidden');
-  editorEl.classList.remove('hidden');
-  buildPalette();
-  resize();
-  centerMap();
-}
-authBtn.addEventListener('click', enterEditor);
+// Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
+socket.emit('adminAuth');               // сервер выдаёт права (на всякий случай)
+buildPalette();
+resize();
 
 socket.on('mapData', (data) => {
   MAP = data.map.map(row => row.slice()); // копия
   FLOOR = (data.floor || deriveFloor(data.map)).map(row => row.slice());
   mapW = data.width; mapH = data.height;
+  centerMap();                            // карта пришла — центрируем
 });
 socket.on('saveResult', ({ ok }) => {
   statusEl.textContent = ok ? '✓ Сохранено' : '✗ Ошибка';
