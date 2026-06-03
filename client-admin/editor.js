@@ -166,6 +166,10 @@ function buildPalette() {
         selected = t.id;
         document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
         el.classList.add('active');
+        if (TELES.has(t.id)) {                       // выбрал портал — сразу спросить ID связи
+          const v = prompt(`ID связи для «${t.name}» (одинаковый у пары порталов):`, sidInput.value || '1');
+          if (v !== null) sidInput.value = Math.max(1, parseInt(v, 10) || 1);
+        }
       });
       group.appendChild(el);
     });
