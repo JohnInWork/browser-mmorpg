@@ -23,12 +23,12 @@ function isWalkable(x, y) {
   return !BLOCKED.has(S.MAP[y][x]);
 }
 export function mobAt(x, y) {
-  for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive && m.x === x && m.y === y) return m; }
+  for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive && m.location === S.location && m.x === x && m.y === y) return m; }
   return null;
 }
-// Игрок под клеткой (по видимой позиции) — для подсказки с ником при наведении
+// Игрок под клеткой (по видимой позиции) — для подсказки с ником при наведении (только текущая локация)
 function playerAt(x, y) {
-  for (const id in S.players) { const p = S.players[id]; if (Math.round(p.rx) === x && Math.round(p.ry) === y) return p; }
+  for (const id in S.players) { const p = S.players[id]; if ((p.location || 'surface') === S.location && Math.round(p.rx) === x && Math.round(p.ry) === y) return p; }
   return null;
 }
 function canStep(x, y) { return isWalkable(x, y) && !mobAt(x, y); }
@@ -96,6 +96,7 @@ function nodeAt(x, y) {
   return null;
 }
 function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }
+function stairsAt(x, y) { const t = S.MAP && S.MAP[y] && S.MAP[y][x]; return t === 13 ? 'Лестница вниз' : t === 14 ? 'Лестница вверх' : null; }
 
 export function setupInput() {
   const canvas = S.canvas;
@@ -124,6 +125,7 @@ export function setupInput() {
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
     else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
     else if (wellAt(t.x, t.y)) { showTip('Колодец'); canvas.style.cursor = 'pointer'; }
+    else if (stairsAt(t.x, t.y)) { showTip(stairsAt(t.x, t.y)); canvas.style.cursor = 'pointer'; }
     else if (node) { showTip(node.name); canvas.style.cursor = 'pointer'; }
     else { hideTip(); canvas.style.cursor = ''; }
   });

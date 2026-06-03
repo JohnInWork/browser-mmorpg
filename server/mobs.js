@@ -11,31 +11,32 @@ let seq = 0;
 
 function create() {
   for (const s of data.spawns) {
-    if (!world.isWalkable(s.x, s.y)) {
-      console.log(`  ⚠ моб на непроходимой клетке ${s.x},${s.y} — пропущен`);
+    const loc = s.location || 'surface';
+    if (!world.isWalkable(loc, s.x, s.y)) {
+      console.log(`  ⚠ моб на непроходимой клетке ${loc} ${s.x},${s.y} — пропущен`);
       continue;
     }
     const def = TYPES[s.type];
     if (!def) { console.log(`  ⚠ неизвестный тип моба "${s.type}" — пропущен`); continue; }
     const id = 'm' + (seq++);
-    mobs[id] = { id, x: s.x, y: s.y, type: s.type, hp: def.maxHp, maxHp: def.maxHp, color: def.color, sprite: def.sprite || null, alive: true };
+    mobs[id] = { id, x: s.x, y: s.y, location: s.location || 'surface', type: s.type, hp: def.maxHp, maxHp: def.maxHp, color: def.color, sprite: def.sprite || null, alive: true };
   }
 }
 
-function mobAt(x, y) {
-  for (const id in mobs) { const m = mobs[id]; if (m.alive && m.x === x && m.y === y) return m; }
+function mobAt(loc, x, y) {
+  for (const id in mobs) { const m = mobs[id]; if (m.alive && m.location === loc && m.x === x && m.y === y) return m; }
   return null;
 }
 
-// Клетка проходима для игрока: карта проходима И нет живого моба
-function playerCanStep(x, y) { return world.isWalkable(x, y) && !mobAt(x, y); }
+// Клетка проходима для игрока в его локации: карта проходима И нет живого моба той же локации
+function playerCanStep(loc, x, y) { return world.isWalkable(loc, x, y) && !mobAt(loc, x, y); }
 
 // Снимок мобов для клиентов
 function publicMobs() {
   const out = {};
   for (const id in mobs) {
     const m = mobs[id];
-    out[id] = { id: m.id, x: m.x, y: m.y, type: m.type, hp: m.hp, maxHp: m.maxHp, color: m.color, sprite: m.sprite, alive: m.alive };
+    out[id] = { id: m.id, x: m.x, y: m.y, location: m.location, type: m.type, hp: m.hp, maxHp: m.maxHp, color: m.color, sprite: m.sprite, alive: m.alive };
   }
   return out;
 }
@@ -48,7 +49,7 @@ function kill(io, m) {
   }
   setTimeout(() => {
     m.alive = true; m.hp = m.maxHp;
-    io.emit('mobRespawned', { id: m.id, x: m.x, y: m.y, type: m.type, hp: m.hp, maxHp: m.maxHp, color: m.color, sprite: m.sprite, alive: true });
+    io.emit('mobRespawned', { id: m.id, x: m.x, y: m.y, location: m.location, type: m.type, hp: m.hp, maxHp: m.maxHp, color: m.color, sprite: m.sprite, alive: true });
   }, RESPAWN_MS);
 }
 

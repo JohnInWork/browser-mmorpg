@@ -19,20 +19,21 @@ function setup(io) {
     // --- Админ-редактор ---
     if (isAdminClient) {
       socket.isAdmin = true;                 // вход в редактор пока без пароля (локальная разработка)
-      socket.emit('mapData', world.getState());
+      socket.emit('mapData', world.editorState());
 
       socket.on('adminAuth', () => {         // совместимость: подтверждаем вход
         socket.isAdmin = true;
         socket.emit('adminAuthResult', { ok: true });
       });
 
-      socket.on('saveMap', (newMap) => {
+      socket.on('saveMap', (payload) => {
         if (!socket.isAdmin) return;                 // ГЛАВНАЯ защита: без прав — игнор
-        if (!world.setMap(newMap)) { socket.emit('saveResult', { ok: false }); return; }
-        resources.build();                           // деревья на карте изменились — пересобрать ноды
+        if (!world.setLocations(payload)) { socket.emit('saveResult', { ok: false }); return; }
+        resources.build();                           // карта изменилась — пересобрать ноды
         socket.emit('saveResult', { ok: true });
-        io.emit('mapUpdated', world.getState());     // живое обновление у игроков
-        console.log('  💾 Карта сохранена админом');
+        for (const pid in playersMod.players)         // каждому игроку — свежая карта его локации
+          io.to(pid).emit('mapUpdated', world.locState(playersMod.players[pid].location));
+        console.log('  💾 Карты сохранены админом');
       });
 
       socket.on('disconnect', () => {});
@@ -42,7 +43,7 @@ function setup(io) {
     // --- Обычный игрок ---
     const player = playersMod.create(socket.id);
 
-    socket.emit('init', { ...world.getState(), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, skills: skillsMod.clientSkills(player), questDefs: QUESTS });
+    socket.emit('init', { ...world.locState(player.location), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, skills: skillsMod.clientSkills(player), questDefs: QUESTS });
     socket.broadcast.emit('playerJoined', player);
     io.emit('count', playersMod.count());
 
@@ -77,20 +78,31 @@ function setup(io) {
       io.emit('playerAppearance', { id: socket.id, appearance: ap });
     });
 
+    // Перенос игрока в другую локацию (по лестнице-телепорту)
+    const teleport = (target) => {
+      player.location = target.location; player.x = target.x; player.y = target.y;
+      player.target = null; player.turn = null; player.gathering = null; player.engaging = null;
+      socket.emit('changeLocation', { ...world.locState(player.location), x: player.x, y: player.y });
+      io.emit('playerLocation', { id: socket.id, location: player.location, x: player.x, y: player.y });
+    };
+
     socket.on('move', ({ x, y }) => {
       if (typeof x !== 'number' || typeof y !== 'number') return;
       // Невалидный ход — откатываем клиента к серверной позиции (защита от рассинхрона)
-      if (Math.abs(x - player.x) + Math.abs(y - player.y) !== 1 || !mobsMod.playerCanStep(x, y)) {
+      if (Math.abs(x - player.x) + Math.abs(y - player.y) !== 1 || !mobsMod.playerCanStep(player.location, x, y)) {
         socket.emit('playerMoved', { id: socket.id, x: player.x, y: player.y });
         return;
       }
       player.x = x; player.y = y;
       io.emit('playerMoved', { id: socket.id, x, y });
-      // Прошёл вплотную к агрессивному мобу (не тому, на кого сам идёт драться) — моб нападает первым и останавливает героя
+      // Наступил на лестницу-телепорт → переход в связанную локацию
+      const tt = world.teleportTarget(player.location, x, y);
+      if (tt) { teleport(tt); return; }
+      // Прошёл вплотную к агрессивному мобу той же локации — моб нападает первым и останавливает героя
       if (!player.target) {
         for (const mid in mobsMod.mobs) {
           const mob = mobsMod.mobs[mid];
-          if (mob.alive && mobsMod.TYPES[mob.type].aggressive && mob.id !== player.engaging && adjOrtho(x, y, mob.x, mob.y)) {
+          if (mob.alive && mob.location === player.location && mobsMod.TYPES[mob.type].aggressive && mob.id !== player.engaging && adjOrtho(x, y, mob.x, mob.y)) {
             player.target = mob.id; player.turn = 'mob'; player.gathering = null;
             socket.emit('aggro', { mobId: mob.id });       // клиент: стоп движение, завязать бой
             break;
@@ -102,14 +114,14 @@ function setup(io) {
     // Игрок выбрал моба для атаки (клик) — намерение драться: этот моб не бьёт первым
     socket.on('engage', (mobId) => {
       const m = mobsMod.mobs[mobId];
-      if (!m || !m.alive || !mobsMod.TYPES[m.type].canAttack) return;
+      if (!m || !m.alive || m.location !== player.location || !mobsMod.TYPES[m.type].canAttack) return;
       player.engaging = mobId;
     });
 
     // Игрок атакует моба (клиент подвёл персонажа вплотную и шлёт mobId)
     socket.on('attack', (mobId) => {
       const m = mobsMod.mobs[mobId];
-      if (!m || !m.alive) return;
+      if (!m || !m.alive || m.location !== player.location) return;
       if (!mobsMod.TYPES[m.type].canAttack) return;       // дружественных бить нельзя
       if (!adjOrtho(player.x, player.y, m.x, m.y)) return; // только вплотную
       player.gathering = null;                             // бой прерывает рубку
@@ -124,7 +136,7 @@ function setup(io) {
     const nearTrader = () => {
       for (const id in mobsMod.mobs) {
         const m = mobsMod.mobs[id];
-        if (m.alive && m.type === 'trader' && adjOrtho(player.x, player.y, m.x, m.y)) return true;
+        if (m.alive && m.type === 'trader' && m.location === player.location && adjOrtho(player.x, player.y, m.x, m.y)) return true;
       }
       return false;
     };
@@ -145,14 +157,12 @@ function setup(io) {
     });
 
     // --- Крафт у станции (плавильня/наковальня) ---
-    const nearStation = (tile) => {
-      const m = world.getState().map;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const x = player.x + dx, y = player.y + dy;
-        if (m[y] && m[y][x] === tile) return true;
-      }
+    const nearTile = (tile) => {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+        if (world.tileAt(player.location, player.x + dx, player.y + dy) === tile) return true;
       return false;
     };
+    const nearStation = (tile) => nearTile(tile);
     socket.on('craft', ({ station, recipe }) => {
       const list = RECIPES[station];
       const tile = STATION_TILE[station];
@@ -173,7 +183,7 @@ function setup(io) {
 
     // Игрок рубит дерево (подошёл вплотную, активен топор)
     socket.on('gather', ({ x, y }) => {
-      const n = resources.getNodeAt(x, y);
+      const n = resources.getNodeAt(player.location, x, y);
       if (!n || !n.alive) return;
       if (!adjOrtho(player.x, player.y, n.x, n.y)) return;
       if (!resources.canGather(playersMod.activeTool(player), n)) return; // нужен подходящий инструмент
@@ -208,14 +218,7 @@ function setup(io) {
     });
 
     // --- Сундук-хранилище (банк): доступен, когда игрок стоит рядом с сундуком ---
-    const nearChest = () => {
-      const m = world.getState().map;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const x = player.x + dx, y = player.y + dy;
-        if (m[y] && m[y][x] === cfg.TILES.CHEST) return true;
-      }
-      return false;
-    };
+    const nearChest = () => nearTile(cfg.TILES.CHEST);
     const sendBank = () => { socket.emit('bankState', playersMod.bankStateOf(player)); socket.emit('inventoryUpdate', playersMod.invState(player)); };
 
     socket.on('openBank', () => { if (nearChest()) socket.emit('bankState', playersMod.bankStateOf(player)); });
@@ -233,14 +236,7 @@ function setup(io) {
     });
 
     // --- Колодец: наполнить пустые колбы водой (рядом с колодцем) ---
-    const nearWell = () => {
-      const m = world.getState().map;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const x = player.x + dx, y = player.y + dy;
-        if (m[y] && m[y][x] === cfg.TILES.WELL) return true;
-      }
-      return false;
-    };
+    const nearWell = () => nearTile(cfg.TILES.WELL);
     socket.on('fillWater', () => {
       if (!nearWell()) return;
       const n = playersMod.fillFlasks(player);

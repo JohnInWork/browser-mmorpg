@@ -7,14 +7,20 @@ const socket = io({ query: { mode: 'admin' } });
 const paletteEl = document.getElementById('palette');
 const saveBtn = document.getElementById('saveBtn');
 const statusEl = document.getElementById('status');
+const locTabsEl = document.getElementById('locTabs');
+const sidInput = document.getElementById('sidInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-// --- Карта ---
-let MAP = null, FLOOR = null, mapW = 0, mapH = 0;
-const GROUND = new Set([0, 1, 4]);                 // тайлы пола
+// --- Локации/карта ---
+let LOCS = {};                 // { name: {map,floor,teleports,W,H} }
+let curLoc = 'surface';        // редактируемая локация
+let MAP = null, FLOOR = null, mapW = 0, mapH = 0;  // ссылки на текущую локацию
+const GROUND = new Set([0, 1, 4, 15]);             // тайлы пола (+ пещера)
+const TELES = new Set([13, 14]);                   // лестницы-телепорты
 const isGround = (t) => GROUND.has(t);
 const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
+const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты' };
 function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
 
 // --- Изометрия / камера ---
@@ -31,16 +37,17 @@ let panX = 0, panY = 0; // экранное смещение начала коо
 
 // --- Палитра тайлов по категориям ---
 const CATEGORIES = [
-  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 1, name: 'Вода', color: '#3a86c8' } ] },
+  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
   { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' } ] },
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' } ] },
+  { name: 'Лестницы', items: [ { id: 13, name: 'Вниз', color: '#5b8def' }, { id: 14, name: 'Вверх', color: '#8fd06a' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
 ];
 let selected = 0; // выбранный id тайла
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e' };
+const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
@@ -49,11 +56,36 @@ buildPalette();
 resize();
 
 socket.on('mapData', (data) => {
-  MAP = data.map.map(row => row.slice()); // копия
-  FLOOR = (data.floor || deriveFloor(data.map)).map(row => row.slice());
-  mapW = data.width; mapH = data.height;
-  centerMap();                            // карта пришла — центрируем
+  LOCS = {};
+  for (const k in (data.locations || {})) {
+    const L = data.locations[k];
+    LOCS[k] = { map: L.map.map(r => r.slice()), floor: (L.floor || deriveFloor(L.map)).map(r => r.slice()),
+                teleports: (L.teleports || []).map(e => ({ ...e })), W: L.width, H: L.height };
+  }
+  switchLoc(LOCS.surface ? 'surface' : Object.keys(LOCS)[0]);
 });
+
+function buildLocTabs() {
+  locTabsEl.innerHTML = '';
+  for (const k in LOCS) {
+    const b = document.createElement('button');
+    b.className = 'loc-tab' + (k === curLoc ? ' active' : '');
+    b.textContent = LOC_NAMES[k] || k;
+    b.addEventListener('click', () => switchLoc(k));
+    locTabsEl.appendChild(b);
+  }
+}
+function switchLoc(name) {
+  if (!LOCS[name]) return;
+  curLoc = name;
+  MAP = LOCS[name].map; FLOOR = LOCS[name].floor; mapW = LOCS[name].W; mapH = LOCS[name].H;
+  centerMap();
+  buildLocTabs();
+}
+// Телепорты текущей локации
+function removeTele(x, y) { LOCS[curLoc].teleports = LOCS[curLoc].teleports.filter(e => !(e.x === x && e.y === y)); }
+function setTele(x, y, sid) { removeTele(x, y); LOCS[curLoc].teleports.push({ x, y, sid }); }
+function teleAt(x, y) { return LOCS[curLoc].teleports.find(e => e.x === x && e.y === y); }
 socket.on('saveResult', ({ ok }) => {
   statusEl.textContent = ok ? '✓ Сохранено' : '✗ Ошибка';
   setTimeout(() => { statusEl.textContent = ''; }, 2000);
@@ -81,7 +113,11 @@ function buildPalette() {
   });
 }
 
-saveBtn.addEventListener('click', () => { socket.emit('saveMap', { map: MAP, floor: FLOOR }); });
+saveBtn.addEventListener('click', () => {
+  const out = {};
+  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports };
+  socket.emit('saveMap', { locations: out });
+});
 
 // --- Геометрия изометрии ---
 function isoX(x, y) { return (x - y) * (TW / 2) * zoom; }
@@ -143,12 +179,15 @@ function paintAt(e) {
   const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
   if (selected === ERASE) {                          // ластик: убрать объект, оставить пол
-    MAP[t.y][t.x] = FLOOR[t.y][t.x];
+    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
     FLOOR[t.y][t.x] = selected;
     if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
-  } else {                                           // объект: кладём ПОВЕРХ, пол под ним не трогаем
+  } else if (TELES.has(selected)) {                  // лестница-телепорт: кладём + записываем ID связи (sid)
     MAP[t.y][t.x] = selected;
+    setTele(t.x, t.y, Math.max(1, parseInt(sidInput.value, 10) || 1));
+  } else {                                           // прочий объект: поверх пола; если была лестница — убрать связь
+    MAP[t.y][t.x] = selected; removeTele(t.x, t.y);
   }
 }
 
@@ -237,6 +276,17 @@ function drawWell(cx, cy) {
   ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
 }
+function drawStairs(cx, cy, down) {
+  const z = zoom, n = 4, sh = 5 * z;
+  ctx.fillStyle = down ? '#23232a' : '#7c828b';
+  ctx.beginPath(); ctx.moveTo(cx, cy - 13 * z); ctx.lineTo(cx + 16 * z, cy); ctx.lineTo(cx, cy + 13 * z); ctx.lineTo(cx - 16 * z, cy); ctx.closePath(); ctx.fill();
+  const top = cy - (n * sh) / 2;
+  for (let i = 0; i < n; i++) {
+    const w = (24 - i * 4) * z, y = top + i * sh, v = down ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26);
+    ctx.fillStyle = `rgb(${v},${v},${v + 8})`;
+    ctx.beginPath(); ctx.moveTo(cx, y - sh * 0.5); ctx.lineTo(cx + w / 2, y); ctx.lineTo(cx, y + sh * 0.5); ctx.lineTo(cx - w / 2, y); ctx.closePath(); ctx.fill();
+  }
+}
 
 function render() {
   ctx.fillStyle = '#10131a';
@@ -270,6 +320,8 @@ function render() {
       else if (t === 10) obj.push({ d: x + y + 0.1, k: 10, x, y });
       else if (t === 11) obj.push({ d: x + y + 0.1, k: 11, x, y });
       else if (t === 12) obj.push({ d: x + y + 0.1, k: 12, x, y });
+      else if (t === 13) obj.push({ d: x + y + 0.1, k: 13, x, y });
+      else if (t === 14) obj.push({ d: x + y + 0.1, k: 14, x, y });
     }
   obj.sort((a, b) => a.d - b.d);
   for (const o of obj) {
@@ -281,6 +333,12 @@ function render() {
     else if (o.k === 10) drawChest(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 11) drawSandPile(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 12) drawWell(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
+    else if (o.k === 13 || o.k === 14) {
+      const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
+      drawStairs(sx, sy, o.k === 13);
+      const te = teleAt(o.x, o.y);                 // показать ID связи на лестнице
+      if (te) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(12 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(te.sid, sx, sy - 16 * zoom); }
+    }
     else drawRock(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.k === 6);
   }
   requestAnimationFrame(render);

@@ -39,7 +39,7 @@ function start(io) {
       if (!m.alive || !mobsMod.TYPES[m.type].aggressive) continue;
       for (const pid in players) {
         const p = players[pid];
-        if (p.hp > 0 && !p.target && p.engaging !== m.id && adjOrtho(p.x, p.y, m.x, m.y)) {
+        if (p.hp > 0 && !p.target && p.engaging !== m.id && p.location === m.location && adjOrtho(p.x, p.y, m.x, m.y)) {
           p.target = m.id; p.turn = 'mob';
           io.to(pid).emit('aggro', { mobId: m.id });       // остановить героя
         }
@@ -50,7 +50,7 @@ function start(io) {
       const p = players[pid];
       if (!p.target) continue;
       const m = mobs[p.target];
-      if (!m || !m.alive || !adjOrtho(p.x, p.y, m.x, m.y)) { p.target = null; p.turn = null; continue; }
+      if (!m || !m.alive || m.location !== p.location || !adjOrtho(p.x, p.y, m.x, m.y)) { p.target = null; p.turn = null; continue; }
 
       if (p.turn === 'player') {
         const mobArmor = mobsMod.TYPES[m.type].armor || 0;       // броня моба снижает урон (мин 1)

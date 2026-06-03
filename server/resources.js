@@ -20,23 +20,25 @@ const nodes = {};   // id -> { id, x, y, kind, tool, gives, amount, maxAmount, a
 const nodeAt = {};  // "x,y" -> node
 let seq = 0;
 
+const RES_LOCATION = 'surface';     // ресурсы пока только на Поверхности
+
 function build() {
   for (const k in nodes) delete nodes[k];
   for (const k in nodeAt) delete nodeAt[k];
-  const { map, width, height } = world.getState();
+  const { map, width, height } = world.locState(RES_LOCATION);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const def = KINDS[map[y][x]];
       if (!def) continue;
       const id = 'n' + (seq++);
-      nodes[id] = { id, x, y, kind: def.kind, tool: def.tool, gives: def.gives, amount: def.amount, maxAmount: def.amount,
+      nodes[id] = { id, x, y, location: RES_LOCATION, kind: def.kind, tool: def.tool, gives: def.gives, amount: def.amount, maxAmount: def.amount,
                     skill: def.skill, reqLevel: def.reqLevel, xp: def.xp, alive: true };
       nodeAt[x + ',' + y] = nodes[id];
     }
   }
 }
 
-function getNodeAt(x, y) { return nodeAt[x + ',' + y] || null; }
+function getNodeAt(loc, x, y) { const n = nodeAt[x + ',' + y]; return (n && n.location === loc) ? n : null; }
 function depletedList() { return Object.values(nodes).filter(n => !n.alive).map(n => `${n.x},${n.y}`); }
 // Подходит ли инструмент (id) для ноды
 function canGather(tool, node) { return !!(node && tool && tool === node.tool); }
@@ -47,7 +49,7 @@ function start(io) {
       const p = players[pid];
       if (!p.gathering) continue;
       const n = nodes[p.gathering];
-      if (!n || !n.alive || !adjOrtho(p.x, p.y, n.x, n.y) || !canGather(activeTool(p), n)) {
+      if (!n || !n.alive || n.location !== p.location || !adjOrtho(p.x, p.y, n.x, n.y) || !canGather(activeTool(p), n)) {
         p.gathering = null;
         continue;
       }

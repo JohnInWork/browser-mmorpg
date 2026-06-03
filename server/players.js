@@ -33,10 +33,12 @@ function moveSlot(srcArr, srcIdx, dstArr, dstIdx) {
 }
 
 function create(id) {
-  const spawn = world.randomSpawn();
+  const location = world.startLocation();
+  const spawn = world.randomSpawn(location);
   const player = {
     id,
     name: 'Игрок',
+    location,                       // в какой локации находится игрок
     x: spawn.x, y: spawn.y,
     color: COLORS[Object.keys(players).length % COLORS.length],
     hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP,
@@ -302,10 +304,10 @@ function invState(p) {
 
 // Смерть → респаун с полным HP в новой точке
 function respawn(io, p) {
-  const s = world.randomSpawn();
+  const s = world.randomSpawn(p.location);
   p.x = s.x; p.y = s.y; p.hp = PLAYER_MAX_HP;
   p.target = null; p.turn = null; p.gathering = null;
-  io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp });
+  io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp, location: p.location });
 }
 
 module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,

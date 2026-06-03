@@ -14,6 +14,7 @@ export function setupNet() {
   socket.on('init', (data) => {
     if (data.items) Object.assign(S.items, data.items);   // единый источник данных предметов (наполняем, НЕ переприсваиваем — ссылку держит items.js)
     S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height; S.myId = data.you.id;
+    S.location = data.location || 'surface';
     for (const id in data.players) {
       const p = data.players[id];
       S.players[id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null };
@@ -37,7 +38,23 @@ export function setupNet() {
 
   socket.on('mapUpdated', (data) => {
     S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
+    if (data.location) S.location = data.location;
     S.depletedNodes.clear(); // деревья пересозданы редактором
+  });
+
+  // Переход в другую локацию (по лестнице): заменить карту, переставить себя
+  socket.on('changeLocation', (data) => {
+    S.location = data.location; S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
+    const me = S.players[S.myId];
+    if (me) { me.x = data.x; me.y = data.y; me.rx = data.x; me.ry = data.y; me.location = data.location; }
+    S.path = []; S.targetTile = null; S.pendingAction = null;
+    S.combatTargetId = null; updateTargetHud();
+  });
+
+  // Другой игрок сменил локацию (телепорт) — обновить его локацию/позицию
+  socket.on('playerLocation', ({ id, location, x, y }) => {
+    const p = S.players[id];
+    if (p) { p.location = location; p.x = x; p.y = y; p.rx = x; p.ry = y; }
   });
 
   // Инвентарь обновился (рубка, перенос в хотбар, активация)
@@ -138,10 +155,11 @@ export function setupNet() {
     if (id === S.myId) { updateHpHud(); updateStats(); }
   });
 
-  socket.on('playerRespawn', ({ id, x, y, hp }) => {
+  socket.on('playerRespawn', ({ id, x, y, hp, location }) => {
     const p = S.players[id];
     if (!p) return;
     p.x = x; p.y = y; p.rx = x; p.ry = y; p.hp = hp;
+    if (location) p.location = location;
     if (id === S.myId) {
       S.path = []; S.targetTile = null; S.pendingAction = null;
       updateHpHud(); updateStats(); S.deathFlash = 1.0;

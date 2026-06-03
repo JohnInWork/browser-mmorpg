@@ -58,3 +58,10 @@ body {
 #status { color: #2ecc71; font-weight: 600; }
 .hint { color: #777; margin-left: auto; }
 #canvas { flex: 1; display: block; background: #10131a; cursor: crosshair; }
+
+/* Вкладки локаций + поле ID связи */
+#locTabs { display: inline-flex; gap: 4px; }
+.loc-tab { background: #2a2a3e; border: 1px solid #3a3a4e; color: #cfd6e4; padding: 5px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+.loc-tab.active { background: #e0a93b; color: #1a1a24; border-color: #e0a93b; font-weight: 700; }
+.sid-lbl { font-size: 13px; color: #cfd6e4; display: inline-flex; align-items: center; gap: 6px; }
+.sid-lbl input { background: #1a1a24; border: 1px solid #3a3a4e; color: #eee; border-radius: 6px; padding: 4px; }

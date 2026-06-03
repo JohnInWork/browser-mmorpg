@@ -267,6 +267,26 @@ function drawWell(cx, cy) {
   ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
 }
 
+// Лестница-телепорт. down=true — вниз (тёмный проём), иначе вверх (светлый камень).
+function drawStairs(cx, cy, down) {
+  const ctx = S.ctx, z = SCALE, n = 4, sh = 5 * z;
+  // рамка проёма
+  ctx.fillStyle = down ? '#23232a' : '#7c828b';
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 13 * z); ctx.lineTo(cx + 16 * z, cy); ctx.lineTo(cx, cy + 13 * z); ctx.lineTo(cx - 16 * z, cy);
+  ctx.closePath(); ctx.fill();
+  // ступени (сужающиеся ромбы): вниз — темнеют, вверх — светлеют
+  const top = cy - (n * sh) / 2;
+  for (let i = 0; i < n; i++) {
+    const w = (24 - i * 4) * z, y = top + i * sh;
+    const v = down ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26);
+    ctx.fillStyle = `rgb(${v},${v},${v + 8})`;
+    ctx.beginPath();
+    ctx.moveTo(cx, y - sh * 0.5); ctx.lineTo(cx + w / 2, y); ctx.lineTo(cx, y + sh * 0.5); ctx.lineTo(cx - w / 2, y);
+    ctx.closePath(); ctx.fill();
+  }
+}
+
 function drawHpBar(cx, topY, hp, maxHp) {
   const ctx = S.ctx, z = SCALE, w = 28 * z, h = 5 * z;
   const x = cx - w / 2, y = topY;
@@ -432,6 +452,7 @@ export function render() {
       const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
       if (f === 1) drawWater(cx, cy, x, y);
       else if (f === 4) fillDiamond(cx, cy, TILE[4].top, 'rgba(0,0,0,.18)'); // тропа
+      else if (f === 15) fillDiamond(cx, cy, '#3b3b46', 'rgba(0,0,0,.3)');   // пещерный пол (Шахты)
       else drawGrass(cx, cy, x, y);                                 // трава (0) по умолчанию
     }
   }
@@ -457,10 +478,13 @@ export function render() {
       else if (t === 10) drawables.push({ d: x + y + 0.1, kind: 'chest', x, y });
       else if (t === 11) drawables.push({ d: x + y + 0.1, kind: 'sandpile', x, y });
       else if (t === 12) drawables.push({ d: x + y + 0.1, kind: 'well', x, y });
+      else if (t === 13) drawables.push({ d: x + y + 0.1, kind: 'stairsDown', x, y });
+      else if (t === 14) drawables.push({ d: x + y + 0.1, kind: 'stairsUp', x, y });
     }
   }
-  for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive) drawables.push({ d: m.x + m.y + 0.15, kind: 'mob', m }); }
-  for (const id in S.players) { const p = S.players[id]; drawables.push({ d: p.rx + p.ry + 0.2, kind: 'player', p, isMe: id === S.myId }); }
+  // Мобы и игроки — только из текущей локации
+  for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive && m.location === S.location) drawables.push({ d: m.x + m.y + 0.15, kind: 'mob', m }); }
+  for (const id in S.players) { const p = S.players[id]; if ((p.location || 'surface') === S.location) drawables.push({ d: p.rx + p.ry + 0.2, kind: 'player', p, isMe: id === S.myId }); }
   drawables.sort((a, b) => a.d - b.d);
 
   for (const o of drawables) {
@@ -473,6 +497,8 @@ export function render() {
     else if (o.kind === 'chest') drawChest(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'sandpile') drawSandPile(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), S.depletedNodes.has(`${o.x},${o.y}`));
     else if (o.kind === 'well') drawWell(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
+    else if (o.kind === 'stairsDown') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true);
+    else if (o.kind === 'stairsUp') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), false);
     else if (o.kind === 'mob') {
       if (o.m.type === 'trader') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), TRADER_APP, TRADER_EQUIP, null);
       else if (o.m.type === 'questgiver') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), FORESTER_APP, FORESTER_EQUIP, npcMarker(o.m));
