@@ -6,7 +6,7 @@
 export const HELD_ITEMS = {
   pickaxe: { src: '/assets/pickaxe.svg', hand: 'right', size: 300, grip: { x: 0.18, y: 0.82 }, rot: 0 },
   axe:     { src: '/assets/axe.svg',     hand: 'right', size: 300, grip: { x: 0.18, y: 0.82 }, rot: 0 },
-  shovel:  { src: '/assets/shovel.svg',  hand: 'right', size: 340, grip: { x: 0.3, y: 0.82 }, rot: 0 },
+  shovel:  { src: '/assets/shovel.svg',  hand: 'right', size: 400, grip: { x: 0.46, y: 0.82 }, rot: 0 },
 };
 export const HELD_OVERLAY_IDS = new Set(Object.keys(HELD_ITEMS));
 // Точка ладони в координатах тела 512×512
