@@ -70,7 +70,7 @@ function normMob(m) {
     : [];
   return {
     x, y, name: String(m.name || '').slice(0, 24),
-    sprite: MOB_SPRITES.has(m.sprite) ? m.sprite : 'wolf',
+    sprite: (typeof m.sprite === 'string' && m.sprite) ? m.sprite.slice(0, 24) : 'wolf', // любая текстура из реестра клиента
     aggro: MOB_AGGRO.has(m.aggro) ? m.aggro : 'aggressive',
     hp: clampN(m.hp, 1, 9999, 20), armor: clampN(m.armor, 0, 99, 0),
     dmgMin: clampN(m.dmgMin, 0, 999, 1), dmgMax: clampN(m.dmgMax, 0, 999, 3),

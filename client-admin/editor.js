@@ -1,6 +1,7 @@
 // MMORPG — редактор карт (только для админа)
 // Подключается как mode=admin, проходит проверку пароля, рисует и сохраняет карту.
 import { buildCharacterSVG, getCharImage, PALETTES, DEFAULT_APPEARANCE, CHAR_RATIO, CHAR_FEET } from '/js/character.js';
+import { MOB_TEXTURES, MOB_TEX_BY_ID } from '/js/mob-textures.js';
 
 const socket = io({ query: { mode: 'admin' } });
 
@@ -58,8 +59,9 @@ const chestImg = new Image(); chestImg._ready = false; chestImg.onload = () => {
 const anvilImg = new Image(); anvilImg._ready = false; anvilImg.onload = () => { anvilImg._ready = true; onAsset(); }; anvilImg.src = '/assets/anvil.svg';
 const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload = () => { campfireImg._ready = true; onAsset(); }; campfireImg.src = '/assets/campfire.svg';
 const mkImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; onAsset(); }; im.src = src; return im; };
-const MOB_IMG = { chicken: mkImg('/assets/chicken.svg'), wolf: mkImg('/assets/wolf.svg'), bear: mkImg('/assets/bear.svg') };
-const SPRITE_INFO = { chicken: { name: 'Курица', color: '#f1c40f' }, wolf: { name: 'Волк', color: '#888c94' }, bear: { name: 'Медведь', color: '#6b4a2b' } };
+// Иконки и подписи текстур мобов строятся из единого реестра (client/js/mob-textures.js)
+const MOB_IMG = {}, SPRITE_INFO = {};
+for (const t of MOB_TEXTURES) { MOB_IMG[t.id] = mkImg(t.svg); SPRITE_INFO[t.id] = { name: t.name, color: '#888c94' }; }
 // Библиотека сохранённых мобов: создал моба → он попадает сюда и появляется в палитре отдельной кнопкой.
 // Живёт в localStorage (между перезагрузками и на всех картах).
 let savedMobs = [];
@@ -732,7 +734,7 @@ function openNpcEditor(x, y, existing) {
 
 // --- Конструктор моба ---
 const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Шлем'], ['chest', 'Нагрудник'], ['gloves', 'Перчатки'], ['pants', 'Поножи'], ['boots', 'Сапоги']];
-const MOB_SPRITE_OPTS = [['chicken', 'Курица'], ['wolf', 'Волк'], ['bear', 'Медведь']];
+const MOB_SPRITE_OPTS = MOB_TEXTURES.map(t => [t.id, t.name]);
 function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, loot: [] }; }
 function makeLootBlock(l) {
   l = l || { id: 'rawChicken', qty: 1, chance: 1 };
@@ -753,11 +755,12 @@ function openMobEditor(x, y, existing, toLibrary) {
   const data = existing ? JSON.parse(JSON.stringify(existing)) : mobDefaults();
   if (!Array.isArray(data.loot)) data.loot = [];
   const ov = document.getElementById('npcOverlay');
-  const spriteBtns = MOB_SPRITE_OPTS.map(([s, l]) => `<button class="mob-sprite${data.sprite === s ? ' sel' : ''}" data-sprite="${s}"><img src="/assets/${s}.svg" alt="">${l}</button>`).join('');
+  const texSvg = (id) => (MOB_TEX_BY_ID[id] && MOB_TEX_BY_ID[id].svg) || ('/assets/' + id + '.svg');
+  const spriteBtns = MOB_SPRITE_OPTS.map(([s, l]) => `<button class="mob-sprite${data.sprite === s ? ' sel' : ''}" data-sprite="${s}"><img src="${texSvg(s)}" alt="">${l}</button>`).join('');
   ov.innerHTML = `
     <div class="npc-modal">
       <div class="npc-left">
-        <div class="npc-preview"><img id="mobPreview" src="/assets/${data.sprite}.svg" style="width:80%;height:80%"></div>
+        <div class="npc-preview"><img id="mobPreview" src="${texSvg(data.sprite)}" style="width:80%;height:80%"></div>
         <div class="mob-sprites" id="mobSprites">${spriteBtns}</div>
       </div>
       <div class="npc-right">
@@ -785,7 +788,7 @@ function openMobEditor(x, y, existing, toLibrary) {
   ov.querySelectorAll('.mob-sprite').forEach(b => b.addEventListener('click', () => {
     data.sprite = b.dataset.sprite;
     ov.querySelectorAll('.mob-sprite').forEach(o => o.classList.remove('sel')); b.classList.add('sel');
-    $('mobPreview').src = `/assets/${data.sprite}.svg`;
+    $('mobPreview').src = texSvg(data.sprite);
   }));
   // лут
   const lootBox = $('mLoot');

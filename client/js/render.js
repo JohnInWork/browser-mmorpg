@@ -3,6 +3,7 @@ import { S } from './state.js';
 import { SCALE, TW, TH, WALL_H, TREE_H, TILE } from './config.js';
 import { isoX, isoY } from './iso.js';
 import { getCharImage, CHAR_RATIO, CHAR_FEET, DEFAULT_APPEARANCE } from './character.js';
+import { MOB_TEX_BY_ID } from './mob-textures.js';
 
 // Спрайты мобов из SVG-файлов (client/assets/) — рисуются картинками
 const wolfImg = new Image();
@@ -53,6 +54,9 @@ const fenceImg = loadImg('/assets/fence.svg');
 const lampImg = loadImg('/assets/lamp.svg');
 const bridgeImg = loadImg('/assets/bridge.svg');
 const signImg = loadImg('/assets/sign.svg');
+// Текстуры мобов из реестра (для НОВЫХ существ — общий рисовальщик; курица/волк/медведь рисуются по-своему)
+const mobTexImg = {};
+for (const id in MOB_TEX_BY_ID) mobTexImg[id] = loadImg(MOB_TEX_BY_ID[id].svg);
 // Нарисовать спрайт объекта по центру клетки (как сундук/наковальня)
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * SCALE, H = sz * SCALE; S.ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * SCALE, W, H); } }
 
@@ -411,10 +415,23 @@ function drawBear(cx, cy, m) {
   if (m.hp < m.maxHp) drawHpBar(cx, top + 8 * z, m.hp, m.maxHp);
 }
 
+// Общий рисовальщик моба из любой текстуры реестра (для новых существ)
+function drawSpriteMob(cx, cy, m) {
+  const ctx = S.ctx, z = SCALE;
+  const tex = MOB_TEX_BY_ID[m.sprite], img = mobTexImg[m.sprite];
+  const sz = ((tex && tex.size) || 46) * z, top = cy + 7 * z - sz;
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, sz * 0.4, sz * 0.16, 0, 0, Math.PI * 2); ctx.fill();
+  if (img && img._ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; ctx.drawImage(img, cx - sz / 2, top, sz, sz); ctx.restore(); }
+  if (m.aggressive) { ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('!', cx, top + 4 * z); }
+  if (m.hp < m.maxHp) drawHpBar(cx, top + 8 * z, m.hp, m.maxHp);
+}
+
 function drawMob(cx, cy, m) {
   if (m.sprite === 'chicken') return drawChicken(cx, cy, m);
   if (m.sprite === 'wolf') return drawWolf(cx, cy, m);
   if (m.sprite === 'bear') return drawBear(cx, cy, m);
+  if (m.sprite && mobTexImg[m.sprite]) return drawSpriteMob(cx, cy, m);   // новая текстура из реестра
   const ctx = S.ctx, z = SCALE;
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 15 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
