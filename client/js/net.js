@@ -15,6 +15,7 @@ export function setupNet() {
     if (data.items) Object.assign(S.items, data.items);   // единый источник данных предметов (наполняем, НЕ переприсваиваем — ссылку держит items.js)
     S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height; S.myId = data.you.id;
     S.location = data.location || 'surface';
+    S.signs = data.signs || [];
     for (const id in data.players) {
       const p = data.players[id];
       S.players[id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null };
@@ -39,12 +40,14 @@ export function setupNet() {
   socket.on('mapUpdated', (data) => {
     S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
     if (data.location) S.location = data.location;
+    S.signs = data.signs || [];
     S.depletedNodes.clear(); // деревья пересозданы редактором
   });
 
   // Переход в другую локацию (по лестнице): заменить карту, переставить себя
   socket.on('changeLocation', (data) => {
     S.location = data.location; S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
+    S.signs = data.signs || [];
     const me = S.players[S.myId];
     if (me) { me.x = data.x; me.y = data.y; me.rx = data.x; me.ry = data.y; me.location = data.location; }
     S.path = []; S.targetTile = null; S.pendingAction = null;

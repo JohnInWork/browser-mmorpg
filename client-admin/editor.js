@@ -22,6 +22,8 @@ const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23]); // тайлы пола (+
 const TELES = new Set([13, 14, 16, 17, 18]);       // порталы-телепорты (вид отвязан от связи)
 const isGround = (t) => GROUND.has(t);
 const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
+const EDIT = -2;                                   // «изменить» — правка параметров поставленного объекта
+const SIGN = 30;                                   // табличка с текстом
 const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты' };
 function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
 
@@ -51,11 +53,11 @@ const CATEGORIES = [
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Природа',  items: [ { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
-  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 28, name: 'Фонарь', color: '#f0c24a' }, { id: 29, name: 'Мост', color: '#a9743f' }, { id: 30, name: 'Указатель', color: '#9a6b3a' } ] },
+  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 28, name: 'Фонарь', color: '#f0c24a' }, { id: 29, name: 'Мост', color: '#a9743f' }, { id: 30, name: 'Табличка', color: '#9a6b3a' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
   { name: 'Существа', items: [ { id: 'mob:passive', name: 'Курица', color: '#f1c40f' }, { id: 'mob:aggressive', name: 'Волк', color: '#888c94' }, { id: 'mob:bear', name: 'Медведь', color: '#6b4a2b' }, { id: 'mob:friendly', name: 'Мирный', color: '#2ecc71' }, { id: 'mob:trader', name: 'Торговец', color: '#c79a2a' }, { id: 'mob:questgiver', name: 'Лесник', color: '#3f9e63' } ] },
-  { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
+  { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' }, { id: -2, name: 'Изменить (текст/связь)', color: '#3aa' } ] },
 ];
 let selected = 0; // выбранный id тайла
 let iconCanvases = [];                          // {c: canvas, id} — мини-иконки палитры (перерисовка после загрузки SVG)
@@ -73,7 +75,8 @@ socket.on('mapData', (data) => {
   for (const k in (data.locations || {})) {
     const L = data.locations[k];
     LOCS[k] = { map: L.map.map(r => r.slice()), floor: (L.floor || deriveFloor(L.map)).map(r => r.slice()),
-                teleports: (L.teleports || []).map(e => ({ ...e })), mobs: (L.mobs || []).map(m => ({ ...m })), W: L.width, H: L.height };
+                teleports: (L.teleports || []).map(e => ({ ...e })), mobs: (L.mobs || []).map(m => ({ ...m })),
+                signs: (L.signs || []).map(s => ({ ...s })), W: L.width, H: L.height };
   }
   switchLoc(LOCS.surface ? 'surface' : Object.keys(LOCS)[0]);
 });
@@ -106,7 +109,7 @@ function blankLocation() {
     for (let x = 0; x < W; x++) { const b = (x === 0 || y === 0 || x === W - 1 || y === H - 1); mr.push(b ? 2 : 0); fr.push(0); }
     map.push(mr); floor.push(fr);
   }
-  return { map, floor, teleports: [], mobs: [], W, H };
+  return { map, floor, teleports: [], mobs: [], signs: [], W, H };
 }
 function addLocation() {
   const name = (prompt('Название новой локации:', '') || '').trim();
@@ -148,7 +151,8 @@ function applyResize() {
   }
   const tele = LOCS[curLoc].teleports.filter(e => e.x < w && e.y < h);   // выкинуть телепорты за границей
   const mobs = LOCS[curLoc].mobs.filter(m => m.x < w && m.y < h);
-  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, W: w, H: h };
+  const signs = LOCS[curLoc].signs.filter(s => s.x < w && s.y < h);
+  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, signs, W: w, H: h };
   switchLoc(curLoc);
 }
 mapWInput.addEventListener('change', applyResize);
@@ -160,6 +164,10 @@ function teleAt(x, y) { return LOCS[curLoc].teleports.find(e => e.x === x && e.y
 // Мобы текущей локации
 function removeMob(x, y) { LOCS[curLoc].mobs = LOCS[curLoc].mobs.filter(m => !(m.x === x && m.y === y)); }
 function setMob(x, y, type) { removeMob(x, y); LOCS[curLoc].mobs.push({ x, y, type }); }
+// Таблички текущей локации
+function removeSign(x, y) { LOCS[curLoc].signs = LOCS[curLoc].signs.filter(s => !(s.x === x && s.y === y)); }
+function setSign(x, y, text) { removeSign(x, y); LOCS[curLoc].signs.push({ x, y, text: String(text || '') }); }
+function signAt(x, y) { return LOCS[curLoc].signs.find(s => s.x === x && s.y === y); }
 socket.on('saveResult', ({ ok }) => {
   statusEl.textContent = ok ? '✓ Сохранено' : '✗ Ошибка';
   setTimeout(() => { statusEl.textContent = ''; }, 2000);
@@ -181,6 +189,10 @@ function drawIcon(c, id) {
     c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
   }
   if (id === -1) { c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
+  if (id === -2) { // карандаш «изменить»
+    c.fillStyle = '#3ad0c0'; c.beginPath(); c.moveTo(8, 22); c.lineTo(18, 12); c.lineTo(21, 15); c.lineTo(11, 25); c.closePath(); c.fill();
+    c.fillStyle = '#cfa14a'; c.beginPath(); c.moveTo(19, 11); c.lineTo(22, 8); c.lineTo(25, 11); c.lineTo(22, 14); c.closePath(); c.fill();
+    c.fillStyle = '#fff'; c.beginPath(); c.moveTo(8, 22); c.lineTo(11, 25); c.lineTo(7, 26); c.closePath(); c.fill(); return; }
   // Все объекты — из единых SVG (OBJ_IMG). Перерисовал svg-файл → иконка обновилась везде.
   const im = OBJ_IMG[id];
   if (im && im._ready) c.drawImage(im, 2, 0, 26, 26);
@@ -220,7 +232,7 @@ function buildPalette() {
 
 saveBtn.addEventListener('click', () => {
   const out = {};
-  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs };
+  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs, signs: LOCS[k].signs };
   socket.emit('saveMap', { locations: out });
 });
 
@@ -252,7 +264,7 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('mousedown', (e) => {
   if (e.button === 2) { panning = true; lastX = e.clientX; lastY = e.clientY; }
-  else if (e.button === 0) { painting = true; paintAt(e); }
+  else if (e.button === 0) { painting = true; paintAt(e, true); }   // true = одиночный клик (можно спросить текст/правку)
 });
 window.addEventListener('mouseup', () => { painting = false; panning = false; });
 
@@ -264,7 +276,7 @@ canvas.addEventListener('mousemove', (e) => {
     panY += e.clientY - lastY;
     lastX = e.clientX; lastY = e.clientY;
   }
-  if (painting) paintAt(e);
+  if (painting) paintAt(e, false);   // протяжка — без диалогов
 });
 
 canvas.addEventListener('wheel', (e) => {
@@ -279,23 +291,44 @@ canvas.addEventListener('wheel', (e) => {
   zoom = nz;
 }, { passive: false });
 
-function paintAt(e) {
+function paintAt(e, isClick) {
   const r = canvas.getBoundingClientRect();
   const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
+  if (selected === EDIT) { if (isClick) editParams(t.x, t.y); return; }  // «Изменить»: правка параметров поставленного объекта
   if (typeof selected === 'string' && selected.startsWith('mob:')) { // существо: ставим маркер (тайл не меняем)
     setMob(t.x, t.y, selected.slice(4)); return;
   }
   if (selected === ERASE) {                          // ластик: убрать объект/моба, оставить пол
-    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y);
+    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
     FLOOR[t.y][t.x] = selected;
     if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
   } else if (TELES.has(selected)) {                  // портал: кладём + записываем связь (метка-строка)
     MAP[t.y][t.x] = selected;
     setTele(t.x, t.y, (sidInput.value || '').trim() || '1');
+  } else if (selected === SIGN) {                    // табличка: кладём + спрашиваем текст (только при клике)
+    MAP[t.y][t.x] = SIGN; removeTele(t.x, t.y);
+    if (isClick) { const cur = signAt(t.x, t.y); const txt = prompt('Текст таблички (его увидит игрок):', cur ? cur.text : ''); if (txt !== null) setSign(t.x, t.y, txt); else if (!cur) setSign(t.x, t.y, ''); }
+    else if (!signAt(t.x, t.y)) setSign(t.x, t.y, '');
   } else {                                           // прочий объект: поверх пола; если была лестница — убрать связь
     MAP[t.y][t.x] = selected; removeTele(t.x, t.y);
+  }
+}
+
+// «Изменить» — правка параметров уже поставленного объекта на клетке
+function editParams(x, y) {
+  const t = MAP[y][x];
+  if (t === SIGN) {
+    const cur = signAt(x, y);
+    const txt = prompt('Текст таблички (его увидит игрок):', cur ? cur.text : '');
+    if (txt !== null) setSign(x, y, txt);
+  } else if (TELES.has(t)) {
+    const te = teleAt(x, y);
+    const sid = prompt('ID связи (порталы/лестницы с одинаковым ID соединены):', te ? te.sid : '');
+    if (sid !== null) setTele(x, y, sid.trim() || '1');
+  } else {
+    alert('На этой клетке нечего настраивать.\nИзменяемые объекты: табличка (текст), порталы и лестницы (ID связи).');
   }
 }
 
@@ -425,7 +458,12 @@ function render() {
     else if (o.k === 27) objSprite(OBJ_IMG[27], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);
     else if (o.k === 28) objSprite(OBJ_IMG[28], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 29) { const im = OBJ_IMG[29]; if (im && im._ready) { const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y), W = 66 * zoom, H = 42 * zoom; ctx.drawImage(im, sx - W / 2, sy - H / 2, W, H); } }
-    else if (o.k === 30) objSprite(OBJ_IMG[30], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 32);
+    else if (o.k === 30) {
+      const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
+      objSprite(OBJ_IMG[30], sx, sy, 32);
+      const s = signAt(o.x, o.y);                  // показать начало текста над табличкой
+      if (s && s.text) { const tx = s.text.replace(/\n/g, ' ').slice(0, 14) + (s.text.length > 14 ? '…' : ''); ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(11 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(tx, sx, sy - 22 * zoom); }
+    }
     else drawRock(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.k === 6);
   }
   // Существа (поверх объектов)

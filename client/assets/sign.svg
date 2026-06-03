@@ -1,15 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Деревянный указатель: столб + доска со стрелкой. Заготовка. -->
-  <ellipse cx="256" cy="448" rx="80" ry="20" fill="#000000" fill-opacity="0.18"/>
+  <!-- Табличка-доска объявлений (читаемое сообщение). НЕ дорожный знак. Заготовка. -->
+  <ellipse cx="256" cy="452" rx="86" ry="20" fill="#000000" fill-opacity="0.18"/>
   <!-- столб -->
-  <rect x="238" y="150" width="36" height="296" fill="#8a5a28"/>
-  <rect x="238" y="150" width="14" height="296" fill="#a9743f"/>
-  <!-- доска-стрелка вправо -->
-  <polygon points="120,170 360,170 420,230 360,290 120,290" fill="#b07a42"/>
-  <polygon points="120,170 360,170 360,290 120,290" fill="#c1884e"/>
-  <!-- кромка доски -->
-  <polygon points="120,170 360,170 420,230 360,290 120,290" fill="none" stroke="#7a4d22" stroke-width="8" stroke-linejoin="round"/>
-  <!-- «надпись» (плоские штрихи) -->
-  <rect x="160" y="208" width="150" height="14" rx="6" fill="#7a4d22"/>
-  <rect x="160" y="240" width="110" height="14" rx="6" fill="#7a4d22"/>
+  <rect x="238" y="250" width="36" height="200" fill="#7a4d22"/>
+  <rect x="238" y="250" width="14" height="200" fill="#9a6634"/>
+  <!-- доска -->
+  <rect x="96" y="96" width="320" height="190" rx="14" fill="#7a4d22"/>
+  <rect x="108" y="108" width="296" height="166" rx="10" fill="#b07a42"/>
+  <!-- доски настила (вертикальные швы) -->
+  <g stroke="#9a6634" stroke-width="4">
+    <line x1="206" y1="112" x2="206" y2="270"/>
+    <line x1="306" y1="112" x2="306" y2="270"/>
+  </g>
+  <!-- «строки текста» -->
+  <g fill="#5a3f1e">
+    <rect x="138" y="140" width="236" height="16" rx="8"/>
+    <rect x="138" y="172" width="236" height="16" rx="8"/>
+    <rect x="138" y="204" width="170" height="16" rx="8"/>
+  </g>
+  <!-- гвозди по углам -->
+  <g fill="#5a3f1e">
+    <circle cx="126" cy="126" r="7"/>
+    <circle cx="386" cy="126" r="7"/>
+    <circle cx="126" cy="256" r="7"/>
+    <circle cx="386" cy="256" r="7"/>
+  </g>
 </svg>

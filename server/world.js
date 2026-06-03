@@ -50,13 +50,14 @@ function normLoc(L) {
   const map = L.map, floor = Array.isArray(L.floor) ? L.floor : deriveFloor(map);
   // mobs: undefined = поле отсутствовало (легаси, подсеем позже); массив = используем как есть
   const mobs = Array.isArray(L.mobs) ? L.mobs.map(m => ({ x: m.x, y: m.y, type: m.type })) : undefined;
-  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, H: map.length, W: map[0].length };
+  const signs = Array.isArray(L.signs) ? L.signs.map(s => ({ x: s.x, y: s.y, text: String(s.text || '') })) : [];
+  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, signs, H: map.length, W: map[0].length };
 }
 
 function saveToDisk() {
   if (!fs.existsSync(MAPS_DIR)) fs.mkdirSync(MAPS_DIR, { recursive: true });
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [] };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [] };
   fs.writeFileSync(MAP_FILE, JSON.stringify({ locations: out }));
 }
 
@@ -146,13 +147,13 @@ function teleportTarget(loc, x, y) {
 function locState(loc) {
   const L = locations[loc] || locations[START];
   const name = locations[loc] ? loc : START;
-  return { location: name, map: L.map, floor: L.floor, width: L.W, height: L.H };
+  return { location: name, map: L.map, floor: L.floor, signs: L.signs || [], width: L.W, height: L.H };
 }
 
 // Все локации для редактора
 function editorState() {
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], width: locations[k].W, height: locations[k].H };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], width: locations[k].W, height: locations[k].H };
   return { locations: out };
 }
 
@@ -183,7 +184,10 @@ function setLocations(payload) {
     const mobs = Array.isArray(L.mobs)
       ? L.mobs.filter(m => Number.isInteger(m.x) && Number.isInteger(m.y) && MOB_TYPES.has(m.type)).map(m => ({ x: m.x, y: m.y, type: m.type }))
       : [];
-    next[k] = { map, floor, teleports, mobs, H: map.length, W: map[0].length };
+    const signs = Array.isArray(L.signs)
+      ? L.signs.filter(s => Number.isInteger(s.x) && Number.isInteger(s.y) && typeof s.text === 'string').map(s => ({ x: s.x, y: s.y, text: s.text.slice(0, 300) }))
+      : [];
+    next[k] = { map, floor, teleports, mobs, signs, H: map.length, W: map[0].length };
   }
   if (!next[START]) return false;                 // Поверхность обязательна (стартовая локация)
   locations = next;

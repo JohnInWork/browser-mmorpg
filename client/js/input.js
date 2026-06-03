@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { BLOCKED, MOVE_SPEED } from './config.js';
 import { screenToTile } from './iso.js';
-import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, closeInteractions } from './ui.js';
+import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, closeInteractions } from './ui.js';
 
 // Имя моба/НПС: из данных сервера (mobTypes), иначе из TYPE_NAMES
 function mobLabel(type) { return (S.mobTypes[type] && S.mobTypes[type].name) || TYPE_NAMES[type] || 'Существо'; }
@@ -96,6 +96,11 @@ function nodeAt(x, y) {
   return null;
 }
 function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }
+// Табличка на клетке (тайл 30): возвращает {x,y,text} или null
+function signAt(x, y) {
+  if (!(S.MAP && S.MAP[y] && S.MAP[y][x] === 30)) return null;
+  return (S.signs || []).find(s => s.x === x && s.y === y) || { x, y, text: '' };
+}
 function stairsAt(x, y) {
   const t = S.MAP && S.MAP[y] && S.MAP[y][x];
   return t === 13 ? 'Лестница вниз' : t === 14 ? 'Лестница вверх' : (t === 16 || t === 17 || t === 18) ? 'Портал' : null;
@@ -128,6 +133,7 @@ export function setupInput() {
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
     else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
     else if (wellAt(t.x, t.y)) { showTip('Колодец'); canvas.style.cursor = 'pointer'; }
+    else if (signAt(t.x, t.y)) { showTip('Табличка'); canvas.style.cursor = 'pointer'; }
     else if (stairsAt(t.x, t.y)) { showTip(stairsAt(t.x, t.y)); canvas.style.cursor = 'pointer'; }
     else if (node) { showTip(node.name); canvas.style.cursor = 'pointer'; }
     else { hideTip(); canvas.style.cursor = ''; }
@@ -185,6 +191,15 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'chest', x: t.x, y: t.y };
+      S.path = ap.path; S.targetTile = null;
+      return;
+    }
+    // Клик по табличке — подойти и прочитать сообщение
+    const sign = signAt(t.x, t.y);
+    if (sign) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      S.pendingAction = { kind: 'sign', text: sign.text };
       S.path = ap.path; S.targetTile = null;
       return;
     }
@@ -267,6 +282,8 @@ function decideStep() {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openQuestDialog(a.npc);
     } else if (a.kind === 'notice') {
       addFloater(me.x, me.y, a.text, a.color || '#fff'); // дошли до объекта — показать сообщение
+    } else if (a.kind === 'sign') {
+      openSign(a.text);                                  // дошли до таблички — показать текст
     }
     S.pendingAction = null;
     return;

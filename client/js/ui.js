@@ -102,6 +102,17 @@ function openModal(html) {
 }
 export function closeModal() { document.getElementById('modalOverlay').classList.add('hidden'); }
 
+// Табличка: показать игроку сообщение (модальное окно с текстом, сохраняем переносы строк)
+export function openSign(text) {
+  const body = text && text.trim() ? escHtml(text).replace(/\n/g, '<br>') : '<i class="sign-empty">Пустая табличка</i>';
+  openModal(`
+    <div class="sign-modal">
+      <div class="sign-board">${body}</div>
+      <div class="modal-btns"><button class="m-ok" data-act="sign-ok">Закрыть</button></div>
+    </div>`);
+  document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => closeModal()));
+}
+
 function openSplitDialog(invIndex) {
   const stack = S.inventory[invIndex];
   if (!stack || stack.qty < 2) return;
