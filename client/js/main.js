@@ -4,7 +4,7 @@ import { setupNet } from './net.js';
 import { setupInput, update } from './input.js';
 import { render } from './render.js';
 import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, closeBank, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu } from './ui.js';
-import { buildCharacterSVG, PALETTES } from './character.js';
+import { buildCharacterSVG, PALETTES, HAIR_STYLES } from './character.js';
 import { itemType } from './items.js';
 
 // socket.io подключён глобально через <script> в index.html
@@ -26,7 +26,7 @@ const previewEl = document.getElementById('charPreview');
 function renderPreview() { previewEl.innerHTML = buildCharacterSVG(S.appearance); }
 
 function buildCreator() {
-  // пока только цвет кожи
+  // Цветовые палитры (кожа, цвет волос) — общий механизм по data-kind
   document.querySelectorAll('.swatches').forEach(box => {
     const kind = box.dataset.kind;
     if (!PALETTES[kind]) return;
@@ -43,7 +43,30 @@ function buildCreator() {
       box.appendChild(sw);
     });
   });
+  buildHairPicker();
   renderPreview();
+}
+
+// Выбор причёски (форма): кнопки-превью + вариант «Без причёски»
+function buildHairPicker() {
+  const box = document.getElementById('hairStyles');
+  if (!box) return;
+  box.innerHTML = '';
+  const opts = [{ id: '', name: 'Без причёски' }, ...HAIR_STYLES];
+  opts.forEach(s => {
+    const b = document.createElement('button');
+    b.className = 'hair-btn' + (S.appearance.hairStyle === s.id ? ' sel' : '');
+    b.title = s.name;
+    if (s.art) b.innerHTML = `<svg viewBox="185 40 150 135">${s.art.split('#484848').join('#6b4a2b')}</svg>`;
+    else b.textContent = '✕';
+    b.addEventListener('click', () => {
+      S.appearance.hairStyle = s.id;
+      box.querySelectorAll('.hair-btn').forEach(x => x.classList.remove('sel'));
+      b.classList.add('sel');
+      renderPreview();
+    });
+    box.appendChild(b);
+  });
 }
 
 function enterGame() {

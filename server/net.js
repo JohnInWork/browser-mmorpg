@@ -70,13 +70,10 @@ function setup(io) {
     socket.on('setAppearance', (a) => {
       if (!a || typeof a !== 'object') return;
       const hex = (v) => typeof v === 'string' && /^#[0-9a-fA-F]{3,6}$/.test(v);
-      const styles = ['short', 'long', 'mohawk', 'topknot', 'bald'];
       const ap = player.appearance;
       if (hex(a.skin)) ap.skin = a.skin;
       if (hex(a.hair)) ap.hair = a.hair;
-      if (hex(a.top)) ap.top = a.top;
-      if (hex(a.bottom)) ap.bottom = a.bottom;
-      if (styles.includes(a.hairStyle)) ap.hairStyle = a.hairStyle;
+      if (typeof a.hairStyle === 'string' && /^[a-z0-9]{0,12}$/i.test(a.hairStyle)) ap.hairStyle = a.hairStyle; // id причёски (или '' — без причёски)
       io.emit('playerAppearance', { id: socket.id, appearance: ap });
     });
 

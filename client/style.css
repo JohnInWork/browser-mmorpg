@@ -40,6 +40,10 @@ body {
 .swatches { display: flex; flex-wrap: wrap; gap: 7px; }
 .swatch-c { width: 28px; height: 28px; border-radius: 7px; cursor: pointer; border: 2px solid transparent; }
 .swatch-c.sel { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
+.hair-styles { display: flex; flex-wrap: wrap; gap: 7px; }
+.hair-btn { width: 44px; height: 44px; padding: 0; border-radius: 9px; cursor: pointer; border: 2px solid #3a3a4e; background: #1a1a24; color: #9aa0b0; font-size: 16px; display: flex; align-items: center; justify-content: center; }
+.hair-btn svg { width: 100%; height: 100%; }
+.hair-btn.sel { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,.25); }
 .opts { display: flex; flex-wrap: wrap; gap: 6px; }
 .opt { padding: 6px 11px; border-radius: 8px; background: #1a1a24; border: 2px solid #3a3a4e; cursor: pointer; font-size: 13px; }
 .opt.sel { border-color: #5b8def; color: #fff; }

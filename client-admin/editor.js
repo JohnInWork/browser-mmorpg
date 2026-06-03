@@ -1,6 +1,6 @@
 // MMORPG — редактор карт (только для админа)
 // Подключается как mode=admin, проходит проверку пароля, рисует и сохраняет карту.
-import { buildCharacterSVG, getCharImage, PALETTES, DEFAULT_APPEARANCE, CHAR_RATIO, CHAR_FEET } from '/js/character.js';
+import { buildCharacterSVG, getCharImage, PALETTES, DEFAULT_APPEARANCE, CHAR_RATIO, CHAR_FEET, HAIR_STYLES } from '/js/character.js';
 import { MOB_TEXTURES, MOB_TEX_BY_ID } from '/js/mob-textures.js';
 
 const socket = io({ query: { mode: 'admin' } });
@@ -665,7 +665,11 @@ function openNpcEditor(x, y, existing) {
   // легаси: одиночный quest → массив
   if (!Array.isArray(data.quests)) data.quests = data.quest ? [data.quest] : [];
   const ov = document.getElementById('npcOverlay');
+  if (data.appearance.hair == null) data.appearance.hair = '#4a3525';
+  if (data.appearance.hairStyle == null) data.appearance.hairStyle = '';
   const skinSw = PALETTES.skin.map(c => `<span class="npc-skin${data.appearance.skin === c ? ' sel' : ''}" data-c="${c}" style="background:${c}"></span>`).join('');
+  const hairColSw = PALETTES.hair.map(c => `<span class="npc-skin${data.appearance.hair === c ? ' sel' : ''}" data-haircol="${c}" style="background:${c}"></span>`).join('');
+  const hairBtns = [{ id: '', name: 'Без' }, ...HAIR_STYLES].map(s => `<button class="npc-hair${data.appearance.hairStyle === s.id ? ' sel' : ''}" data-hair="${s.id}">${s.art ? `<svg viewBox="185 40 150 135">${s.art.split('#484848').join('#6b4a2b')}</svg>` : '✕'}</button>`).join('');
   const equipRows = EQUIP_ORDER.map(slot => `<label class="npc-eq"><span>${SLOT_NAMES[slot]}</span><select data-slot="${slot}">${optHtml(EQUIP_ITEMS[slot], data.equipment[slot] || '')}</select></label>`).join('');
   const sellChecks = SELL_ITEMS.map(([id, l]) => `<label class="npc-sell"><input type="checkbox" data-sell="${id}"${data.sells.includes(id) ? ' checked' : ''}> ${escHtml(l)}</label>`).join('');
   ov.innerHTML = `
@@ -673,6 +677,10 @@ function openNpcEditor(x, y, existing) {
       <div class="npc-left">
         <div class="npc-preview" id="npcPreview"></div>
         <div class="npc-skins" id="npcSkins">${skinSw}</div>
+        <div class="npc-lbl">Причёска</div>
+        <div class="npc-hairstyles">${hairBtns}</div>
+        <div class="npc-lbl">Цвет волос</div>
+        <div class="npc-skins">${hairColSw}</div>
         <div class="npc-eqgrid">${equipRows}</div>
       </div>
       <div class="npc-right">
@@ -699,9 +707,19 @@ function openNpcEditor(x, y, existing) {
   const preview = () => { $('npcPreview').innerHTML = buildCharacterSVG(data.appearance, data.equipment); };
   preview();
 
-  ov.querySelectorAll('.npc-skin').forEach(sw => sw.addEventListener('click', () => {
+  ov.querySelectorAll('.npc-skin[data-c]').forEach(sw => sw.addEventListener('click', () => {
     data.appearance.skin = sw.dataset.c;
-    ov.querySelectorAll('.npc-skin').forEach(s => s.classList.remove('sel')); sw.classList.add('sel');
+    ov.querySelectorAll('.npc-skin[data-c]').forEach(s => s.classList.remove('sel')); sw.classList.add('sel');
+    preview();
+  }));
+  ov.querySelectorAll('.npc-skin[data-haircol]').forEach(sw => sw.addEventListener('click', () => {
+    data.appearance.hair = sw.dataset.haircol;
+    ov.querySelectorAll('.npc-skin[data-haircol]').forEach(s => s.classList.remove('sel')); sw.classList.add('sel');
+    preview();
+  }));
+  ov.querySelectorAll('.npc-hair').forEach(b => b.addEventListener('click', () => {
+    data.appearance.hairStyle = b.dataset.hair;
+    ov.querySelectorAll('.npc-hair').forEach(s => s.classList.remove('sel')); b.classList.add('sel');
     preview();
   }));
   ov.querySelectorAll('select[data-slot]').forEach(sel => sel.addEventListener('change', () => {

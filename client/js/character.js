@@ -1,15 +1,18 @@
 // Рендер персонажа из векторного тела пользователя (Персонаж.svg).
-// Пока кастомизируется только ЦВЕТ КОЖИ (остальное — позже).
+// Кастомизация: цвет кожи, причёска (форма) и цвет волос.
 import { BODY_SVG } from './body-data.js';
 import { ARMOR_PARTS } from './armor-data.js';
+import { HAIR_BY_ID, HAIR_COLORS } from './hair-data.js';
+export { HAIR_STYLES } from './hair-data.js';   // для экрана создания и редактора НПС
 
 function shade(hex, p){ hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; const t=p<0?0:255,a=Math.abs(p)/100; r=Math.round((t-r)*a+r);g=Math.round((t-g)*a+g);b=Math.round((t-b)*a+b); return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
 
-// Палитры кастомизации (пока активна только кожа)
+// Палитры кастомизации
 export const PALETTES = {
   skin: ['#f3cfa6','#ffa78f','#e8bf94','#d9a06b','#b97a4e','#8a5a34','#5e3a1e'],
+  hair: HAIR_COLORS,
 };
-export const DEFAULT_APPEARANCE = { skin:'#f3cfa6' };
+export const DEFAULT_APPEARANCE = { skin:'#f3cfa6', hair:'#4a3525', hairStyle:'h1' };
 
 // Порядок отрисовки брони ПОВЕРХ тела (низ→верх). Плащ рисуется ОТДЕЛЬНО — позади тела.
 const ARMOR_ORDER = ['pants','chest','gloves','boots','helmet'];
@@ -78,6 +81,9 @@ export function buildCharacterSVG(app, equipment, opts = {}){
   const skin = app.skin;
   const sh = shade(skin, -16); // тень кожи
   const body = BODY_SVG.replace(/#FFA78F/gi, skin).replace(/#F89580/gi, sh);
+  // Причёска: слой поверх головы, перекрашен в цвет волос (под шлемом, если надет)
+  const hairDef = app.hairStyle && HAIR_BY_ID[app.hairStyle];
+  const hair = hairDef ? hairDef.art.split('#484848').join(app.hair || '#4a3525') : '';
   const back = (equipment && equipment.cloak) ? CLOAK_BACK : '';
   let armor = '';
   if (equipment) for (const slot of ARMOR_ORDER) {
@@ -96,7 +102,7 @@ export function buildCharacterSVG(app, equipment, opts = {}){
     if (opts.held && HELD_TOOLS[opts.held]) hands += HELD_TOOLS[opts.held];
     else if (mh && WEAPON_ART[mh]) hands += WEAPON_ART[mh];
   }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${back}${body}${armor}${hands}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${back}${body}${hair}${armor}${hands}</svg>`;
 }
 
 // Сигнатура надетых слотов (для ключа кэша)
@@ -109,7 +115,8 @@ function equipKey(equipment){
 const imgCache = new Map();
 export function getCharImage(app, equipment, held){
   const opts = { held };
-  const key = ((app && app.skin) || DEFAULT_APPEARANCE.skin) + '|' + equipKey(equipment) + '|' + (held || '');
+  const a = app || {};
+  const key = (a.skin || DEFAULT_APPEARANCE.skin) + '|' + (a.hairStyle || '') + '|' + (a.hair || '') + '|' + equipKey(equipment) + '|' + (held || '');
   if(imgCache.has(key)) return imgCache.get(key);
   const ent = { img: new Image(), ready:false };
   ent.img.onload = ()=>{ ent.ready=true; };

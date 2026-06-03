@@ -78,6 +78,11 @@ body {
 .npc-skins { display: flex; flex-wrap: wrap; gap: 6px; }
 .npc-skin { width: 24px; height: 24px; border-radius: 6px; cursor: pointer; border: 2px solid transparent; }
 .npc-skin.sel { border-color: #fff; }
+.npc-lbl { font-size: 11px; color: #9aa0b0; font-weight: 700; }
+.npc-hairstyles { display: flex; flex-wrap: wrap; gap: 5px; }
+.npc-hair { width: 38px; height: 38px; padding: 0; border-radius: 8px; cursor: pointer; border: 2px solid #3a3a4e; background: #1a1a24; color: #9aa0b0; font-size: 14px; display: flex; align-items: center; justify-content: center; }
+.npc-hair svg { width: 100%; height: 100%; }
+.npc-hair.sel { border-color: #fff; }
 .npc-eqgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .npc-eq { display: flex; flex-direction: column; font-size: 11px; color: #9aa0b0; gap: 2px; }
 .npc-eq select { background: #1a1a24; border: 1px solid #3a3a4e; color: #eee; border-radius: 6px; padding: 4px; font-size: 12px; }

@@ -42,7 +42,7 @@ function create(id) {
     x: spawn.x, y: spawn.y,
     color: COLORS[Object.keys(players).length % COLORS.length],
     hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP,
-    appearance: { skin:'#f3cfa6', hair:'#6e4426', hairStyle:'short', top:'#3f7aa8', bottom:'#5a4636' },
+    appearance: { skin:'#f3cfa6', hair:'#4a3525', hairStyle:'h1' },
     gold: 0,
     // стартовый инвентарь: топор + комплект брони (чтобы было что надеть)
     inventory: [
