@@ -32,6 +32,6 @@ resources.start(io);
 server.listen(cfg.PORT, () => {
   console.log(`\n  🎮 MMORPG сервер запущен`);
   console.log(`  → Игра:     http://localhost:${cfg.PORT}`);
-  console.log(`  → Редактор: http://localhost:${cfg.PORT}/admin   (пароль: ${cfg.ADMIN_PASSWORD})`);
+  console.log(`  → Редактор: http://localhost:${cfg.PORT}/admin   (без пароля)`);
   console.log('');
 });

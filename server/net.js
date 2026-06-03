@@ -18,17 +18,12 @@ function setup(io) {
 
     // --- Админ-редактор ---
     if (isAdminClient) {
+      socket.isAdmin = true;                 // вход в редактор пока без пароля (локальная разработка)
       socket.emit('mapData', world.getState());
 
-      socket.on('adminAuth', (password) => {
-        if (password === cfg.ADMIN_PASSWORD) {
-          socket.isAdmin = true;
-          socket.emit('adminAuthResult', { ok: true });
-          console.log('  ✔ Админ авторизовался');
-        } else {
-          socket.emit('adminAuthResult', { ok: false });
-          console.log('  ✖ Неверный пароль админа');
-        }
+      socket.on('adminAuth', () => {         // совместимость: подтверждаем вход
+        socket.isAdmin = true;
+        socket.emit('adminAuthResult', { ok: true });
       });
 
       socket.on('saveMap', (newMap) => {
