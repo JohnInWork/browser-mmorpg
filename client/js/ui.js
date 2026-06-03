@@ -3,7 +3,13 @@ import { S } from './state.js';
 import { itemIcon, itemName, itemPrice, SLOTS, SLOT_NAMES, ITEMS, CAT_NAMES, RARITY, itemRarity, rarityColor, UI_SVG } from './items.js';
 
 // Фон-плитка по редкости (с альфой) для слота с предметом; '' — сброс к стандартному фону
-function rarityBg(id) { return rarityColor(id) + '33'; }
+// Фон слота: НЕПРОЗРАЧНЫЙ — тёмная база слота + лёгкий оттенок редкости (чтобы фон не «просвечивал»).
+function rarityBg(id) {
+  const c = rarityColor(id).replace('#', '');
+  const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+  const a = 0.26, br = 20, bg = 20, bb = 28;   // база = цвет слота (rgb 20,20,28)
+  return `rgb(${Math.round(br * (1 - a) + r * a)},${Math.round(bg * (1 - a) + g * a)},${Math.round(bb * (1 - a) + b * a)})`;
+}
 // Цвет названия по редкости (обычные — обычный светлый текст)
 function rarityNameColor(id) { return itemRarity(id) === 'common' ? '' : rarityColor(id); }
 
