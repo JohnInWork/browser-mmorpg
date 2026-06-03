@@ -7,6 +7,11 @@ const COLORS = ['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6','#e67e22','#1a
 
 const players = {}; // socketId -> player
 
+// Инвентарь — фиксированные 32 ячейки: {id,qty} или null (пустая клетка).
+const INV_SIZE = 32;
+function padInv(items) { const a = items.slice(0, INV_SIZE); while (a.length < INV_SIZE) a.push(null); return a; }
+function firstEmpty(p) { return p.inventory.findIndex(s => !s); }
+
 function create(id) {
   const spawn = world.randomSpawn();
   const player = {
@@ -34,6 +39,7 @@ function create(id) {
     gathering: null,   // id ресурс-ноды (дерева), которую рубим
     quests: { story: 0, progress: 0, completed: [], active: {} }, // story-цепочка + npc-квесты (active: id→прогресс)
   };
+  player.inventory = padInv(player.inventory);   // дополнить до 32 ячеек пустыми
   players[id] = player;
   return player;
 }
@@ -41,25 +47,28 @@ function create(id) {
 function remove(id) { delete players[id]; }
 function count() { return Object.keys(players).length; }
 
-// Добавить предмет в инвентарь (стакается, если stackable)
+// Добавить предмет в инвентарь (стакается, если stackable). Возвращает false, если нет места.
 function addItem(p, id, qty = 1) {
   const def = ITEMS[id];
   if (def && def.stackable) {
-    const stack = p.inventory.find(s => s.id === id);
-    if (stack) { stack.qty += qty; return; }
+    const stack = p.inventory.find(s => s && s.id === id);
+    if (stack) { stack.qty += qty; return true; }
   }
-  p.inventory.push({ id, qty });
+  const e = firstEmpty(p);
+  if (e < 0) return false;                       // рюкзак полон
+  p.inventory[e] = { id, qty };
+  return true;
 }
-function hasItem(p, id) { return p.inventory.some(s => s.id === id); }
-function countItem(p, id) { let n = 0; for (const s of p.inventory) if (s.id === id) n += s.qty || 1; return n; }
+function hasItem(p, id) { return p.inventory.some(s => s && s.id === id); }
+function countItem(p, id) { let n = 0; for (const s of p.inventory) if (s && s.id === id) n += s.qty || 1; return n; }
 function removeItems(p, id, qty) {
   let need = qty;
   for (let i = p.inventory.length - 1; i >= 0 && need > 0; i--) {
     const s = p.inventory[i];
-    if (s.id !== id) continue;
+    if (!s || s.id !== id) continue;
     const take = Math.min(need, s.qty || 1);
     s.qty -= take; need -= take;
-    if (s.qty <= 0) p.inventory.splice(i, 1);
+    if (s.qty <= 0) p.inventory[i] = null;       // освободить клетку (не схлопывать)
   }
 }
 // Крафт по рецепту {out, outQty, in:[{id,qty}]}: проверка ингредиентов, расход, выдача
@@ -81,6 +90,7 @@ function activeTool(p) {
 function activateInv(p, invIndex) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
   const item = p.inventory[invIndex];
+  if (!item) return false;
   const def = ITEMS[item.id];
   if (!def || def.type !== 'tool') return false;          // «в руку» из рюкзака — только инструмент
   p.activeInvId = (p.activeInvId === item.id) ? null : item.id;
@@ -92,22 +102,42 @@ function activateInv(p, invIndex) {
 function invToHotbar(p, invIndex, slot) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
   if (!Number.isInteger(slot) || slot < 0 || slot >= p.hotbar.length) return false;
-  const item = p.inventory.splice(invIndex, 1)[0];
+  const item = p.inventory[invIndex];
+  if (!item) return false;
   const prev = p.hotbar[slot];
   p.hotbar[slot] = item;
-  if (prev) p.inventory.push(prev); // то, что лежало в слоте, возвращается в рюкзак
+  p.inventory[invIndex] = prev || null;          // то, что лежало в слоте, кладём на освободившуюся клетку
   if (p.activeInvId === item.id) p.activeInvId = null; // активный инструмент уехал в слот — снять «рюкзачную» активность
   return true;
 }
 
-// Вернуть предмет из слота хотбара в рюкзак
-function hotbarToInv(p, slot) {
+// Вернуть предмет из слота хотбара в рюкзак (в выбранную клетку, иначе в первую свободную).
+function hotbarToInv(p, slot, invIndex = null) {
   if (!Number.isInteger(slot) || slot < 0 || slot >= p.hotbar.length) return false;
   const item = p.hotbar[slot];
   if (!item) return false;
-  p.hotbar[slot] = null;
-  p.inventory.push(item);
-  if (p.activeSlot === slot) p.activeSlot = null;
+  let dest = Number.isInteger(invIndex) && invIndex >= 0 && invIndex < p.inventory.length ? invIndex : firstEmpty(p);
+  if (dest < 0) return false;                     // рюкзак полон
+  const occ = p.inventory[dest];
+  if (occ) { p.hotbar[slot] = occ; }              // занятая клетка — обмен с хотбаром
+  else { p.hotbar[slot] = null; if (p.activeSlot === slot) p.activeSlot = null; }
+  p.inventory[dest] = item;
+  return true;
+}
+
+// Переместить/обменять предметы внутри рюкзака (drag-n-drop в любую клетку).
+function moveItem(p, from, to) {
+  const n = p.inventory.length;
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= n || to >= n || from === to) return false;
+  const a = p.inventory[from];
+  if (!a) return false;
+  const b = p.inventory[to];
+  if (!b) { p.inventory[to] = a; p.inventory[from] = null; return true; }      // на пустую клетку
+  const def = ITEMS[a.id];
+  if (b.id === a.id && def && def.stackable) {                                  // слить одинаковые стаки
+    b.qty += a.qty; p.inventory[from] = null; return true;
+  }
+  p.inventory[from] = b; p.inventory[to] = a;                                   // иначе обмен местами
   return true;
 }
 
@@ -115,6 +145,7 @@ function hotbarToInv(p, slot) {
 function eat(p, invIndex) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return 0;
   const item = p.inventory[invIndex];
+  if (!item) return 0;
   const def = ITEMS[item.id];
   if (!def || def.type !== 'food' || !def.heal) return 0; // сырое/не-еда не лечит (это ингредиент)
   if (p.hp >= p.maxHp) return 0;                          // уже полное HP — не тратим еду
@@ -138,11 +169,12 @@ function armorValue(p) {
 function equipItem(p, invIndex) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
   const item = p.inventory[invIndex];
+  if (!item) return false;
   const def = ITEMS[item.id];
   if (!def || !def.slot || !['armor', 'weapon', 'shield'].includes(def.type)) return false;
   if (!(def.slot in p.equipment)) return false;
-  p.inventory.splice(invIndex, 1);
-  const back = (id) => { if (id) p.inventory.push({ id, qty: 1 }); };
+  p.inventory[invIndex] = null;                  // освободить клетку (снятое вернётся в неё или в свободную)
+  const back = (id) => { if (id) { const e = firstEmpty(p); if (e >= 0) p.inventory[e] = { id, qty: 1 }; } };
   // Двуручное оружие — освободить вторую руку; щит/одноручное — снять двуручное, если оно надето
   if (def.slot === 'mainHand' && def.hands === 2) { back(p.equipment.offHand); p.equipment.offHand = null; }
   if (def.slot === 'offHand') { const mh = ITEMS[p.equipment.mainHand]; if (mh && mh.hands === 2) { back(p.equipment.mainHand); p.equipment.mainHand = null; } }
@@ -158,31 +190,34 @@ function weaponDamage(p) {
   return (w && ITEMS[w] && ITEMS[w].damage) || 0;
 }
 
-// Снять предмет из слота брони в рюкзак
+// Снять предмет из слота брони в рюкзак (в первую свободную клетку)
 function unequipItem(p, slot) {
   if (!p.equipment[slot]) return false;
-  p.inventory.push({ id: p.equipment[slot], qty: 1 });
+  const e = firstEmpty(p);
+  if (e < 0) return false;                       // рюкзак полон — некуда снять
+  p.inventory[e] = { id: p.equipment[slot], qty: 1 };
   p.equipment[slot] = null;
   return true;
 }
 
-// Разделить стак: отнять amount у стака и положить новый стак тем же предметом
-const INV_CAP = 32;
+// Разделить стак: отнять amount у стака и положить новый стак в свободную клетку
 function splitStack(p, invIndex, amount) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
-  if (p.inventory.length >= INV_CAP) return false;          // нет свободной клетки под новый стак
   const s = p.inventory[invIndex];
   amount = Math.floor(Number(amount));
   if (!s || !(s.qty > 1) || !(amount >= 1) || amount >= s.qty) return false;
+  const e = firstEmpty(p);
+  if (e < 0) return false;                        // нет свободной клетки под новый стак
   s.qty -= amount;
-  p.inventory.push({ id: s.id, qty: amount });
+  p.inventory[e] = { id: s.id, qty: amount };
   return true;
 }
 
-// Уничтожить стак целиком
+// Уничтожить стак целиком (клетка становится пустой)
 function destroyStack(p, invIndex) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
-  p.inventory.splice(invIndex, 1);
+  if (!p.inventory[invIndex]) return false;
+  p.inventory[invIndex] = null;
   return true;
 }
 
@@ -203,4 +238,4 @@ function respawn(io, p) {
   io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp });
 }
 
-module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, splitStack, destroyStack, invState, ITEMS };
+module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack, invState, ITEMS };

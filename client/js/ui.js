@@ -239,7 +239,7 @@ export function openTrade() { tradeOpen = true; tradeSel.clear(); document.getEl
 export function closeTrade() { tradeOpen = false; document.getElementById('tradePanel').classList.add('hidden'); }
 export function selectedTrade() { return Array.from(tradeSel); }
 export function clearTradeSel() { tradeSel.clear(); }
-export function selectAllTrade() { tradeSel.clear(); S.inventory.forEach((_, i) => tradeSel.add(i)); renderTrade(); }
+export function selectAllTrade() { tradeSel.clear(); S.inventory.forEach((s, i) => { if (s) tradeSel.add(i); }); renderTrade(); }
 
 function updateTradeFooter() {
   const me = S.players[S.myId];
@@ -274,7 +274,7 @@ export function renderTrade() {
 // --- Окно крафта (станции) ---
 let craftStation = null;
 const STATION_NAMES = { smelter: 'Плавильня', anvil: 'Наковальня', campfire: 'Костёр' };
-function countInv(id) { let n = 0; for (const s of S.inventory) if (s.id === id) n += s.qty || 1; return n; }
+function countInv(id) { let n = 0; for (const s of S.inventory) if (s && s.id === id) n += s.qty || 1; return n; }
 export function isCraftOpen() { return !!craftStation; }
 export function openCraft(station) {
   craftStation = station;

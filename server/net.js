@@ -119,14 +119,12 @@ function setup(io) {
     socket.on('sellItems', (indices) => {
       if (!nearTrader() || !Array.isArray(indices)) return;
       const set = new Set(indices.filter(i => Number.isInteger(i)));
-      let g = 0; const keep = [];
+      let g = 0;
       player.inventory.forEach((it, i) => {
-        if (set.has(i)) g += priceOf(it.id) * (it.qty || 1);
-        else keep.push(it);
+        if (it && set.has(i)) { g += priceOf(it.id) * (it.qty || 1); player.inventory[i] = null; }
       });
       if (g <= 0) return;
       player.gold += g;
-      player.inventory = keep;
       socket.emit('inventoryUpdate', playersMod.invState(player));
       socket.emit('loot', { gold: g });
     });
@@ -175,12 +173,18 @@ function setup(io) {
       }
     });
 
-    // Возврат предмета из слота хотбара в рюкзак
-    socket.on('hotbarToInv', ({ slot }) => {
-      if (playersMod.hotbarToInv(player, slot)) {
+    // Возврат предмета из слота хотбара в рюкзак (в выбранную клетку, если указана)
+    socket.on('hotbarToInv', ({ slot, invIndex } = {}) => {
+      if (playersMod.hotbarToInv(player, slot, invIndex)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
         sendHeld();
       }
+    });
+
+    // Перемещение/обмен предметов внутри рюкзака (drag-n-drop в любую клетку)
+    socket.on('moveItem', ({ from, to } = {}) => {
+      if (playersMod.moveItem(player, from, to))
+        socket.emit('inventoryUpdate', playersMod.invState(player));
     });
 
     // Надеть броню из рюкзака

@@ -99,7 +99,9 @@ function setupUi() {
     slot.addEventListener('drop', (e) => {
       e.preventDefault();
       const src = parseDrag(e);
-      if (src && src.from === 'hot') S.socket.emit('hotbarToInv', { slot: src.index });
+      if (!src) return;
+      if (src.from === 'hot') S.socket.emit('hotbarToInv', { slot: src.index, invIndex: i });   // в выбранную клетку
+      else if (src.from === 'inv' && src.index !== i) S.socket.emit('moveItem', { from: src.index, to: i }); // перенос внутри рюкзака
     });
     // Клик по предмету: броню — надеть; инструмент — взять «в руку» (без переноса в слот)
     slot.addEventListener('click', () => {
