@@ -339,7 +339,7 @@ export function renderBank() {
 
 // --- Окно крафта (станции) ---
 let craftStation = null;
-const STATION_NAMES = { smelter: 'Плавильня', anvil: 'Наковальня', campfire: 'Костёр' };
+const STATION_NAMES = { smelter: 'Плавильня', anvil: 'Наковальня', campfire: 'Костёр', workbench: 'Верстак' };
 function countInv(id) { let n = 0; for (const s of S.inventory) if (s && s.id === id) n += s.qty || 1; return n; }
 export function isCraftOpen() { return !!craftStation; }
 export function openCraft(station) {

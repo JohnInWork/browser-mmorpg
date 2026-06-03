@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Верстак (станция крафта). Заготовка — перерисуй под себя. -->
+  <ellipse cx="256" cy="452" rx="170" ry="30" fill="#000000" fill-opacity="0.16"/>
+  <!-- ножки -->
+  <rect x="150" y="300" width="26" height="150" fill="#6b4a2b"/>
+  <rect x="336" y="300" width="26" height="150" fill="#6b4a2b"/>
+  <rect x="150" y="300" width="26" height="150" fill="#5a3d22" opacity="0.4"/>
+  <!-- столешница -->
+  <rect x="110" y="262" width="292" height="46" rx="8" fill="#a9743f"/>
+  <rect x="110" y="262" width="292" height="14" rx="7" fill="#c1884e"/>
+  <!-- доски на столешнице (швы) -->
+  <g stroke="#8a5a28" stroke-width="3">
+    <line x1="180" y1="266" x2="180" y2="304"/>
+    <line x1="256" y1="266" x2="256" y2="304"/>
+    <line x1="332" y1="266" x2="332" y2="304"/>
+  </g>
+  <!-- инструменты на столе: молоток -->
+  <rect x="150" y="210" width="70" height="14" rx="6" fill="#7a5230"/>
+  <rect x="200" y="196" width="34" height="42" rx="6" fill="#5d626d"/>
+  <rect x="200" y="196" width="14" height="42" rx="6" fill="#787e8a"/>
+  <!-- кусок кожи/материал -->
+  <path d="M286 230 L342 222 L360 250 L344 286 L296 282 L282 256 Z" fill="#c4573a"/>
+  <path d="M286 230 L342 222 L350 240 L300 248 Z" fill="#d6694b"/>
+  <!-- пила прислонена -->
+  <polygon points="372,150 384,150 372,300 360,300" fill="#b9c2cd"/>
+  <polygon points="372,150 384,150 384,300 372,300" fill="#9aa4b0"/>
+</svg>

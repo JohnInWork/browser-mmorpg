@@ -35,6 +35,13 @@
     "brownPants":   { "name": "Кожаные штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "tags": ["одежда", "кожа"], "desc": "Простые штаны. Одежда без защиты." },
     "redPants":     { "name": "Красные штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "tags": ["одежда", "ткань"], "desc": "Красные штаны. Одежда без защиты." },
     "blueGloves":   { "name": "Синие перчатки",  "type": "armor", "cat": "clothing", "slot": "gloves", "price": 4, "tags": ["одежда", "ткань"], "desc": "Синие перчатки. Одежда без защиты." },
-    "leatherBoots": { "name": "Кожаные сапоги",  "type": "armor", "cat": "clothing", "slot": "boots",  "price": 5, "tags": ["одежда", "кожа"], "desc": "Кожаные сапоги. Одежда без защиты." }
+    "leatherBoots": { "name": "Кожаные сапоги",  "type": "armor", "cat": "clothing", "slot": "boots",  "price": 5, "tags": ["одежда", "кожа"], "desc": "Кожаные сапоги. Одежда без защиты." },
+
+    "leather":      { "name": "Кожа",             "type": "resource", "cat": "material", "stackable": true, "price": 5, "tags": ["материал", "кожа", "верстак"], "desc": "Снимается с некоторых зверей. Из неё делают кожаную броню на верстаке." },
+    "leatherHat":   { "name": "Кожаный капюшон",  "type": "armor", "cat": "armor", "slot": "helmet", "armor": 1, "price": 7,  "tags": ["броня", "кожа", "верстак"], "desc": "Лёгкая защита головы из кожи. Делается на верстаке." },
+    "leatherTunic": { "name": "Кожаный нагрудник", "type": "armor", "cat": "armor", "slot": "chest",  "armor": 1, "price": 10, "tags": ["броня", "кожа", "верстак"], "desc": "Кожаный доспех на торс. Делается на верстаке." },
+    "leatherMitts": { "name": "Кожаные перчатки",  "type": "armor", "cat": "armor", "slot": "gloves", "armor": 1, "price": 6,  "tags": ["броня", "кожа", "верстак"], "desc": "Кожаные перчатки. Делаются на верстаке." },
+    "leatherLegs":  { "name": "Кожаные поножи",    "type": "armor", "cat": "armor", "slot": "pants",  "armor": 1, "price": 7,  "tags": ["броня", "кожа", "верстак"], "desc": "Кожаная защита ног. Делается на верстаке." },
+    "leatherShoes": { "name": "Кожаные сапоги",    "type": "armor", "cat": "armor", "slot": "boots",  "armor": 1, "price": 6,  "tags": ["броня", "кожа", "верстак"], "desc": "Кожаные сапоги. Делаются на верстаке." }
   }
 }

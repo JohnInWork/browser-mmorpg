@@ -14,6 +14,7 @@ function stationAt(x, y) {
   if (t === 7) return { station: 'anvil', name: 'Наковальня' };
   if (t === 8) return { station: 'smelter', name: 'Плавильня' };
   if (t === 9) return { station: 'campfire', name: 'Костёр' };
+  if (t === 33) return { station: 'workbench', name: 'Верстак' };
   return null;
 }
 function chestAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 10; }

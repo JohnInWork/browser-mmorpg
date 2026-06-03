@@ -55,6 +55,7 @@ const fenceImg = loadImg('/assets/fence.svg');
 const lampImg = loadImg('/assets/lamp.svg');
 const bridgeImg = loadImg('/assets/bridge.svg');
 const signImg = loadImg('/assets/sign.svg');
+const workbenchImg = loadImg('/assets/workbench.svg');
 // Текстуры мобов из реестра (для НОВЫХ существ — общий рисовальщик; курица/волк/медведь рисуются по-своему)
 const mobTexImg = {};
 for (const id in MOB_TEX_BY_ID) mobTexImg[id] = loadImg(MOB_TEX_BY_ID[id].svg);
@@ -618,6 +619,7 @@ export function render() {
       else if (t === 28) drawables.push({ d: x + y + 0.1, kind: 'lamp', x, y });
       else if (t === 29) drawables.push({ d: x + y - 0.4, kind: 'bridge', x, y });  // мост — рисуем под игроком (можно идти по нему)
       else if (t === 30) drawables.push({ d: x + y + 0.1, kind: 'sign', x, y });
+      else if (t === 33) drawables.push({ d: x + y + 0.1, kind: 'workbench', x, y });
     }
   }
   // Мобы и игроки — только из текущей локации
@@ -647,6 +649,7 @@ export function render() {
     else if (o.kind === 'lamp') objSprite(lampImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'bridge') drawBridge(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'sign') objSprite(signImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 32);
+    else if (o.kind === 'workbench') objSprite(workbenchImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'mob') drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
     else if (o.kind === 'authNpc') drawAuthNpc(ox + isoX(o.n.x, o.n.y), oy + isoY(o.n.x, o.n.y), o.n);
     else drawPlayer(ox + isoX(o.p.rx, o.p.ry), oy + isoY(o.p.rx, o.p.ry), o.p, o.isMe);

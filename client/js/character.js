@@ -68,10 +68,22 @@ const SLOT_VIEWBOX = {
   cloak:  '112 170 290 345',
 };
 
+// Текстуры брони из SVG-файлов (нарисованы на теле 512). Один файл = вид на персонаже + иконка.
+// На теле: подгружаем содержимое файла (fetch) и встраиваем (внешние ссылки в <img>-SVG не грузятся).
+// В инвентаре: <image href> в живом DOM грузится напрямую.
+const ARMOR_TEX = {
+  helmet: '/assets/iron-helmet.svg', chest: '/assets/iron-chest.svg',
+  leatherHat: '/assets/leather-helmet.svg', leatherTunic: '/assets/leather-chest.svg',
+  leatherMitts: '/assets/leather-gloves.svg', leatherLegs: '/assets/leather-pants.svg',
+  leatherShoes: '/assets/leather-boots.svg',
+};
+const ARMOR_ART_CACHE = {};   // id → внутреннее содержимое svg (для композита персонажа)
+
 // SVG-иконка надеваемой вещи = её вид на персонаже, обрезанный по слоту (или null, если арта нет).
 export function wornIconSVG(id, slot) {
-  const art = ITEM_ART[id] || (slot === 'cloak' ? CLOAK_BACK : ARMOR_PARTS[slot]);
   const vb = SLOT_VIEWBOX[slot];
+  if (ARMOR_TEX[id] && vb) return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="30" height="30"><image href="${ARMOR_TEX[id]}" width="512" height="512"/></svg>`;
+  const art = ITEM_ART[id] || (slot === 'cloak' ? CLOAK_BACK : ARMOR_PARTS[slot]);
   if (!art || !vb) return null;
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${vb}" width="30" height="30">${art}</svg>`;
 }
@@ -90,7 +102,7 @@ export function buildCharacterSVG(app, equipment, opts = {}){
   if (equipment) for (const slot of ARMOR_ORDER) {
     const id = equipment[slot];
     if (!id) continue;
-    const art = ITEM_ART[id] || ARMOR_PARTS[slot]; // визуал конкретного предмета, иначе стандартный по слоту
+    const art = ARMOR_ART_CACHE[id] || ITEM_ART[id] || ARMOR_PARTS[slot]; // файл-текстура → конкретный предмет → стандарт по слоту
     if (art) armor += art;
   }
   // Руки: двуручное оружие перекрывает всё; иначе щит (левая) + инструмент или оружие (правая).
@@ -115,6 +127,16 @@ function equipKey(equipment){
 
 // Кэш Image по внешности+экипировке+предмету в руке
 const imgCache = new Map();
+
+// Подгрузить содержимое SVG-файлов брони и встроить в композит; после загрузки — пересобрать персонажей.
+(function loadArmorTex() {
+  for (const id in ARMOR_TEX) {
+    fetch(ARMOR_TEX[id]).then(r => r.text()).then(t => {
+      ARMOR_ART_CACHE[id] = t.replace(/<\?xml[^?]*\?>/i, '').replace(/<svg[^>]*>/i, '').replace(/<\/svg>/i, '');
+      imgCache.clear();   // пересобрать персонажей с подгруженной бронёй
+    }).catch(() => {});
+  }
+})();
 export function getCharImage(app, equipment, held){
   const opts = { held };
   const a = app || {};

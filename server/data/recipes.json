@@ -19,5 +19,12 @@
     { "out": "ironSword",      "in": [{ "id": "ingot", "qty": 2 }, { "id": "wood", "qty": 1 }] },
     { "out": "ironGreatsword", "in": [{ "id": "ingot", "qty": 4 }, { "id": "wood", "qty": 1 }] },
     { "out": "ironShield",     "in": [{ "id": "ingot", "qty": 3 }] }
+  ],
+  "workbench": [
+    { "out": "leatherHat",   "in": [{ "id": "leather", "qty": 3 }] },
+    { "out": "leatherTunic", "in": [{ "id": "leather", "qty": 5 }] },
+    { "out": "leatherMitts", "in": [{ "id": "leather", "qty": 2 }] },
+    { "out": "leatherLegs",  "in": [{ "id": "leather", "qty": 4 }] },
+    { "out": "leatherShoes", "in": [{ "id": "leather", "qty": 2 }] }
   ]
 }

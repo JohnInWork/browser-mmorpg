@@ -123,6 +123,7 @@ export const ITEM_TEX = {
   pickaxe: '/assets/pickaxe.svg',
   axe: '/assets/axe.svg',
   shovel: '/assets/shovel.svg',
+  leather: '/assets/leather.svg',
 };
 
 // Иконка предмета. Приоритет: загруженная текстура-файл → вид брони на персонаже → нарисованная иконка.

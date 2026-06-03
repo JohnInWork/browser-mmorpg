@@ -9,7 +9,7 @@ const RECIPES = require('./data/recipes.json');
 const quests = require('./quests');
 const skillsMod = require('./skills');
 const QUESTS = quests.QUESTS;
-const STATION_TILE = { smelter: cfg.TILES.SMELTER, anvil: cfg.TILES.ANVIL, campfire: cfg.TILES.CAMPFIRE };
+const STATION_TILE = { smelter: cfg.TILES.SMELTER, anvil: cfg.TILES.ANVIL, campfire: cfg.TILES.CAMPFIRE, workbench: cfg.TILES.WORKBENCH };
 
 function setup(io) {
   io.on('connection', (socket) => {
