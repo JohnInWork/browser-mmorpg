@@ -74,6 +74,39 @@ function buildLocTabs() {
     b.addEventListener('click', () => switchLoc(k));
     locTabsEl.appendChild(b);
   }
+  const add = document.createElement('button');           // «+» — добавить новую локацию
+  add.className = 'loc-tab loc-add'; add.textContent = '+'; add.title = 'Добавить локацию';
+  add.addEventListener('click', addLocation);
+  locTabsEl.appendChild(add);
+  if (curLoc !== 'surface') {                             // удалить текущую (кроме стартовой)
+    const del = document.createElement('button');
+    del.className = 'loc-tab loc-del'; del.textContent = '✕'; del.title = 'Удалить текущую локацию';
+    del.addEventListener('click', deleteLocation);
+    locTabsEl.appendChild(del);
+  }
+}
+// Пустая новая локация: комната 20×14 со стенами по краю и травой внутри
+function blankLocation() {
+  const W = 20, H = 14, map = [], floor = [];
+  for (let y = 0; y < H; y++) {
+    const mr = [], fr = [];
+    for (let x = 0; x < W; x++) { const b = (x === 0 || y === 0 || x === W - 1 || y === H - 1); mr.push(b ? 2 : 0); fr.push(0); }
+    map.push(mr); floor.push(fr);
+  }
+  return { map, floor, teleports: [], W, H };
+}
+function addLocation() {
+  const name = (prompt('Название новой локации:', '') || '').trim();
+  if (!name) return;
+  if (LOCS[name]) { alert('Локация с таким названием уже есть'); return; }
+  LOCS[name] = blankLocation();
+  switchLoc(name);
+}
+function deleteLocation() {
+  if (curLoc === 'surface') { alert('«Поверхность» удалить нельзя — это стартовая локация.'); return; }
+  if (!confirm(`Удалить локацию «${LOC_NAMES[curLoc] || curLoc}»? Не забудь сохранить.`)) return;
+  delete LOCS[curLoc];
+  switchLoc('surface');
 }
 function switchLoc(name) {
   if (!LOCS[name]) return;

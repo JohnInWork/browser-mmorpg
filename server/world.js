@@ -74,8 +74,8 @@ function parse(raw) {
 function load() {
   let parsed = null;
   try { parsed = parse(JSON.parse(fs.readFileSync(MAP_FILE, 'utf8'))); } catch (e) { parsed = null; }
-  if (!parsed) parsed = { surface: normLoc(defaultSurface()) };
-  if (!parsed.mines) parsed.mines = normLoc(defaultMines());     // Шахты всегда есть
+  if (!parsed) parsed = { surface: normLoc(defaultSurface()), mines: normLoc(defaultMines()) }; // дефолт только при первом запуске
+  if (!parsed[START]) parsed[START] = normLoc(defaultSurface()); // Поверхность обязательна
   locations = parsed;
   saveToDisk();
   writeTestMapJs();
@@ -150,8 +150,7 @@ function setLocations(payload) {
     const teleports = Array.isArray(L.teleports) ? L.teleports.filter(e => Number.isInteger(e.x) && Number.isInteger(e.y) && Number.isInteger(e.sid)) : [];
     next[k] = { map, floor, teleports, H: map.length, W: map[0].length };
   }
-  if (!next[START]) return false;                 // Поверхность обязательна
-  if (!next.mines) next.mines = normLoc(defaultMines());
+  if (!next[START]) return false;                 // Поверхность обязательна (стартовая локация)
   locations = next;
   saveToDisk();
   writeTestMapJs();
