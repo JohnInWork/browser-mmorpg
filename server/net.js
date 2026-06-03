@@ -104,7 +104,7 @@ function setup(io) {
       if (!player.target) {
         for (const mid in mobsMod.mobs) {
           const mob = mobsMod.mobs[mid];
-          if (mob.alive && mob.location === player.location && mobsMod.TYPES[mob.type].aggressive && mob.id !== player.engaging && adjOrtho(x, y, mob.x, mob.y)) {
+          if (mob.alive && mob.location === player.location && mob.aggressive && mob.id !== player.engaging && adjOrtho(x, y, mob.x, mob.y)) {
             player.target = mob.id; player.turn = 'mob'; player.gathering = null;
             socket.emit('aggro', { mobId: mob.id });       // клиент: стоп движение, завязать бой
             break;
@@ -116,7 +116,7 @@ function setup(io) {
     // Игрок выбрал моба для атаки (клик) — намерение драться: этот моб не бьёт первым
     socket.on('engage', (mobId) => {
       const m = mobsMod.mobs[mobId];
-      if (!m || !m.alive || m.location !== player.location || !mobsMod.TYPES[m.type].canAttack) return;
+      if (!m || !m.alive || m.location !== player.location || !m.canAttack) return;
       player.engaging = mobId;
     });
 
@@ -124,7 +124,7 @@ function setup(io) {
     socket.on('attack', (mobId) => {
       const m = mobsMod.mobs[mobId];
       if (!m || !m.alive || m.location !== player.location) return;
-      if (!mobsMod.TYPES[m.type].canAttack) return;       // дружественных бить нельзя
+      if (!m.canAttack) return;                            // дружественных бить нельзя
       if (!adjOrtho(player.x, player.y, m.x, m.y)) return; // только вплотную
       player.gathering = null;                             // бой прерывает рубку
       player.engaging = null;

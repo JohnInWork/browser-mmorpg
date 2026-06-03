@@ -22,16 +22,17 @@ function questProgress(io, pid, p, mobType) {
   io.to(pid).emit('questUpdate', quests.clientState(p));
 }
 
-// Выдать лут моба сразу в инвентарь убийце (как собранный ресурс — не падает на землю)
+// Выдать лут моба сразу в инвентарь убийце (каждый дроп — со своим шансом)
 function grantMobLoot(io, pid, p, m) {
-  const loot = mobsMod.TYPES[m.type] && mobsMod.TYPES[m.type].loot;
-  if (!loot) return;
-  const drops = Array.isArray(loot) ? loot : [loot];
+  const drops = m.loot || [];
+  let any = false;
   for (const d of drops) {
+    if (Math.random() > (d.chance != null ? d.chance : 1)) continue;   // не выпал по шансу
     addItem(p, d.id, d.qty || 1);
     io.to(pid).emit('loot', { id: d.id, qty: d.qty || 1 });
+    any = true;
   }
-  io.to(pid).emit('inventoryUpdate', invState(p));
+  if (any) io.to(pid).emit('inventoryUpdate', invState(p));
 }
 
 function start(io) {
@@ -41,7 +42,7 @@ function start(io) {
     //    Пропускаем моба, на которого игрок сам идёт драться (player.engaging) — тогда первым бьёт игрок.
     for (const id in mobs) {
       const m = mobs[id];
-      if (!m.alive || !mobsMod.TYPES[m.type].aggressive) continue;
+      if (!m.alive || !m.aggressive) continue;
       for (const pid in players) {
         const p = players[pid];
         if (p.hp > 0 && !p.target && p.engaging !== m.id && p.location === m.location && adjOrtho(p.x, p.y, m.x, m.y)) {
@@ -58,7 +59,7 @@ function start(io) {
       if (!m || !m.alive || m.location !== p.location || !adjOrtho(p.x, p.y, m.x, m.y)) { p.target = null; p.turn = null; continue; }
 
       if (p.turn === 'player') {
-        const mobArmor = mobsMod.TYPES[m.type].armor || 0;       // броня моба снижает урон (мин 1)
+        const mobArmor = m.armor || 0;                           // броня моба снижает урон (мин 1)
         const dmg = Math.max(1, rnd(cfg.PLAYER_DMG_MIN, cfg.PLAYER_DMG_MAX) + weaponDamage(p) - mobArmor);
         m.hp = Math.max(0, m.hp - dmg);
         io.emit('combatHit', { target: 'mob', id: m.id, hp: m.hp, dmg });
@@ -70,13 +71,12 @@ function start(io) {
         if (m.hp <= 0) {
           const kb = skills.addXp(p, 'combat', Math.round(m.maxHp / 2)); if (kb.leveledUp) cup = kb; // бонус-опыт за добивание
           io.to(pid).emit('skillUpdate', { skill: 'combat', ...skills.one(p, 'combat'), leveledUp: cup.leveledUp });
-          grantMobLoot(io, pid, p, m); questProgress(io, pid, p, m.type); mobsMod.kill(io, m); continue;
+          grantMobLoot(io, pid, p, m); questProgress(io, pid, p, m.kind); mobsMod.kill(io, m); continue;
         }
         io.to(pid).emit('skillUpdate', { skill: 'combat', ...skills.one(p, 'combat'), leveledUp: cup.leveledUp });
         p.turn = 'mob';
       } else {
-        const def = mobsMod.TYPES[m.type];
-        const raw = rnd(def.dmgMin, def.dmgMax);
+        const raw = rnd(m.dmgMin || 0, m.dmgMax || 0);
         const dmg = Math.max(0, raw - armorValue(p)); // броня: 1 брони = −1 урон
         p.hp = Math.max(0, p.hp - dmg);
         io.emit('combatHit', { target: 'player', id: pid, hp: p.hp, dmg });

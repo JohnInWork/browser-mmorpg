@@ -4,8 +4,8 @@ import { BLOCKED, MOVE_SPEED } from './config.js';
 import { screenToTile } from './iso.js';
 import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, closeInteractions } from './ui.js';
 
-// Имя моба/НПС: из данных сервера (mobTypes), иначе из TYPE_NAMES
-function mobLabel(type) { return (S.mobTypes[type] && S.mobTypes[type].name) || TYPE_NAMES[type] || 'Существо'; }
+// Имя моба: пришло с сервера (label), иначе запасное
+function mobLabel(m) { return (m && m.label) || 'Существо'; }
 
 // Станция на клетке: {station, name} или null
 function stationAt(x, y) {
@@ -142,7 +142,7 @@ export function setupInput() {
     const npc = npcAt(t.x, t.y);
     const node = nodeAt(t.x, t.y);
     const st = stationAt(t.x, t.y);
-    if (m) { showTip(mobLabel(m.type)); canvas.style.cursor = 'pointer'; }
+    if (m) { showTip(mobLabel(m)); canvas.style.cursor = 'pointer'; }
     else if (npc) { showTip(npc.name); canvas.style.cursor = 'pointer'; }
     else if (pl) { showTip(pl.name); canvas.style.cursor = 'pointer'; }
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
@@ -161,32 +161,16 @@ export function setupInput() {
     const r = canvas.getBoundingClientRect();
     const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
 
-    // Клик по мобу/торговцу
+    // Клик по мобу — подойти и в бой (или, если он мирный, просто подойти)
     const m = mobAt(t.x, t.y);
     if (m) {
-      if (m.type === 'trader') { // подойти и открыть торговлю
-        const ap = approachTo(m.x, m.y);
-        if (!ap) return;
-        S.pendingAction = { kind: 'trade', x: m.x, y: m.y };
-        S.path = ap.path; S.targetTile = null;
-        return;
-      }
-      if (m.type === 'questgiver') { // подойти и открыть диалог квеста
-        const ap = approachTo(m.x, m.y);
-        if (!ap) return;
-        S.pendingAction = { kind: 'questnpc', x: m.x, y: m.y, npc: m.type };
-        S.path = ap.path; S.targetTile = null;
-        return;
-      }
-      if (m.type === 'friendly') { // подойти, затем сообщить, что он мирный
-        const ap = approachTo(m.x, m.y);
-        if (!ap) { addFloater(me.x, me.y, 'Мирный', '#2ecc71'); return; }
-        S.pendingAction = { kind: 'notice', text: 'Мирный', color: '#2ecc71' };
-        S.path = ap.path; S.targetTile = null;
-        return;
-      }
       const ap = approachTo(m.x, m.y);
       if (!ap) return;
+      if (!m.canAttack) {                            // мирный — атаковать нельзя
+        S.pendingAction = { kind: 'notice', text: mobLabel(m), color: '#2ecc71' };
+        S.path = ap.path; S.targetTile = null;
+        return;
+      }
       S.socket.emit('engage', m.id);                 // намерение драться: этот моб не ударит первым
       S.pendingAction = { kind: 'attack', id: m.id };
       S.path = ap.path; S.targetTile = null;

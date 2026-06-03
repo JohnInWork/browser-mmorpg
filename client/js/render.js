@@ -425,7 +425,7 @@ function drawMob(cx, cy, m) {
   ctx.fillStyle = '#1a1a1a';
   ctx.beginPath(); ctx.arc(cx - 4 * z, cy - r - 1 * z, 2 * z, 0, Math.PI * 2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx + 4 * z, cy - r - 1 * z, 2 * z, 0, Math.PI * 2); ctx.fill();
-  if (m.type === 'aggressive') {
+  if (m.aggressive) {
     ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`;
     ctx.textAlign = 'center'; ctx.fillText('!', cx, cy - 2 * r - 4 * z);
   }
@@ -608,11 +608,7 @@ export function render() {
     else if (o.kind === 'lamp') objSprite(lampImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'bridge') drawBridge(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'sign') objSprite(signImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 32);
-    else if (o.kind === 'mob') {
-      if (o.m.type === 'trader') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), TRADER_APP, TRADER_EQUIP, null);
-      else if (o.m.type === 'questgiver') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), FORESTER_APP, FORESTER_EQUIP, npcMarker(o.m));
-      else drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
-    }
+    else if (o.kind === 'mob') drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
     else if (o.kind === 'authNpc') drawAuthNpc(ox + isoX(o.n.x, o.n.y), oy + isoY(o.n.x, o.n.y), o.n);
     else drawPlayer(ox + isoX(o.p.rx, o.p.ry), oy + isoY(o.p.rx, o.p.ry), o.p, o.isMe);
   }

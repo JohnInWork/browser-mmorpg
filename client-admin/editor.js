@@ -58,8 +58,9 @@ const chestImg = new Image(); chestImg._ready = false; chestImg.onload = () => {
 const anvilImg = new Image(); anvilImg._ready = false; anvilImg.onload = () => { anvilImg._ready = true; onAsset(); }; anvilImg.src = '/assets/anvil.svg';
 const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload = () => { campfireImg._ready = true; onAsset(); }; campfireImg.src = '/assets/campfire.svg';
 const mkImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; onAsset(); }; im.src = src; return im; };
-const MOB_IMG = { passive: mkImg('/assets/chicken.svg'), aggressive: mkImg('/assets/wolf.svg'), bear: mkImg('/assets/bear.svg') };
-const MOB_INFO = { passive: { name: 'Курица', color: '#f1c40f' }, aggressive: { name: 'Волк', color: '#888' }, bear: { name: 'Медведь', color: '#6b4a2b' }, friendly: { name: 'Мирный', color: '#2ecc71' }, trader: { name: 'Торговец', color: '#c79a2a' }, questgiver: { name: 'Лесник', color: '#3f9e63' } };
+const MOB_IMG = { chicken: mkImg('/assets/chicken.svg'), wolf: mkImg('/assets/wolf.svg'), bear: mkImg('/assets/bear.svg') };
+const SPRITE_INFO = { chicken: { name: 'Курица', color: '#f1c40f' }, wolf: { name: 'Волк', color: '#888c94' }, bear: { name: 'Медведь', color: '#6b4a2b' } };
+let mobClipboard = null;     // буфер копирования моба (для штамповки много/на другие карты)
 // Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
 const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg') };
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
@@ -109,7 +110,7 @@ const CATEGORIES = [
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
   { name: 'НПС', items: [ { id: 'npc', name: 'Создать НПС', color: '#e0a93b' } ] },
-  { name: 'Существа', items: [ { id: 'mob:passive', name: 'Курица', color: '#f1c40f' }, { id: 'mob:aggressive', name: 'Волк', color: '#888c94' }, { id: 'mob:bear', name: 'Медведь', color: '#6b4a2b' }, { id: 'mob:friendly', name: 'Мирный', color: '#2ecc71' }, { id: 'mob:trader', name: 'Торговец', color: '#c79a2a' }, { id: 'mob:questgiver', name: 'Лесник', color: '#3f9e63' } ] },
+  { name: 'Существа', items: [ { id: 'mob', name: 'Создать моба', color: '#c0392b' }, { id: 'mobpaste', name: 'Вставить моба', color: '#8e44ad' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' }, { id: -2, name: 'Изменить (текст/связь)', color: '#3aa' } ] },
 ];
 let selected = 0; // выбранный id тайла
@@ -217,7 +218,8 @@ function setTele(x, y, sid) { removeTele(x, y); LOCS[curLoc].teleports.push({ x,
 function teleAt(x, y) { return LOCS[curLoc].teleports.find(e => e.x === x && e.y === y); }
 // Мобы текущей локации
 function removeMob(x, y) { LOCS[curLoc].mobs = LOCS[curLoc].mobs.filter(m => !(m.x === x && m.y === y)); }
-function setMob(x, y, type) { removeMob(x, y); LOCS[curLoc].mobs.push({ x, y, type }); }
+function setMob(x, y, cfg) { removeMob(x, y); LOCS[curLoc].mobs.push({ ...cfg, x, y }); }
+function mobAt(x, y) { return LOCS[curLoc].mobs.find(m => m.x === x && m.y === y); }
 // Таблички текущей локации
 function removeSign(x, y) { LOCS[curLoc].signs = LOCS[curLoc].signs.filter(s => !(s.x === x && s.y === y)); }
 function setSign(x, y, text) { removeSign(x, y); LOCS[curLoc].signs.push({ x, y, text: String(text || '') }); }
@@ -241,11 +243,14 @@ function drawIcon(c, id) {
   // Всё остальное — БЕЗ фона травы (рисуем сам объект на прозрачном; тёмный фон кнопки сам по себе)
   if (id === 2) { c.fillStyle = '#5d626d'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#787e8a'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#9aa0ac'; c.fillRect(7, 4, 16, 4); return; }
   if (id === 32) { c.fillStyle = '#333842'; c.beginPath(); c.moveTo(15, 24); c.lineTo(6, 19); c.lineTo(6, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#4a4f59'; c.beginPath(); c.moveTo(15, 24); c.lineTo(24, 19); c.lineTo(24, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#646b75'; c.beginPath(); c.moveTo(15, 7); c.lineTo(24, 11); c.lineTo(16, 3); c.lineTo(9, 10); c.closePath(); c.fill(); return; }
-  if (typeof id === 'string' && id.startsWith('mob:')) {
-    const t = id.slice(4), mi = MOB_IMG[t], info = MOB_INFO[t] || { color: '#888' };
-    if (mi && mi._ready) return void c.drawImage(mi, 3, 1, 24, 24);
-    c.fillStyle = info.color; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill(); c.strokeStyle = '#1a1a24'; c.lineWidth = 1; c.stroke();
+  if (id === 'mob') {     // создать моба — голова волка из спрайта или кружок-зверь
+    const mi = MOB_IMG.wolf; if (mi && mi._ready) return void c.drawImage(mi, 3, 2, 24, 24);
+    c.fillStyle = '#888c94'; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill();
     c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
+  }
+  if (id === 'mobpaste') { // вставить моба — два силуэта (штамп копий)
+    const mi = MOB_IMG.wolf; if (mi && mi._ready) { c.globalAlpha = 0.5; c.drawImage(mi, 1, 4, 18, 18); c.globalAlpha = 1; c.drawImage(mi, 9, 2, 20, 20); return; }
+    c.fillStyle = '#8e44ad'; c.fillRect(7, 9, 14, 14); return;
   }
   if (id === 'npc') {   // человечек (создать НПС)
     c.fillStyle = '#f3cfa6'; c.beginPath(); c.arc(15, 9, 4.5, 0, TAU); c.fill();           // голова
@@ -332,7 +337,7 @@ canvas.addEventListener('mousedown', (e) => {
   else if (e.button === 0) {
     // Инструменты с диалогом (табличка/изменить) — только одиночный клик, БЕЗ протяжки:
     // prompt() блокирует поток и «съедает» mouseup, иначе курсор продолжал бы рисовать.
-    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc');
+    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc' || selected === 'mob');
     if (!dialogTool) painting = true;
     paintAt(e, true);   // true = одиночный клик (можно спросить текст/правку)
   }
@@ -368,9 +373,8 @@ function paintAt(e, isClick) {
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
   if (selected === EDIT) { if (isClick) editParams(t.x, t.y); return; }  // «Изменить»: правка параметров поставленного объекта
   if (selected === 'npc') { if (isClick) openNpcEditor(t.x, t.y, npcAt(t.x, t.y) || null); return; } // создать/править НПС
-  if (typeof selected === 'string' && selected.startsWith('mob:')) { // существо: ставим маркер (тайл не меняем)
-    setMob(t.x, t.y, selected.slice(4)); return;
-  }
+  if (selected === 'mob') { if (isClick) openMobEditor(t.x, t.y, mobAt(t.x, t.y) || null); return; }   // конструктор моба
+  if (selected === 'mobpaste') { if (mobClipboard) setMob(t.x, t.y, JSON.parse(JSON.stringify(mobClipboard))); return; } // штамп копии (можно протяжкой)
   if (selected === ERASE) {                          // ластик: убрать объект/моба/НПС, оставить пол
     MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y); removeNpc(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
@@ -394,6 +398,8 @@ function paintAt(e, isClick) {
 function editParams(x, y) {
   const npc = npcAt(x, y);
   if (npc) { openNpcEditor(x, y, npc); return; }      // НПС — открыть его конструктор
+  const mob = mobAt(x, y);
+  if (mob) { openMobEditor(x, y, mob); return; }      // моб — открыть его конструктор
   const t = MAP[y][x];
   if (t === SIGN) {
     const cur = signAt(x, y);
@@ -404,7 +410,7 @@ function editParams(x, y) {
     const sid = prompt('ID связи (порталы/лестницы с одинаковым ID соединены):', te ? te.sid : '');
     if (sid !== null) setTele(x, y, sid.trim() || '1');
   } else {
-    alert('На этой клетке нечего настраивать.\nИзменяемые объекты: НПС, табличка (текст), порталы и лестницы (ID связи).');
+    alert('На этой клетке нечего настраивать.\nИзменяемые объекты: НПС, моб, табличка (текст), порталы и лестницы (ID связи).');
   }
 }
 
@@ -444,17 +450,19 @@ function drawAnvil(cx, cy) {
   const z = zoom, W = 32 * z, H = 32 * z, top = cy - H / 2 - 5 * z;
   if (anvilImg._ready) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
 }
-function drawMobMarker(cx, cy, type) {                 // существо в редакторе: спрайт/кружок + подпись
-  const z = zoom, info = MOB_INFO[type] || { name: type, color: '#888' }, img = MOB_IMG[type];
+function drawMobMarker(cx, cy, m) {                    // существо в редакторе: спрайт/кружок + подпись + значок агрессии
+  const z = zoom, sprite = m.sprite || 'wolf', info = SPRITE_INFO[sprite] || { name: 'Существо', color: '#888' }, img = MOB_IMG[sprite];
+  const label = m.name || info.name;
   if (img && img._ready) { const W = 30 * z, H = 30 * z; ctx.drawImage(img, cx - W / 2, cy + 8 * z - H, W, H); }
   else {
     ctx.fillStyle = info.color; ctx.beginPath(); ctx.arc(cx, cy - 8 * z, 9 * z, 0, Math.PI * 2); ctx.fill();
     ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 1.5 * z; ctx.stroke();
     ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.arc(cx - 3 * z, cy - 9 * z, 1.4 * z, 0, Math.PI * 2); ctx.arc(cx + 3 * z, cy - 9 * z, 1.4 * z, 0, Math.PI * 2); ctx.fill();
   }
+  if (m.aggro === 'aggressive') { ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('!', cx, cy - 26 * z); }
   ctx.font = `bold ${Math.round(10 * z)}px sans-serif`; ctx.textAlign = 'center';
-  ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 3 * z; ctx.strokeText(info.name, cx, cy + 16 * z);
-  ctx.fillStyle = '#fff'; ctx.fillText(info.name, cx, cy + 16 * z);
+  ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 3 * z; ctx.strokeText(label, cx, cy + 16 * z);
+  ctx.fillStyle = '#fff'; ctx.fillText(label, cx, cy + 16 * z);
 }
 function drawSmelter(cx, cy) { objSprite(OBJ_IMG[8], cx, cy, 40); }
 function drawCampfire(cx, cy) {
@@ -546,7 +554,7 @@ function render() {
   }
   // Существа (поверх объектов)
   const ms = (LOCS[curLoc] && LOCS[curLoc].mobs) || [];
-  for (const m of ms) drawMobMarker(panX + isoX(m.x, m.y), panY + isoY(m.x, m.y), m.type);
+  for (const m of ms) drawMobMarker(panX + isoX(m.x, m.y), panY + isoY(m.x, m.y), m);
   // Авторские НПС (поверх объектов)
   const ns = (LOCS[curLoc] && LOCS[curLoc].npcs) || [];
   for (const n of ns) drawNpcMarker(panX + isoX(n.x, n.y), panY + isoY(n.x, n.y), n);
@@ -686,6 +694,86 @@ function openNpcEditor(x, y, existing) {
     data.quests = [...questsBox.querySelectorAll('.npc-qblock')].map(readQuestBlock);
     delete data.quest;       // убрать легаси-поле
     setNpc(x, y, data);
+    close();
+  });
+}
+
+// --- Конструктор моба ---
+const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Шлем'], ['chest', 'Нагрудник'], ['gloves', 'Перчатки'], ['pants', 'Поножи'], ['boots', 'Сапоги']];
+const MOB_SPRITE_OPTS = [['chicken', 'Курица'], ['wolf', 'Волк'], ['bear', 'Медведь']];
+function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, loot: [] }; }
+function makeLootBlock(l) {
+  l = l || { id: 'rawChicken', qty: 1, chance: 1 };
+  const el = document.createElement('div');
+  el.className = 'mob-loot-row';
+  el.innerHTML = `<select class="l-item">${optHtml(LOOT_ITEMS, l.id)}</select><span>×</span><input class="l-qty" type="number" min="1" value="${l.qty || 1}"><input class="l-chance" type="number" min="1" max="100" value="${Math.round((l.chance != null ? l.chance : 1) * 100)}"><span>%</span><button class="l-remove" title="Убрать">✕</button>`;
+  el.querySelector('.l-remove').addEventListener('click', () => el.remove());
+  return el;
+}
+function readLootBlock(el) {
+  const id = el.querySelector('.l-item').value;
+  const qty = Math.max(1, parseInt(el.querySelector('.l-qty').value, 10) || 1);
+  const chance = Math.max(1, Math.min(100, parseInt(el.querySelector('.l-chance').value, 10) || 100)) / 100;
+  return { id, qty, chance };
+}
+
+function openMobEditor(x, y, existing) {
+  const data = existing ? JSON.parse(JSON.stringify(existing)) : mobDefaults();
+  if (!Array.isArray(data.loot)) data.loot = [];
+  const ov = document.getElementById('npcOverlay');
+  const spriteBtns = MOB_SPRITE_OPTS.map(([s, l]) => `<button class="mob-sprite${data.sprite === s ? ' sel' : ''}" data-sprite="${s}"><img src="/assets/${s}.svg" alt="">${l}</button>`).join('');
+  ov.innerHTML = `
+    <div class="npc-modal">
+      <div class="npc-left">
+        <div class="npc-preview"><img id="mobPreview" src="/assets/${data.sprite}.svg" style="width:80%;height:80%"></div>
+        <div class="mob-sprites" id="mobSprites">${spriteBtns}</div>
+      </div>
+      <div class="npc-right">
+        <h3>${existing ? 'Изменить моба' : 'Создать моба'}</h3>
+        <label class="npc-f">Имя (необязательно)<input id="mName" type="text" maxlength="24" value="${escAttr(data.name)}" placeholder="напр. Лютоволк"></label>
+        <label class="npc-f">Поведение<select id="mAggro">${optHtml([['friendly', 'Мирный (нельзя атаковать)'], ['passive', 'Пассивный (даёт сдачи)'], ['aggressive', 'Агрессивный (нападает сам)']], data.aggro)}</select></label>
+        <div class="mob-stats">
+          <label class="npc-f">HP<input id="mHp" type="number" min="1" value="${data.hp}"></label>
+          <label class="npc-f">Броня<input id="mArmor" type="number" min="0" value="${data.armor}"></label>
+          <label class="npc-f">Урон мин<input id="mDmgMin" type="number" min="0" value="${data.dmgMin}"></label>
+          <label class="npc-f">Урон макс<input id="mDmgMax" type="number" min="0" value="${data.dmgMax}"></label>
+          <label class="npc-f">Респавн, сек<input id="mResp" type="number" min="1" value="${data.respawn}"></label>
+        </div>
+        <div class="npc-f">Лут (предмет · кол-во · шанс)<div id="mLoot"></div><button id="mAddLoot" class="npc-addq">+ Добавить лут</button></div>
+        <div class="npc-btns">
+          ${existing ? '<button id="mDelete" class="m-danger">Удалить</button>' : ''}
+          <button id="mCancel" class="m-cancel">Отмена</button>
+          <button id="mSave" class="m-ok">Сохранить</button>
+        </div>
+      </div>
+    </div>`;
+  ov.classList.remove('hidden');
+  const $ = (id) => ov.querySelector('#' + id);
+  // выбор текстуры
+  ov.querySelectorAll('.mob-sprite').forEach(b => b.addEventListener('click', () => {
+    data.sprite = b.dataset.sprite;
+    ov.querySelectorAll('.mob-sprite').forEach(o => o.classList.remove('sel')); b.classList.add('sel');
+    $('mobPreview').src = `/assets/${data.sprite}.svg`;
+  }));
+  // лут
+  const lootBox = $('mLoot');
+  data.loot.forEach(l => lootBox.appendChild(makeLootBlock(l)));
+  $('mAddLoot').addEventListener('click', () => lootBox.appendChild(makeLootBlock()));
+
+  const close = () => { ov.classList.add('hidden'); ov.innerHTML = ''; };
+  $('mCancel').addEventListener('click', close);
+  if (existing) $('mDelete').addEventListener('click', () => { removeMob(x, y); close(); });
+  $('mSave').addEventListener('click', () => {
+    data.name = ($('mName').value || '').trim().slice(0, 24);
+    data.aggro = $('mAggro').value;
+    data.hp = Math.max(1, parseInt($('mHp').value, 10) || 1);
+    data.armor = Math.max(0, parseInt($('mArmor').value, 10) || 0);
+    data.dmgMin = Math.max(0, parseInt($('mDmgMin').value, 10) || 0);
+    data.dmgMax = Math.max(0, parseInt($('mDmgMax').value, 10) || 0);
+    data.respawn = Math.max(1, parseInt($('mResp').value, 10) || 10);
+    data.loot = [...lootBox.querySelectorAll('.mob-loot-row')].map(readLootBlock);
+    setMob(x, y, data);
+    mobClipboard = JSON.parse(JSON.stringify(data));   // в буфер — теперь можно штамповать «Вставить моба»
     close();
   });
 }

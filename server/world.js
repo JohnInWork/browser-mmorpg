@@ -56,16 +56,40 @@ function defaultMines() {
 
 const EQUIP_SLOTS = ['helmet', 'chest', 'gloves', 'pants', 'boots', 'cloak', 'mainHand', 'offHand'];
 const QUEST_TYPES = new Set(['gather', 'kill', 'talk']);
+const MOB_SPRITES = new Set(['chicken', 'wolf', 'bear']);
+const MOB_AGGRO = new Set(['friendly', 'passive', 'aggressive']);
+function clampN(v, lo, hi, def) { v = Number(v); return Number.isFinite(v) ? Math.max(lo, Math.min(hi, Math.round(v))) : def; }
+
+// Нормализовать одного моба: либо кастомный (свои параметры), либо легаси-пресет {type}
+function normMob(m) {
+  const x = m.x | 0, y = m.y | 0;
+  const isCustom = m.sprite || m.aggro || m.hp != null || Array.isArray(m.loot);
+  if (!isCustom) return { x, y, type: String(m.type || 'aggressive') };  // легаси-пресет из data/mobs.json
+  const loot = Array.isArray(m.loot)
+    ? m.loot.filter(l => l && l.id).map(l => ({ id: String(l.id), qty: clampN(l.qty, 1, 999, 1), chance: Math.max(0.01, Math.min(1, Number(l.chance) || 1)) }))
+    : [];
+  return {
+    x, y, name: String(m.name || '').slice(0, 24),
+    sprite: MOB_SPRITES.has(m.sprite) ? m.sprite : 'wolf',
+    aggro: MOB_AGGRO.has(m.aggro) ? m.aggro : 'aggressive',
+    hp: clampN(m.hp, 1, 9999, 20), armor: clampN(m.armor, 0, 99, 0),
+    dmgMin: clampN(m.dmgMin, 0, 999, 1), dmgMax: clampN(m.dmgMax, 0, 999, 3),
+    respawn: clampN(m.respawn, 1, 3600, 10),     // секунды
+    loot,
+  };
+}
 
 // Нормализовать один квест НПС (стабильный id с индексом)
 function normQuest(q, loc, x, y, i) {
   if (!q || typeof q !== 'object' || !QUEST_TYPES.has(q.type)) return null;
+  let target = String(q.target || '');
+  if (q.type === 'kill') { const M = { passive: 'chicken', aggressive: 'wolf' }; target = M[target] || target; } // миграция старых имён → спрайт
   return {
     id: `q_${loc}_${x}_${y}_${i}`,
     title: String(q.title || 'Задание').slice(0, 60),
     desc: String(q.desc || '').slice(0, 300),
     type: q.type,
-    target: String(q.target || ''),            // gather: itemId; kill: тип моба; talk: метка/имя НПС
+    target,                                    // gather: itemId; kill: спрайт моба; talk: метка/имя НПС
     count: q.type === 'talk' ? 1 : Math.max(1, q.count | 0),
     reward: Math.max(0, q.reward | 0),          // золото
     rewardItem: (q.rewardItem && q.rewardItem.id) ? { id: String(q.rewardItem.id), qty: Math.max(1, q.rewardItem.qty | 0) } : null,
@@ -102,7 +126,7 @@ function normNpc(n, loc, idx) {
 function normLoc(L, locName) {
   const map = L.map, floor = Array.isArray(L.floor) ? L.floor : deriveFloor(map);
   // mobs: undefined = поле отсутствовало (легаси, подсеем позже); массив = используем как есть
-  const mobs = Array.isArray(L.mobs) ? L.mobs.map(m => ({ x: m.x, y: m.y, type: m.type })) : undefined;
+  const mobs = Array.isArray(L.mobs) ? L.mobs.map(normMob) : undefined;
   const signs = Array.isArray(L.signs) ? L.signs.map(s => ({ x: s.x, y: s.y, text: String(s.text || '') })) : [];
   const npcs = Array.isArray(L.npcs) ? L.npcs.map((n, i) => normNpc(n, locName || 'loc', i)) : [];
   return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, signs, npcs, H: map.length, W: map[0].length };
@@ -183,7 +207,7 @@ function pickSpawn(loc) {
 // Все размещения мобов из карт (по всем локациям) — для спавна
 function mobSpawns() {
   const out = [];
-  for (const ln in locations) for (const m of (locations[ln].mobs || [])) out.push({ location: ln, x: m.x, y: m.y, type: m.type });
+  for (const ln in locations) for (const m of (locations[ln].mobs || [])) out.push({ location: ln, ...m });
   return out;
 }
 
@@ -250,7 +274,7 @@ function setLocations(payload) {
           .map(e => ({ x: e.x, y: e.y, sid: String(e.sid).trim() }))   // связь — строка-метка (число или слово)
       : [];
     const mobs = Array.isArray(L.mobs)
-      ? L.mobs.filter(m => Number.isInteger(m.x) && Number.isInteger(m.y) && MOB_TYPES.has(m.type)).map(m => ({ x: m.x, y: m.y, type: m.type }))
+      ? L.mobs.filter(m => Number.isInteger(m.x) && Number.isInteger(m.y)).map(normMob)
       : [];
     const signs = Array.isArray(L.signs)
       ? L.signs.filter(s => Number.isInteger(s.x) && Number.isInteger(s.y) && typeof s.text === 'string').map(s => ({ x: s.x, y: s.y, text: s.text.slice(0, 300) }))

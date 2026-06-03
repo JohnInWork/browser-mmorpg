@@ -395,7 +395,7 @@ export function updateTargetHud() {
   const m = id ? S.mobs[id] : null;
   if (!m || !m.alive) { panel.classList.add('hidden'); return; }
   panel.classList.remove('hidden');
-  document.getElementById('tName').textContent = TYPE_NAMES[m.type] || 'Враг';
+  document.getElementById('tName').textContent = m.label || 'Враг';
   document.getElementById('tHpFill').style.width = Math.max(0, (m.hp / m.maxHp) * 100) + '%';
   document.getElementById('tHpText').textContent = `${m.hp}/${m.maxHp}`;
 }

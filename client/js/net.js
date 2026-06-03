@@ -137,7 +137,7 @@ export function setupNet() {
   // Мобы и бой
   socket.on('mobDied', ({ id }) => {
     const m = S.mobs[id];
-    if (id === S.combatTargetId && m) chatCombat(`Вы победили: ${TYPE_NAMES[m.type] || 'существо'}`);
+    if (id === S.combatTargetId && m) chatCombat(`Вы победили: ${m.label || 'существо'}`);
     if (m) m.alive = false;
     if (id === S.combatTargetId) updateTargetHud();
   });

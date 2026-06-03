@@ -105,3 +105,14 @@ body {
 .q-remove:hover { background: #e74c3c; color: #fff; }
 .npc-addq { margin-top: 8px; padding: 8px; border: 1px dashed #4a4a5e; border-radius: 8px; background: transparent; color: #9ad0a0; cursor: pointer; font-size: 13px; width: 100%; }
 .npc-addq:hover { background: #1f2a1f; }
+.mob-sprites { display: flex; flex-direction: column; gap: 6px; }
+.mob-sprite { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border: 2px solid #3a3a4e; border-radius: 8px; background: #1a1a24; color: #cfd6e4; cursor: pointer; font-size: 13px; }
+.mob-sprite img { width: 26px; height: 26px; }
+.mob-sprite.sel { border-color: #fff; }
+.mob-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.mob-loot-row { display: flex; align-items: center; gap: 5px; margin-bottom: 5px; }
+.mob-loot-row select { flex: 1; min-width: 0; background: #1a1a24; border: 1px solid #3a3a4e; color: #eee; border-radius: 6px; padding: 5px; font-size: 12px; }
+.mob-loot-row input { width: 48px; background: #1a1a24; border: 1px solid #3a3a4e; color: #eee; border-radius: 6px; padding: 5px; font-size: 12px; }
+.mob-loot-row span { color: #9aa0b0; font-size: 12px; }
+.l-remove { width: 24px !important; flex: 0 0 auto; background: #3a3a4e !important; color: #e0a0a0; border: none; border-radius: 6px; cursor: pointer; }
+.l-remove:hover { background: #e74c3c !important; color: #fff; }
