@@ -187,6 +187,31 @@ function setup(io) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
     });
 
+    // --- Сундук-хранилище (банк): доступен, когда игрок стоит рядом с сундуком ---
+    const nearChest = () => {
+      const m = world.getState().map;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = player.x + dx, y = player.y + dy;
+        if (m[y] && m[y][x] === cfg.TILES.CHEST) return true;
+      }
+      return false;
+    };
+    const sendBank = () => { socket.emit('bankState', playersMod.bankStateOf(player)); socket.emit('inventoryUpdate', playersMod.invState(player)); };
+
+    socket.on('openBank', () => { if (nearChest()) socket.emit('bankState', playersMod.bankStateOf(player)); });
+
+    socket.on('bankMove', ({ src, from, dst, to } = {}) => {
+      if (nearChest() && playersMod.bankMove(player, src, from, dst, to)) sendBank();
+    });
+
+    socket.on('bankQuick', ({ src, index } = {}) => {
+      if (nearChest() && playersMod.bankQuick(player, src, index)) sendBank();
+    });
+
+    socket.on('bankUpgrade', () => {
+      if (nearChest() && playersMod.upgradeBank(player)) sendBank();
+    });
+
     // Надеть броню из рюкзака
     socket.on('equip', (invIndex) => {
       if (playersMod.equipItem(player, invIndex)) {

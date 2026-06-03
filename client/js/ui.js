@@ -271,6 +271,53 @@ export function renderTrade() {
   updateTradeFooter();
 }
 
+// --- Сундук-хранилище (банк): рюкзак + хранилище, перетаскивание и клик-перенос ---
+let bankOpen = false;
+export function isBankOpen() { return bankOpen; }
+export function openBank(data) {
+  if (data) S.bank = data;
+  bankOpen = true;
+  document.getElementById('bankPanel').classList.remove('hidden');
+  renderBank();
+}
+export function closeBank() { bankOpen = false; document.getElementById('bankPanel').classList.add('hidden'); }
+
+function bankCell(side, index, stack) {
+  const slot = document.createElement('div');
+  slot.className = 'slot';
+  if (stack) {
+    slot.innerHTML = itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '');
+    slot.style.background = rarityBg(stack.id);
+    slot.draggable = true;
+    slot.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/plain', JSON.stringify({ bank: true, from: side, index })));
+    slot.addEventListener('click', () => S.socket.emit('bankQuick', { src: side, index }));   // клик — быстрый перенос
+  }
+  slot.addEventListener('dragover', (e) => e.preventDefault());
+  slot.addEventListener('drop', (e) => {
+    e.preventDefault();
+    let src; try { src = JSON.parse(e.dataTransfer.getData('text/plain')); } catch { return; }
+    if (!src || !src.bank) return;                                                              // принимаем только перетаскивания из банка
+    S.socket.emit('bankMove', { src: src.from, from: src.index, dst: side, to: index });
+  });
+  return slot;
+}
+
+export function renderBank() {
+  if (!bankOpen) return;
+  const invGrid = document.getElementById('bankInvGrid');
+  const storeGrid = document.getElementById('bankStoreGrid');
+  invGrid.innerHTML = ''; storeGrid.innerHTML = '';
+  for (let i = 0; i < 32; i++) invGrid.appendChild(bankCell('inv', i, S.inventory[i]));
+  const slots = S.bank.slots || [];
+  for (let i = 0; i < slots.length; i++) storeGrid.appendChild(bankCell('bank', i, slots[i]));
+  document.getElementById('bankLevel').textContent = `· ур. ${S.bank.level}/${S.bank.maxLevel} · ${slots.length} слотов`;
+  const gold = (S.players[S.myId] && S.players[S.myId].gold != null) ? S.players[S.myId].gold : (S.bank.gold || 0);
+  document.getElementById('bankGold').textContent = gold;
+  const btn = document.getElementById('bankUpgradeBtn');
+  if (S.bank.nextCost == null) { btn.textContent = 'Максимальный уровень'; btn.disabled = true; }
+  else { btn.textContent = `Улучшить +${S.bank.perLevel || 8} слотов · ${S.bank.nextCost} зол.`; btn.disabled = gold < S.bank.nextCost; }
+}
+
 // --- Окно крафта (станции) ---
 let craftStation = null;
 const STATION_NAMES = { smelter: 'Плавильня', anvil: 'Наковальня', campfire: 'Костёр' };
@@ -288,6 +335,7 @@ export function closeCraft() { craftStation = null; document.getElementById('cra
 export function closeInteractions() {
   closeTrade();
   closeCraft();
+  closeBank();
   const qd = document.getElementById('questDialog'); if (qd) qd.classList.add('hidden');
 }
 export function renderCraft() {

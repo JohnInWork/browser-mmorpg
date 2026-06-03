@@ -16,6 +16,7 @@ function stationAt(x, y) {
   if (t === 9) return { station: 'campfire', name: 'Костёр' };
   return null;
 }
+function chestAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 10; }
 
 function isWalkable(x, y) {
   if (!S.MAP || x < 0 || y < 0 || x >= S.mapW || y >= S.mapH) return false;
@@ -119,6 +120,7 @@ export function setupInput() {
     if (m) { showTip(mobLabel(m.type)); canvas.style.cursor = 'pointer'; }
     else if (pl) { showTip(pl.name); canvas.style.cursor = 'pointer'; }
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
+    else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
     else if (node) { showTip(node.name); canvas.style.cursor = 'pointer'; }
     else { hideTip(); canvas.style.cursor = ''; }
   });
@@ -166,6 +168,14 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'station', x: t.x, y: t.y, station: st.station };
+      S.path = ap.path; S.targetTile = null;
+      return;
+    }
+    // Клик по сундуку — подойти и открыть хранилище
+    if (chestAt(t.x, t.y)) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      S.pendingAction = { kind: 'chest', x: t.x, y: t.y };
       S.path = ap.path; S.targetTile = null;
       return;
     }
@@ -232,6 +242,8 @@ function decideStep() {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openTrade();
     } else if (a.kind === 'station') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openCraft(a.station);
+    } else if (a.kind === 'chest') {
+      if (adjOrtho(me.x, me.y, a.x, a.y)) S.socket.emit('openBank');
     } else if (a.kind === 'questnpc') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openQuestDialog(a.npc);
     } else if (a.kind === 'notice') {

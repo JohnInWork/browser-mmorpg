@@ -1,6 +1,6 @@
 // Сетевой слой клиента: подписка на события сервера и обновление состояния.
 import { S } from './state.js';
-import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests } from './ui.js';
+import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests } from './ui.js';
 import { itemName } from './items.js';
 
 export function setupNet() {
@@ -42,8 +42,11 @@ export function setupNet() {
     if (st.equipment) { S.equipment = st.equipment; if (S.players[S.myId]) S.players[S.myId].equipment = st.equipment; }
     if (st.armor != null) S.armor = st.armor;
     if (st.gold != null && S.players[S.myId]) S.players[S.myId].gold = st.gold;
-    renderInventory(); renderHotbar(); renderEquipment(); updateStats(); updateGold(); renderTrade(); renderCraft();
+    renderInventory(); renderHotbar(); renderEquipment(); updateStats(); updateGold(); renderTrade(); renderCraft(); renderBank();
   });
+
+  // Сундук-хранилище: пришло состояние банка → открыть/обновить панель
+  socket.on('bankState', (data) => { openBank(data); });
 
   // Добыча
   socket.on('gatherHit', ({ x, y }) => { addFloater(x, y, '+1', '#c98a4b'); });

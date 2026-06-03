@@ -180,6 +180,21 @@
       </div>
     </div>
 
+    <!-- Сундук-хранилище (банк): рюкзак + хранилище, перетаскивание между ними -->
+    <div class="popup hidden" id="bankPanel">
+      <button id="bankClose" class="popup-close">✕</button>
+      <h3>Сундук-хранилище</h3>
+      <p class="trade-hint">Перетаскивай предметы между рюкзаком и хранилищем. Клик — быстрый перенос. Хранилище общее для всех сундуков.</p>
+      <div class="bank-cols">
+        <div class="bank-col"><div class="bank-lbl">Рюкзак</div><div class="invgrid" id="bankInvGrid"></div></div>
+        <div class="bank-col"><div class="bank-lbl">Хранилище <span id="bankLevel"></span></div><div class="invgrid bank-store" id="bankStoreGrid"></div></div>
+      </div>
+      <div id="bankFooter">
+        <span><svg class="coin" viewBox="0 0 24 24" width="16" height="16"><circle cx="12" cy="12" r="9" fill="#f1c40f" stroke="#b8890c" stroke-width="2"/></svg> <b id="bankGold">0</b></span>
+        <button id="bankUpgradeBtn">Улучшить</button>
+      </div>
+    </div>
+
     <!-- Контекстное меню предмета (ПКМ в рюкзаке) -->
     <div id="ctxMenu" class="ctx hidden"></div>
 

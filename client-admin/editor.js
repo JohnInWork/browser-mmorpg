@@ -33,10 +33,11 @@ const CATEGORIES = [
   { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' } ] },
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
+  { name: 'Хранилище', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' } ] },
 ];
 let selected = 0; // выбранный id тайла
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e' };
+const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // --- Авторизация ---
@@ -228,6 +229,15 @@ function drawCampfire(cx, cy) {
   const flame = (ox, h, w, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(cx + ox, cy - 2 * z); ctx.quadraticCurveTo(cx + ox - w, cy - h * 0.5, cx + ox, cy - h); ctx.quadraticCurveTo(cx + ox + w, cy - h * 0.5, cx + ox, cy - 2 * z); ctx.closePath(); ctx.fill(); };
   flame(0, 26 * z, 9 * z, '#e8632a'); flame(-3 * z, 18 * z, 6 * z, '#f4a23d'); flame(3 * z, 16 * z, 5 * z, '#f4a23d'); flame(0, 12 * z, 3.5 * z, '#ffe07a');
 }
+function drawChest(cx, cy) {
+  const z = zoom, W = 30 * z, baseH = 16 * z, lidH = 11 * z, x = cx - W / 2, top = cy - 6 * z;
+  ctx.fillStyle = '#7a4f24'; ctx.fillRect(x, top, W, baseH);
+  ctx.fillStyle = '#5e3c1a'; ctx.fillRect(x, top + baseH - 4 * z, W, 4 * z);
+  ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(x, top); ctx.quadraticCurveTo(cx, top - lidH, x + W, top); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#c9a24a'; ctx.fillRect(x + 3 * z, top - lidH * 0.4, 4 * z, baseH + lidH * 0.4); ctx.fillRect(x + W - 7 * z, top - lidH * 0.4, 4 * z, baseH + lidH * 0.4);
+  ctx.fillStyle = '#b98e3c'; ctx.fillRect(cx - 2 * z, top - lidH * 0.5, 4 * z, baseH + lidH * 0.5);
+  ctx.fillStyle = '#f1c40f'; ctx.fillRect(cx - 3 * z, top + baseH * 0.35, 6 * z, 6 * z);
+}
 
 function render() {
   ctx.fillStyle = '#10131a';
@@ -259,6 +269,7 @@ function render() {
       else if (t === 7) obj.push({ d: x + y + 0.1, k: 7, x, y });
       else if (t === 8) obj.push({ d: x + y + 0.1, k: 8, x, y });
       else if (t === 9) obj.push({ d: x + y + 0.1, k: 9, x, y });
+      else if (t === 10) obj.push({ d: x + y + 0.1, k: 10, x, y });
     }
   obj.sort((a, b) => a.d - b.d);
   for (const o of obj) {
@@ -267,6 +278,7 @@ function render() {
     else if (o.k === 7) drawAnvil(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 8) drawSmelter(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 9) drawCampfire(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
+    else if (o.k === 10) drawChest(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else drawRock(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.k === 6);
   }
   requestAnimationFrame(render);

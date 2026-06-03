@@ -1,5 +1,5 @@
 // Игроки: хранилище, инвентарь/хотбар, операции. Владеет объектом players.
-const { PLAYER_MAX_HP } = require('./config');
+const { PLAYER_MAX_HP, BANK_BASE, BANK_PER_LEVEL, BANK_UPGRADE_COST } = require('./config');
 const world = require('./world');
 const ITEMS = require('./data/items.json').items;
 
@@ -9,8 +9,27 @@ const players = {}; // socketId -> player
 
 // Инвентарь — фиксированные 32 ячейки: {id,qty} или null (пустая клетка).
 const INV_SIZE = 32;
-function padInv(items) { const a = items.slice(0, INV_SIZE); while (a.length < INV_SIZE) a.push(null); return a; }
-function firstEmpty(p) { return p.inventory.findIndex(s => !s); }
+function padTo(items, size) { const a = items.slice(0, size); while (a.length < size) a.push(null); return a; }
+function padInv(items) { return padTo(items, INV_SIZE); }
+function firstEmptyIn(arr) { return arr.findIndex(s => !s); }
+function firstEmpty(p) { return firstEmptyIn(p.inventory); }
+
+// Размер банка по уровню апгрейда
+function bankSize(level) { return BANK_BASE + (level || 0) * BANK_PER_LEVEL; }
+
+// Универсальный перенос {id,qty}/null между ячейками двух массивов: на пустую / слияние стака / обмен.
+function moveSlot(srcArr, srcIdx, dstArr, dstIdx) {
+  if (!Number.isInteger(srcIdx) || !Number.isInteger(dstIdx)) return false;
+  if (srcIdx < 0 || srcIdx >= srcArr.length || dstIdx < 0 || dstIdx >= dstArr.length) return false;
+  if (srcArr === dstArr && srcIdx === dstIdx) return false;
+  const a = srcArr[srcIdx];
+  if (!a) return false;
+  const b = dstArr[dstIdx];
+  if (!b) { dstArr[dstIdx] = a; srcArr[srcIdx] = null; return true; }
+  const def = ITEMS[a.id];
+  if (b.id === a.id && def && def.stackable) { b.qty += a.qty; srcArr[srcIdx] = null; return true; }
+  dstArr[dstIdx] = a; srcArr[srcIdx] = b; return true;            // обмен местами
+}
 
 function create(id) {
   const spawn = world.randomSpawn();
@@ -40,6 +59,7 @@ function create(id) {
     quests: { story: 0, progress: 0, completed: [], active: {} }, // story-цепочка + npc-квесты (active: id→прогресс)
   };
   player.inventory = padInv(player.inventory);   // дополнить до 32 ячеек пустыми
+  player.bank = { level: 0, slots: padTo([], bankSize(0)) }; // личное хранилище (банк)
   players[id] = player;
   return player;
 }
@@ -126,19 +146,46 @@ function hotbarToInv(p, slot, invIndex = null) {
 }
 
 // Переместить/обменять предметы внутри рюкзака (drag-n-drop в любую клетку).
-function moveItem(p, from, to) {
-  const n = p.inventory.length;
-  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= n || to >= n || from === to) return false;
-  const a = p.inventory[from];
-  if (!a) return false;
-  const b = p.inventory[to];
-  if (!b) { p.inventory[to] = a; p.inventory[from] = null; return true; }      // на пустую клетку
-  const def = ITEMS[a.id];
-  if (b.id === a.id && def && def.stackable) {                                  // слить одинаковые стаки
-    b.qty += a.qty; p.inventory[from] = null; return true;
-  }
-  p.inventory[from] = b; p.inventory[to] = a;                                   // иначе обмен местами
+function moveItem(p, from, to) { return moveSlot(p.inventory, from, p.inventory, to); }
+
+// --- Банк (личное хранилище, общее для всех сундуков) ---
+function bankArr(p, which) { return which === 'bank' ? p.bank.slots : p.inventory; }
+
+// Перенос между рюкзаком и банком (или внутри них) перетаскиванием в конкретную клетку.
+function bankMove(p, src, from, dst, to) {
+  if (!['inv', 'bank'].includes(src) || !['inv', 'bank'].includes(dst)) return false;
+  return moveSlot(bankArr(p, src), from, bankArr(p, dst), to);
+}
+
+// Быстрый перенос (клик): из одного хранилища в первую свободную/подходящую ячейку другого.
+function bankQuick(p, src, index) {
+  if (!['inv', 'bank'].includes(src)) return false;
+  const from = bankArr(p, src), to = bankArr(p, src === 'inv' ? 'bank' : 'inv');
+  const item = from[index];
+  if (!item) return false;
+  const def = ITEMS[item.id];
+  if (def && def.stackable) { const m = to.findIndex(s => s && s.id === item.id); if (m >= 0) return moveSlot(from, index, to, m); }
+  const e = firstEmptyIn(to);
+  if (e < 0) return false;
+  return moveSlot(from, index, to, e);
+}
+
+// Апгрейд банка за золото (5 уровней). Возвращает true при успехе.
+function upgradeBank(p) {
+  const lvl = p.bank.level;
+  if (lvl >= BANK_UPGRADE_COST.length) return false;        // максимум
+  const cost = BANK_UPGRADE_COST[lvl];
+  if (p.gold < cost) return false;
+  p.gold -= cost;
+  p.bank.level = lvl + 1;
+  p.bank.slots = padTo(p.bank.slots, bankSize(p.bank.level)); // дорастить ячейки
   return true;
+}
+
+// Снимок банка для клиента
+function bankStateOf(p) {
+  const nextCost = p.bank.level < BANK_UPGRADE_COST.length ? BANK_UPGRADE_COST[p.bank.level] : null;
+  return { slots: p.bank.slots, level: p.bank.level, maxLevel: BANK_UPGRADE_COST.length, perLevel: BANK_PER_LEVEL, nextCost, gold: p.gold };
 }
 
 // Съесть еду из рюкзака (по индексу): только type==='food' с heal. Возвращает фактически вылеченное HP (0 — нельзя).
@@ -238,4 +285,5 @@ function respawn(io, p) {
   io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp });
 }
 
-module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack, invState, ITEMS };
+module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
+  bankMove, bankQuick, upgradeBank, bankStateOf, invState, ITEMS };

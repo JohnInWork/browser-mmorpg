@@ -123,6 +123,18 @@ body {
 .trade-hint { color: #8a90a0; font-size: 12px; margin: -6px 0 12px; }
 #tradeGrid .slot { cursor: pointer; }
 #tradeGrid .slot.sel { border-color: #2ecc71; box-shadow: 0 0 0 2px rgba(46,204,113,.35); }
+
+/* Сундук-хранилище (банк) */
+#bankPanel { left: 50%; top: 50%; right: auto; bottom: auto; transform: translate(-50%, -50%); width: auto; max-width: 94vw; max-height: 90vh; overflow: auto; }
+.bank-cols { display: flex; gap: 22px; align-items: flex-start; }
+.bank-col { display: flex; flex-direction: column; gap: 8px; }
+.bank-lbl { font-size: 13px; font-weight: 700; color: #e6c07a; }
+.bank-store { max-height: 52vh; overflow-y: auto; padding-right: 2px; }
+#bankFooter { display: flex; align-items: center; gap: 14px; margin-top: 14px; }
+#bankFooter b { color: #f1c40f; }
+#bankUpgradeBtn { margin-left: auto; padding: 8px 14px; border: none; border-radius: 9px; background: #e0a93b; color: #1a1a24; font-size: 13px; font-weight: 700; cursor: pointer; }
+#bankUpgradeBtn:hover:not(:disabled) { background: #d49a2a; }
+#bankUpgradeBtn:disabled { background: #3a3a4e; color: #777; cursor: default; }
 #tradeFooter { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
 #tradeFooter b { color: #f1c40f; }
 #tradeFooter .coin { vertical-align: middle; }

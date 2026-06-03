@@ -3,7 +3,7 @@ import { S } from './state.js';
 import { setupNet } from './net.js';
 import { setupInput, update } from './input.js';
 import { render } from './render.js';
-import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu } from './ui.js';
+import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, closeBank, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu } from './ui.js';
 import { buildCharacterSVG, PALETTES } from './character.js';
 import { itemType } from './items.js';
 
@@ -163,6 +163,10 @@ function setupUi() {
 
   // Крафт: закрыть
   document.getElementById('craftClose').addEventListener('click', () => closeCraft());
+
+  // Сундук-хранилище: закрыть / улучшить за золото
+  document.getElementById('bankClose').addEventListener('click', () => closeBank());
+  document.getElementById('bankUpgradeBtn').addEventListener('click', () => S.socket.emit('bankUpgrade'));
 
   // Подсказка-название при наведении на интерактивные кнопки (data-tip)
   document.querySelectorAll('[data-tip]').forEach((el) => {
