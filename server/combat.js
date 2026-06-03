@@ -4,6 +4,7 @@ const { rnd, adjOrtho } = require('./util');
 const { players, respawn, armorValue, addItem, invState, ITEMS, weaponDamage } = require('./players');
 const mobsMod = require('./mobs');
 const quests = require('./quests');
+const skills = require('./skills');
 
 // Продвинуть квесты игрока по убийству моба типа mobType
 function questProgress(io, pid, p, mobType) {
@@ -56,10 +57,17 @@ function start(io) {
         const dmg = Math.max(1, rnd(cfg.PLAYER_DMG_MIN, cfg.PLAYER_DMG_MAX) + weaponDamage(p) - mobArmor);
         m.hp = Math.max(0, m.hp - dmg);
         io.emit('combatHit', { target: 'mob', id: m.id, hp: m.hp, dmg });
+        // Опыт боя: за удар + бонус за добивание
+        let cup = skills.addXp(p, 'combat', 2 + dmg * 2);
         // Артефакт: шлем, лечащий носителя за каждый удар по врагу
         const helmet = p.equipment.helmet, onHit = helmet && ITEMS[helmet] && ITEMS[helmet].onHitHeal;
         if (onHit && p.hp < p.maxHp) { p.hp = Math.min(p.maxHp, p.hp + onHit); io.emit('playerHp', { id: pid, hp: p.hp, heal: onHit }); }
-        if (m.hp <= 0) { grantMobLoot(io, pid, p, m); questProgress(io, pid, p, m.type); mobsMod.kill(io, m); continue; }
+        if (m.hp <= 0) {
+          const kb = skills.addXp(p, 'combat', Math.round(m.maxHp / 2)); if (kb.leveledUp) cup = kb; // бонус-опыт за добивание
+          io.to(pid).emit('skillUpdate', { skill: 'combat', ...skills.one(p, 'combat'), leveledUp: cup.leveledUp });
+          grantMobLoot(io, pid, p, m); questProgress(io, pid, p, m.type); mobsMod.kill(io, m); continue;
+        }
+        io.to(pid).emit('skillUpdate', { skill: 'combat', ...skills.one(p, 'combat'), leveledUp: cup.leveledUp });
         p.turn = 'mob';
       } else {
         const def = mobsMod.TYPES[m.type];

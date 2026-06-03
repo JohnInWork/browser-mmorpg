@@ -7,6 +7,7 @@ const mobsMod = require('./mobs');
 const resources = require('./resources');
 const RECIPES = require('./data/recipes.json');
 const quests = require('./quests');
+const skillsMod = require('./skills');
 const QUESTS = quests.QUESTS;
 const STATION_TILE = { smelter: cfg.TILES.SMELTER, anvil: cfg.TILES.ANVIL, campfire: cfg.TILES.CAMPFIRE };
 
@@ -46,7 +47,7 @@ function setup(io) {
     // --- Обычный игрок ---
     const player = playersMod.create(socket.id);
 
-    socket.emit('init', { ...world.getState(), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, questDefs: QUESTS });
+    socket.emit('init', { ...world.getState(), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, skills: skillsMod.clientSkills(player), questDefs: QUESTS });
     socket.broadcast.emit('playerJoined', player);
     io.emit('count', playersMod.count());
 
@@ -167,6 +168,11 @@ function setup(io) {
       if (playersMod.craft(player, r)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
         socket.emit('loot', { id: r.out, qty: r.outQty || 1 });
+        // Опыт навыка за крафт: костёр → кулинария, плавильня/наковальня → кузнечное дело
+        const skill = station === 'campfire' ? 'cooking' : 'smithing';
+        const xp = station === 'smelter' ? 15 : station === 'campfire' ? 12 : 25;
+        const up = skillsMod.addXp(player, skill, xp);
+        socket.emit('skillUpdate', { skill, ...skillsMod.one(player, skill), leveledUp: up.leveledUp });
       }
     });
 

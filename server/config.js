@@ -15,7 +15,12 @@ module.exports = {
   // Добыча ресурсов
   GATHER_TICK_MS: 700,         // интервал между ударами
   RESOURCE_RESPAWN_MS: 15000,  // ресурс восстанавливается через 15 сек
-  NODE_AMOUNT: { tree: 30, stone: 20, iron: 12 }, // ресурса за ноду (= число ударов)
+  NODE_AMOUNT: { tree: 30, stone: 20, iron: 12 }, // ресурса за ноду (запас)
+  // Шанс получить ресурс за удар: растёт с уровнем навыка (удар не всегда успешен)
+  GATHER_BASE_CHANCE: 0.45,    // шанс на минимально нужном уровне
+  GATHER_PER_LEVEL: 0.035,     // +шанс за уровень выше требуемого
+  GATHER_MIN_CHANCE: 0.30,
+  GATHER_MAX_CHANCE: 0.92,
 
   // Тайлы карты
   TILES: { GRASS: 0, WATER: 1, WALL: 2, TREE: 3, PATH: 4, STONE: 5, IRON: 6, ANVIL: 7, SMELTER: 8, CAMPFIRE: 9, CHEST: 10 },

@@ -1,6 +1,6 @@
 // Сетевой слой клиента: подписка на события сервера и обновление состояния.
 import { S } from './state.js';
-import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests } from './ui.js';
+import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests } from './ui.js';
 import { itemName } from './items.js';
 
 export function setupNet() {
@@ -24,10 +24,11 @@ export function setupNet() {
     if (data.you.equipment) S.equipment = data.you.equipment;
     S.depletedNodes = new Set(data.depleted || []);
     if (data.recipes) S.recipes = data.recipes;
+    if (data.skills) S.skills = data.skills;
     if (data.mobTypes) S.mobTypes = data.mobTypes;
     if (data.questDefs) S.questDefs = data.questDefs;
     if (data.you.quests) S.quests = data.you.quests;
-    updateHpHud(); updateGold(); renderInventory(); renderHotbar(); renderEquipment(); updateStats();
+    updateHpHud(); updateGold(); renderInventory(); renderHotbar(); renderEquipment(); updateStats(); renderSkills();
   });
 
   socket.on('mapUpdated', (data) => {
@@ -49,8 +50,22 @@ export function setupNet() {
   // Сундук-хранилище: пришло состояние банка → открыть/обновить панель
   socket.on('bankState', (data) => { openBank(data); });
 
+  // Навыки: пришло обновление (опыт/уровень)
+  socket.on('skillUpdate', (s) => {
+    const prev = S.skills[s.skill] || {};
+    S.skills[s.skill] = { ...prev, xp: s.xp, level: s.level, levelXp: s.levelXp, nextXp: s.nextXp, max: s.max };
+    if (s.leveledUp) {
+      const nm = (prev.name) || s.skill;
+      chatSystem(`Навык повышен: ${nm} — уровень ${s.level}`);
+      const me = S.players[S.myId];
+      if (me) addFloater(me.x, me.y, `${nm} ур. ${s.level}`, '#f1c40f');
+    }
+    renderSkills();
+  });
+
   // Добыча
   socket.on('gatherHit', ({ x, y }) => { addFloater(x, y, '+1', '#c98a4b'); });
+  socket.on('gatherMiss', ({ x, y }) => { addFloater(x, y, '·', 'rgba(255,255,255,.45)'); }); // промах удара
   socket.on('nodeDepleted', ({ x, y }) => { S.depletedNodes.add(`${x},${y}`); });
   socket.on('nodeRespawned', ({ x, y }) => { S.depletedNodes.delete(`${x},${y}`); });
 

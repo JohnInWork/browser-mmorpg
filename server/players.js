@@ -1,6 +1,7 @@
 // Игроки: хранилище, инвентарь/хотбар, операции. Владеет объектом players.
 const { PLAYER_MAX_HP, BANK_BASE, BANK_PER_LEVEL, BANK_UPGRADE_COST } = require('./config');
 const world = require('./world');
+const skills = require('./skills');
 const ITEMS = require('./data/items.json').items;
 
 const COLORS = ['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6','#e67e22','#1abc9c','#ff6b9d'];
@@ -58,6 +59,7 @@ function create(id) {
     engaging: null,    // id моба, на которого игрок сам идёт драться (он не бьёт первым)
     gathering: null,   // id ресурс-ноды (дерева), которую рубим
     quests: { story: 0, progress: 0, completed: [], active: {} }, // story-цепочка + npc-квесты (active: id→прогресс)
+    skills: skills.defaultSkills(),  // навыки игрока (опыт/уровни)
   };
   player.inventory = padInv(player.inventory);   // дополнить до 32 ячеек пустыми
   player.bank = { level: 0, slots: padTo([], bankSize(0)) }; // личное хранилище (банк)

@@ -448,6 +448,17 @@ function mobIcon(t) {
   const c = m.color || '#2ecc71';                              // запасной вид (без спрайта): цветной зверёк, как в игре
   return `<svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8" fill="${c}" stroke="rgba(0,0,0,.25)" stroke-width="1"/><circle cx="9" cy="11" r="1.4" fill="#173d27"/><circle cx="15" cy="11" r="1.4" fill="#173d27"/><path d="M9 15 q3 1.8 6 0" stroke="#173d27" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>`;
 }
+// Иконки навыков (свои SVG)
+const SKILL_ICONS = {
+  woodcutting: `<svg viewBox="0 0 24 24" width="26" height="26"><line x1="5" y1="20" x2="15" y2="8" stroke="#8a5a28" stroke-width="2.6" stroke-linecap="round"/><path d="M13 4 c4 0 7 3 7 7 c-3 -2 -7 -1 -9 2 z" fill="#cfd6dd" stroke="#8e979f" stroke-width="0.9"/></svg>`,
+  mining: `<svg viewBox="0 0 24 24" width="26" height="26"><line x1="6" y1="20" x2="15" y2="7" stroke="#8a5a28" stroke-width="2.6" stroke-linecap="round"/><path d="M8 5 q7 -1 12 5 q-7 -1 -12 5 q3 -5 0 -10z" fill="#c0c7d0" stroke="#8e979f" stroke-width="0.9"/></svg>`,
+  smithing: `<svg viewBox="0 0 24 24" width="26" height="26"><rect x="11" y="9" width="2.4" height="12" rx="1" fill="#8a5a28"/><rect x="6" y="5" width="12" height="5" rx="1.5" fill="#7c828b" stroke="#5e636b" stroke-width="1"/></svg>`,
+  cooking: `<svg viewBox="0 0 24 24" width="26" height="26"><rect x="5" y="11" width="12" height="7" rx="2" fill="#5e6670" stroke="#3a3f47" stroke-width="1"/><rect x="16" y="13" width="5" height="2.4" rx="1.2" fill="#5e6670"/><path d="M8 9 q1 -2 0 -3 M11 9 q1 -2 0 -3 M14 9 q1 -2 0 -3" stroke="#cfd6dd" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>`,
+  combat: `<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 2 L14 5 L13 14 L11 14 L10 5 Z" fill="#cfd6dd" stroke="#9aa4b0" stroke-width="0.8"/><rect x="8" y="13.6" width="8" height="2.2" rx="1" fill="#5e6670"/><rect x="11" y="15.8" width="2" height="5" rx="1" fill="#8a5a28"/></svg>`,
+};
+function skillIcon(key) { return SKILL_ICONS[key] || ''; }
+function skillName(key) { return (S.skills[key] && S.skills[key].name) || key; }
+
 const link = (kind, id, inner) => `<span class="glink" data-k="${kind}" data-id="${id}">${inner}</span>`;
 const chip = (kind, id, icon, name) => {
   const col = kind === 'item' ? rarityNameColor(id) : '';
@@ -464,6 +475,21 @@ function guideIndexHtml() {
   }
   const mobs = Object.keys(S.mobTypes).filter(t => !S.mobTypes[t].npc);   // NPC в вики не показываем — их много, описывать смысла нет
   if (mobs.length) h += `<div class="g-cat">Существа</div><div class="g-grid">` + mobs.map(t => chip('mob', t, mobIcon(t), mobName(t))).join('') + `</div>`;
+  const sk = Object.keys(S.skills);
+  if (sk.length) h += `<div class="g-cat">Навыки</div><div class="g-grid">` + sk.map(k => chip('skill', k, skillIcon(k), `${skillName(k)} · ур.${S.skills[k].level}`)).join('') + `</div>`;
+  return h;
+}
+function guideSkillHtml(key) {
+  const s = S.skills[key];
+  if (!s) return 'Нет данных';
+  const cur = s.xp - s.levelXp, need = s.nextXp != null ? s.nextXp - s.levelXp : 0;
+  const pct = s.nextXp != null && need > 0 ? Math.round(cur / need * 100) : 100;
+  let h = `<div class="g-head"><span class="g-bigic">${skillIcon(key)}</span><div><div class="g-name">${s.name}</div><div class="g-sub">Навык · уровень ${s.level}/${s.max}</div></div></div>`;
+  if (s.desc) h += `<p class="g-desc">${s.desc}</p>`;
+  h += `<div class="g-sec">Уровень ${s.level}</div>`;
+  h += `<div class="skill-bar"><div class="skill-bar-fill" style="width:${pct}%"></div></div>`;
+  h += `<div class="g-stats"><div>Опыт: <b>${s.xp}</b>${s.nextXp != null ? ` · до ур.${s.level + 1}: <b>${s.nextXp - s.xp}</b>` : ' · максимум'}</div></div>`;
+  if (s.trains) h += `<div class="g-sec">Как качать</div><div class="g-col"><div>${s.trains}</div></div>`;
   return h;
 }
 function guideItemHtml(id) {
@@ -523,10 +549,26 @@ export function renderGuide() {
   let html, title;
   if (v.kind === 'item') { html = guideItemHtml(v.id); title = itemName(v.id); }
   else if (v.kind === 'mob') { html = guideMobHtml(v.id); title = mobName(v.id); }
+  else if (v.kind === 'skill') { html = guideSkillHtml(v.id); title = skillName(v.id); }
   else { html = guideIndexHtml(); title = 'Энциклопедия'; }
   body.innerHTML = html;
   document.getElementById('guideTitle').textContent = title;
   document.getElementById('guideBack').style.display = S.guideNav.length > 1 ? '' : 'none';
+}
+
+// Обновить отображение навыков (панель персонажа + живой пересчёт вики, если открыта)
+export function renderSkills() {
+  const list = document.getElementById('skillsList');
+  if (list) {
+    list.innerHTML = Object.keys(S.skills).map(k => {
+      const s = S.skills[k];
+      const cur = s.xp - s.levelXp, need = s.nextXp != null ? s.nextXp - s.levelXp : 1;
+      const pct = s.nextXp != null && need > 0 ? Math.round(cur / need * 100) : 100;
+      return `<div class="skill-row"><span class="skill-ic">${skillIcon(k)}</span><span class="skill-nm">${s.name}</span><span class="skill-lv">ур. ${s.level}</span><div class="skill-bar"><div class="skill-bar-fill" style="width:${pct}%"></div></div></div>`;
+    }).join('');
+  }
+  const gp = document.getElementById('guidePanel');
+  if (gp && !gp.classList.contains('hidden')) renderGuide();   // живое обновление полоски опыта в вики
 }
 export function openGuide() { S.guideNav = [{ kind: 'index' }]; renderGuide(); }
 export function guideGo(kind, id) { if (!kind || !id) return; S.guideNav.push({ kind, id }); renderGuide(); }

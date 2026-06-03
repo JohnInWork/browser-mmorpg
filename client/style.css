@@ -244,6 +244,16 @@ body {
 .g-ing { display: inline-flex; align-items: center; gap: 5px; background: rgba(20,20,28,.7); border: 1px solid #3a3a4e; border-radius: 8px; padding: 3px 8px 3px 4px; font-size: 12.5px; }
 .g-ing svg { width: 22px; height: 22px; }
 .g-rar { font-size: 11px; font-weight: 700; color: #1a1a24; padding: 1px 8px; border-radius: 6px; vertical-align: middle; }
+/* Навыки: полоска опыта (вики + панель персонажа) */
+.skill-bar { height: 7px; background: #1a1a24; border: 1px solid #3a3a4e; border-radius: 5px; overflow: hidden; margin: 6px 0; }
+.skill-bar-fill { height: 100%; background: #5b8def; border-radius: 4px; }
+.char-skills { margin-top: 14px; }
+.cs-title { color: #e6c07a; font-weight: 700; font-size: 13px; margin-bottom: 8px; }
+.skill-row { display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 8px; margin-bottom: 7px; }
+.skill-row .skill-bar { grid-column: 1 / -1; margin: 2px 0 0; }
+.skill-ic { display: flex; width: 24px; height: 24px; } .skill-ic svg { width: 24px; height: 24px; }
+.skill-nm { font-size: 13px; color: #dfe4ee; } .skill-lv { font-size: 12px; color: #9aa0b0; }
+
 .g-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
 .g-tag { font-size: 11px; color: #aeb6c4; background: rgba(20,20,28,.7); border: 1px solid #3a3a4e; border-radius: 6px; padding: 2px 8px; }
 .g-ic img.mob-sprite { width: 26px; height: 26px; object-fit: contain; }
