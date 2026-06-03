@@ -252,10 +252,33 @@ function droppedBy(itemId) {                                   // с каких 
   return out;
 }
 function mobName(t) { return (S.mobTypes[t] && S.mobTypes[t].name) || TYPE_NAMES[t] || t; }
+// Иконки существ (плоские, без градиентов) — по полю sprite
+const MOB_ICONS = {
+  chicken: `<svg viewBox="0 0 24 24" width="26" height="26">
+    <path d="M9 5 q1.4 -2 2.6 -0.3 q1.3 -1.9 2.6 0 v2.2 h-5.2 z" fill="#e0392b"/>
+    <circle cx="12" cy="13" r="6.4" fill="#f6f1e2" stroke="#d9cfb6" stroke-width="1"/>
+    <path d="M18 12 l3.6 1.4 l-3.6 1.4 z" fill="#e8a32b"/>
+    <path d="M16.3 16.2 q1 1.6 0.1 3" stroke="#e0392b" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <circle cx="13.4" cy="11.6" r="1.25" fill="#1a1a1a"/></svg>`,
+  wolf: `<svg viewBox="0 0 24 24" width="26" height="26">
+    <path d="M5 4 L8.5 10 L4 9 Z" fill="#6f757e"/><path d="M19 4 L15.5 10 L20 9 Z" fill="#6f757e"/>
+    <path d="M6 9 q6 -3 12 0 q1 6 -3 9 q-3 2 -6 0 q-4 -3 -3 -9 z" fill="#8b9099" stroke="#5e636b" stroke-width="0.8"/>
+    <path d="M9 16 q3 1.8 6 0 l-1 3 q-2 1 -4 0 z" fill="#b3b9c1"/>
+    <circle cx="12" cy="18.4" r="1.1" fill="#26282b"/>
+    <path d="M8.4 11 l2.2 1 l-2.2 0.7 z" fill="#f1c40f"/><path d="M15.6 11 l-2.2 1 l2.2 0.7 z" fill="#f1c40f"/></svg>`,
+  bear: `<svg viewBox="0 0 24 24" width="26" height="26">
+    <circle cx="6.3" cy="6.3" r="2.8" fill="#6b4a2b"/><circle cx="17.7" cy="6.3" r="2.8" fill="#6b4a2b"/>
+    <circle cx="6.3" cy="6.3" r="1.2" fill="#8a6a45"/><circle cx="17.7" cy="6.3" r="1.2" fill="#8a6a45"/>
+    <circle cx="12" cy="13" r="7.3" fill="#7a5230" stroke="#523619" stroke-width="0.9"/>
+    <ellipse cx="12" cy="15.4" rx="3.8" ry="2.9" fill="#b08a59"/>
+    <ellipse cx="12" cy="13.9" rx="1.5" ry="1.1" fill="#26201a"/>
+    <circle cx="9" cy="11" r="1" fill="#26201a"/><circle cx="15" cy="11" r="1" fill="#26201a"/></svg>`,
+};
 function mobIcon(t) {
-  const c = (S.mobTypes[t] && S.mobTypes[t].color) || '#888';
-  const body = (S.mobTypes[t] && S.mobTypes[t].sprite === 'chicken') ? '#f6f5ef' : c;
-  return `<svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="9" fill="${body}"/><circle cx="9" cy="11" r="1.5" fill="#1a1a1a"/><circle cx="15" cy="11" r="1.5" fill="#1a1a1a"/></svg>`;
+  const m = S.mobTypes[t] || {};
+  if (MOB_ICONS[m.sprite]) return MOB_ICONS[m.sprite];
+  const c = m.color || '#2ecc71';                              // запасной вид: цветной зверёк
+  return `<svg viewBox="0 0 24 24" width="26" height="26"><circle cx="12" cy="12" r="8" fill="${c}" stroke="rgba(0,0,0,.25)" stroke-width="1"/><circle cx="9" cy="11" r="1.4" fill="#173d27"/><circle cx="15" cy="11" r="1.4" fill="#173d27"/><path d="M9 15 q3 1.8 6 0" stroke="#173d27" stroke-width="1.3" fill="none" stroke-linecap="round"/></svg>`;
 }
 const link = (kind, id, inner) => `<span class="glink" data-k="${kind}" data-id="${id}">${inner}</span>`;
 const chip = (kind, id, icon, name) => {
@@ -271,7 +294,7 @@ function guideIndexHtml() {
     if (!ids.length) continue;
     h += `<div class="g-cat">${CAT_NAMES[c] || c}</div><div class="g-grid">` + ids.map(id => chip('item', id, itemIcon(id), itemName(id))).join('') + `</div>`;
   }
-  const mobs = Object.keys(S.mobTypes);
+  const mobs = Object.keys(S.mobTypes).filter(t => !S.mobTypes[t].npc);   // NPC в вики не показываем — их много, описывать смысла нет
   if (mobs.length) h += `<div class="g-cat">Существа</div><div class="g-grid">` + mobs.map(t => chip('mob', t, mobIcon(t), mobName(t))).join('') + `</div>`;
   return h;
 }
