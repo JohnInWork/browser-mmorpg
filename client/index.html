@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>MMORPG — Этап 1</title>
-  <link rel="stylesheet" href="style.css?v=3">
+  <link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
   <!-- Экран создания персонажа -->
@@ -141,6 +141,10 @@
       <button id="logoutBtn">Выход</button>
     </div>
 
+    <!-- Окно разговора с НПС (имя, описание, кнопки действий) -->
+    <div class="popup hidden" id="npcDialog"></div>
+    <!-- Окно покупки у НПС-продавца -->
+    <div class="popup hidden" id="buyPanel"></div>
     <!-- Диалог квеста от НПС (взять / отказаться) -->
     <div class="popup hidden" id="questDialog"></div>
 
@@ -206,6 +210,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="js/main.js?v=3"></script>
+  <script type="module" src="js/main.js?v=4"></script>
 </body>
 </html>

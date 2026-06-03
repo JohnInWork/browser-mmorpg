@@ -523,18 +523,74 @@ function render() {
 // --- Конструктор НПС (модальное окно) ---
 const escHtml = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const escAttr = escHtml;
-function npcDefaults() { return { name: 'НПС', link: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, dialogue: '', talkText: '', quest: null }; }
-function questDefaults() { return { title: 'Задание', desc: '', type: 'gather', target: 'wood', count: 5, reward: 50, rewardItem: null, thanks: 'Спасибо!' }; }
+// Предметы, которые НПС может продавать игроку (Купить)
+const SELL_ITEMS = [
+  ['axe', 'Топор'], ['pickaxe', 'Кирка'], ['shovel', 'Лопата'], ['emptyFlask', 'Пустая колба'], ['cookedChicken', 'Жареная курица'],
+  ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'],
+  ['helmet', 'Шлем'], ['chest', 'Нагрудник'], ['gloves', 'Перчатки'], ['pants', 'Поножи'], ['boots', 'Сапоги'],
+  ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['ironGreatsword', 'Двуручный меч'],
+];
+function npcDefaults() { return { name: 'НПС', link: '', description: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, sells: [], dialogue: '', talkText: '', quests: [] }; }
+function questDefaults() { return { title: 'Задание', desc: '', type: 'gather', target: 'wood', count: 5, reward: 50, rewardItem: null, thanks: 'Спасибо!', repeatable: false }; }
+const optHtml = (arr, sel) => arr.map(([v, l]) => `<option value="${escAttr(v)}"${v === sel ? ' selected' : ''}>${escHtml(l)}</option>`).join('');
+
+// Один блок квеста (DOM). Возвращает элемент; чтение — readQuestBlock().
+function makeQuestBlock(q) {
+  q = { ...questDefaults(), ...q };
+  const el = document.createElement('div');
+  el.className = 'npc-qblock';
+  el.innerHTML = `
+    <button class="q-remove" title="Удалить квест">✕</button>
+    <label class="npc-f">Название<input class="q-title" type="text" value="${escAttr(q.title)}"></label>
+    <label class="npc-f">Описание (что делать)<textarea class="q-desc" rows="2">${escHtml(q.desc)}</textarea></label>
+    <label class="npc-f">Тип<select class="q-type">${optHtml([['gather', 'Собрать предмет'], ['kill', 'Убить мобов'], ['talk', 'Поговорить с НПС']], q.type)}</select></label>
+    <label class="npc-f q-target-box"></label>
+    <label class="npc-f q-count-row">Количество<input class="q-count" type="number" min="1" value="${q.count}"></label>
+    <label class="npc-f">Награда — золото<input class="q-reward" type="number" min="0" value="${q.reward}"></label>
+    <label class="npc-f">Награда — предмет<span class="npc-inline"><select class="q-ritem">${optHtml(REWARD_ITEMS, q.rewardItem ? q.rewardItem.id : '')}</select>×<input class="q-rqty" type="number" min="1" value="${q.rewardItem ? q.rewardItem.qty : 1}"></span></label>
+    <label class="npc-f">Текст благодарности<textarea class="q-thanks" rows="2">${escHtml(q.thanks)}</textarea></label>
+    <label class="npc-chk"><input class="q-rep" type="checkbox"${q.repeatable ? ' checked' : ''}> Повторяемый (можно брать снова)</label>`;
+  const tbox = el.querySelector('.q-target-box');
+  const typeSel = el.querySelector('.q-type');
+  const renderTarget = (type) => {
+    if (type === 'talk') tbox.innerHTML = `Метка/имя НПС-цели<input class="q-target" type="text" value="${escAttr(q.type === 'talk' ? q.target : '')}" placeholder="напр. Кузнец или 123">`;
+    else if (type === 'kill') tbox.innerHTML = `Кого убить<select class="q-target">${optHtml(KILL_TARGETS, q.type === 'kill' ? q.target : 'passive')}</select>`;
+    else tbox.innerHTML = `Что собрать<select class="q-target">${optHtml(GATHER_TARGETS, q.type === 'gather' ? q.target : 'wood')}</select>`;
+    el.querySelector('.q-count-row').style.display = (type === 'talk') ? 'none' : '';
+  };
+  renderTarget(q.type);
+  typeSel.addEventListener('change', () => renderTarget(typeSel.value));
+  el.querySelector('.q-remove').addEventListener('click', () => el.remove());
+  return el;
+}
+function readQuestBlock(el) {
+  const v = (sel) => { const e = el.querySelector(sel); return e ? e.value : ''; };
+  const type = v('.q-type');
+  const rItem = v('.q-ritem');
+  return {
+    title: (v('.q-title') || 'Задание').slice(0, 60),
+    desc: (v('.q-desc') || '').slice(0, 300),
+    type,
+    target: (v('.q-target') || '').trim(),
+    count: type === 'talk' ? 1 : Math.max(1, parseInt(v('.q-count'), 10) || 1),
+    reward: Math.max(0, parseInt(v('.q-reward'), 10) || 0),
+    rewardItem: rItem ? { id: rItem, qty: Math.max(1, parseInt(v('.q-rqty'), 10) || 1) } : null,
+    thanks: (v('.q-thanks') || 'Спасибо!').slice(0, 300),
+    repeatable: !!el.querySelector('.q-rep').checked,
+  };
+}
 
 function openNpcEditor(x, y, existing) {
   const data = existing ? JSON.parse(JSON.stringify(existing)) : npcDefaults();
   if (!data.appearance) data.appearance = { skin: PALETTES.skin[0] };
   if (!data.equipment) data.equipment = {};
-  const q = data.quest ? { ...questDefaults(), ...data.quest } : questDefaults();
+  if (!Array.isArray(data.sells)) data.sells = [];
+  // легаси: одиночный quest → массив
+  if (!Array.isArray(data.quests)) data.quests = data.quest ? [data.quest] : [];
   const ov = document.getElementById('npcOverlay');
-  const opt = (arr, sel) => arr.map(([v, l]) => `<option value="${escAttr(v)}"${v === sel ? ' selected' : ''}>${escHtml(l)}</option>`).join('');
   const skinSw = PALETTES.skin.map(c => `<span class="npc-skin${data.appearance.skin === c ? ' sel' : ''}" data-c="${c}" style="background:${c}"></span>`).join('');
-  const equipRows = EQUIP_ORDER.map(slot => `<label class="npc-eq"><span>${SLOT_NAMES[slot]}</span><select data-slot="${slot}">${opt(EQUIP_ITEMS[slot], data.equipment[slot] || '')}</select></label>`).join('');
+  const equipRows = EQUIP_ORDER.map(slot => `<label class="npc-eq"><span>${SLOT_NAMES[slot]}</span><select data-slot="${slot}">${optHtml(EQUIP_ITEMS[slot], data.equipment[slot] || '')}</select></label>`).join('');
+  const sellChecks = SELL_ITEMS.map(([id, l]) => `<label class="npc-sell"><input type="checkbox" data-sell="${id}"${data.sells.includes(id) ? ' checked' : ''}> ${escHtml(l)}</label>`).join('');
   ov.innerHTML = `
     <div class="npc-modal">
       <div class="npc-left">
@@ -546,20 +602,12 @@ function openNpcEditor(x, y, existing) {
         <h3>${existing ? 'Изменить НПС' : 'Создать НПС'}</h3>
         <label class="npc-f">Имя<input id="npcName" type="text" maxlength="24" value="${escAttr(data.name)}"></label>
         <label class="npc-f">Метка связи<input id="npcLink" type="text" maxlength="24" value="${escAttr(data.link)}" placeholder="для квеста «поговори с…» (иначе имя)"></label>
-        <label class="npc-chk"><input id="npcTrader" type="checkbox"${data.trader ? ' checked' : ''}> Торговец (можно продавать предметы)</label>
-        <label class="npc-f">Реплика при разговоре<textarea id="npcDialogue" maxlength="300" rows="2">${escHtml(data.dialogue)}</textarea></label>
+        <label class="npc-f">Описание (видно в окне разговора)<textarea id="npcDesc" maxlength="300" rows="2">${escHtml(data.description)}</textarea></label>
+        <label class="npc-f">Реплика (кнопка «Поговорить»)<textarea id="npcDialogue" maxlength="300" rows="2">${escHtml(data.dialogue)}</textarea></label>
         <label class="npc-f">Финальный диалог talk-квеста<textarea id="npcTalk" maxlength="300" rows="2" placeholder="покажется, когда игрок придёт сюда завершить квест «поговори с…»">${escHtml(data.talkText)}</textarea></label>
-        <label class="npc-chk"><input id="npcHasQuest" type="checkbox"${data.quest ? ' checked' : ''}> Даёт квест</label>
-        <div id="npcQuestBox" class="npc-quest${data.quest ? '' : ' hidden'}">
-          <label class="npc-f">Название квеста<input id="qTitle" type="text" value="${escAttr(q.title)}"></label>
-          <label class="npc-f">Описание (что делать)<textarea id="qDesc" rows="2">${escHtml(q.desc)}</textarea></label>
-          <label class="npc-f">Тип<select id="qType">${opt([['gather', 'Собрать предмет'], ['kill', 'Убить мобов'], ['talk', 'Поговорить с НПС']], q.type)}</select></label>
-          <div id="qTargetBox" class="npc-f"></div>
-          <label class="npc-f" id="qCountRow">Количество<input id="qCount" type="number" min="1" value="${q.count}"></label>
-          <label class="npc-f">Награда — золото<input id="qReward" type="number" min="0" value="${q.reward}"></label>
-          <label class="npc-f">Награда — предмет<span class="npc-inline"><select id="qRItem">${opt(REWARD_ITEMS, q.rewardItem ? q.rewardItem.id : '')}</select>×<input id="qRQty" type="number" min="1" value="${q.rewardItem ? q.rewardItem.qty : 1}"></span></label>
-          <label class="npc-f">Текст благодарности<textarea id="qThanks" rows="2">${escHtml(q.thanks)}</textarea></label>
-        </div>
+        <label class="npc-chk"><input id="npcTrader" type="checkbox"${data.trader ? ' checked' : ''}> Принимает товары (игрок ПРОДАЁТ ему)</label>
+        <div class="npc-f">Продаёт игроку (игрок ПОКУПАЕТ):<div class="npc-sells" id="npcSells">${sellChecks}</div></div>
+        <div class="npc-f">Квесты<div id="npcQuests"></div><button id="npcAddQuest" class="npc-addq">+ Добавить квест</button></div>
         <div class="npc-btns">
           ${existing ? '<button id="npcDelete" class="m-danger">Удалить</button>' : ''}
           <button id="npcCancel" class="m-cancel">Отмена</button>
@@ -573,28 +621,19 @@ function openNpcEditor(x, y, existing) {
   const preview = () => { $('npcPreview').innerHTML = buildCharacterSVG(data.appearance, data.equipment); };
   preview();
 
-  // Внешность: кожа
   ov.querySelectorAll('.npc-skin').forEach(sw => sw.addEventListener('click', () => {
     data.appearance.skin = sw.dataset.c;
     ov.querySelectorAll('.npc-skin').forEach(s => s.classList.remove('sel')); sw.classList.add('sel');
     preview();
   }));
-  // Экипировка
   ov.querySelectorAll('select[data-slot]').forEach(sel => sel.addEventListener('change', () => {
     const slot = sel.dataset.slot; if (sel.value) data.equipment[slot] = sel.value; else delete data.equipment[slot];
     preview();
   }));
-  // Поле цели квеста зависит от типа
-  const renderTarget = (type) => {
-    const box = $('qTargetBox');
-    if (type === 'talk') box.innerHTML = `Метка/имя НПС-цели<input id="qTarget" type="text" value="${escAttr(q.type === 'talk' ? q.target : '')}" placeholder="напр. Кузнец или 123">`;
-    else if (type === 'kill') box.innerHTML = `Кого убить<select id="qTarget">${opt(KILL_TARGETS, q.type === 'kill' ? q.target : 'passive')}</select>`;
-    else box.innerHTML = `Что собрать<select id="qTarget">${opt(GATHER_TARGETS, q.type === 'gather' ? q.target : 'wood')}</select>`;
-    $('qCountRow').style.display = (type === 'talk') ? 'none' : '';
-  };
-  renderTarget(q.type);
-  $('qType').addEventListener('change', () => renderTarget($('qType').value));
-  $('npcHasQuest').addEventListener('change', () => $('npcQuestBox').classList.toggle('hidden', !$('npcHasQuest').checked));
+  // Квесты: блоки + кнопка добавить
+  const questsBox = $('npcQuests');
+  data.quests.forEach(q => questsBox.appendChild(makeQuestBlock(q)));
+  $('npcAddQuest').addEventListener('click', () => questsBox.appendChild(makeQuestBlock(questDefaults())));
 
   const close = () => { ov.classList.add('hidden'); ov.innerHTML = ''; };
   $('npcCancel').addEventListener('click', close);
@@ -602,23 +641,13 @@ function openNpcEditor(x, y, existing) {
   $('npcSave').addEventListener('click', () => {
     data.name = ($('npcName').value || 'НПС').trim().slice(0, 24);
     data.link = ($('npcLink').value || '').trim().slice(0, 24);
+    data.description = ($('npcDesc').value || '').slice(0, 300);
     data.trader = $('npcTrader').checked;
     data.dialogue = ($('npcDialogue').value || '').slice(0, 300);
     data.talkText = ($('npcTalk').value || '').slice(0, 300);
-    if ($('npcHasQuest').checked) {
-      const type = $('qType').value;
-      const rItem = $('qRItem').value;
-      data.quest = {
-        title: ($('qTitle').value || 'Задание').slice(0, 60),
-        desc: ($('qDesc').value || '').slice(0, 300),
-        type,
-        target: ($('qTarget').value || '').trim(),
-        count: type === 'talk' ? 1 : Math.max(1, parseInt($('qCount').value, 10) || 1),
-        reward: Math.max(0, parseInt($('qReward').value, 10) || 0),
-        rewardItem: rItem ? { id: rItem, qty: Math.max(1, parseInt($('qRQty').value, 10) || 1) } : null,
-        thanks: ($('qThanks').value || 'Спасибо!').slice(0, 300),
-      };
-    } else data.quest = null;
+    data.sells = [...ov.querySelectorAll('[data-sell]')].filter(c => c.checked).map(c => c.dataset.sell);
+    data.quests = [...questsBox.querySelectorAll('.npc-qblock')].map(readQuestBlock);
+    delete data.quest;       // убрать легаси-поле
     setNpc(x, y, data);
     close();
   });
@@ -636,8 +665,10 @@ function drawNpcMarker(cx, cy, n) {
   ctx.fillText(n.name || 'НПС', cx, topY - 4 * z);
   // значки ролей
   let badge = '';
-  if (n.quest) badge += '!';
+  if (n.quests && n.quests.length) badge += '!';
+  else if (n.quest) badge += '!';                 // легаси
   if (n.trader) badge += '$';
+  if (n.sells && n.sells.length) badge += '+';    // продаёт товары
   if (n.talkText) badge += '?';
   if (badge) { ctx.fillStyle = '#f1c40f'; ctx.font = `bold ${Math.round(12 * z)}px sans-serif`; ctx.fillText(badge, cx, topY - 16 * z); }
 }

@@ -309,6 +309,27 @@ body {
 .qd-btns button:hover { filter: brightness(1.12); }
 .qd-accept { background: #2ecc71; color: #10131a; }
 
+/* Окно разговора с НПС (хаб) */
+#npcDialog { left: 50%; right: auto; top: 90px; bottom: auto; transform: translateX(-50%); width: 320px; max-width: 92vw; }
+#npcDialog .npc-desc { font-size: 13px; line-height: 1.5; color: #dfe4ee; margin: 4px 0 10px; }
+.npc-msg { display: none; }
+.npc-msg.show { display: block; background: #1a1a24; border: 1px solid #3a3a4e; border-radius: 8px; padding: 10px; font-size: 13px; line-height: 1.45; color: #ffe6a3; margin-bottom: 10px; white-space: pre-wrap; }
+.npc-acts { display: flex; flex-direction: column; gap: 7px; }
+.npc-act { padding: 9px 12px; border: none; border-radius: 8px; background: #3a3a4e; color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; text-align: left; }
+.npc-act:hover { filter: brightness(1.14); }
+
+/* Окно покупки */
+#buyPanel { left: 50%; right: auto; top: 90px; bottom: auto; transform: translateX(-50%); width: 300px; max-width: 92vw; max-height: 70vh; display: flex; flex-direction: column; }
+.buy-list { overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.buy-row { display: flex; align-items: center; gap: 8px; background: #1a1a24; border: 1px solid #2f2f3c; border-radius: 8px; padding: 6px 8px; }
+.buy-ic { width: 26px; height: 26px; flex: 0 0 auto; display: flex; align-items: center; justify-content: center; }
+.buy-ic svg, .buy-ic img { width: 24px; height: 24px; }
+.buy-name { flex: 1; font-size: 13px; color: #e6e9f0; }
+.buy-btn { padding: 6px 10px; border: none; border-radius: 7px; background: #e0a93b; color: #1a1a24; font-weight: 700; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.buy-btn:hover { background: #d49a2a; }
+.buy-btn svg { width: 13px; height: 13px; }
+.buy-empty { color: #777; font-size: 13px; }
+
 /* Квесты */
 #questPanel { width: 300px; max-width: 92vw; max-height: 70vh; display: flex; flex-direction: column; }
 #questBody { overflow-y: auto; }

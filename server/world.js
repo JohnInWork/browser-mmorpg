@@ -13,7 +13,7 @@ const questsMod = require('./quests');                                  // ре�
 // Собрать все авторские квесты с НПС всех локаций в реестр движка квестов
 function rebuildQuestRegistry() {
   const defs = {};
-  for (const ln in locations) for (const n of (locations[ln].npcs || [])) if (n.quest) defs[n.quest.id] = { ...n.quest, npc: n.name, location: ln };
+  for (const ln in locations) for (const n of (locations[ln].npcs || [])) for (const q of (n.quests || [])) defs[q.id] = { ...q, npc: n.name, location: ln };
   questsMod.setAuthored(defs);
 }
 
@@ -57,37 +57,45 @@ function defaultMines() {
 const EQUIP_SLOTS = ['helmet', 'chest', 'gloves', 'pants', 'boots', 'cloak', 'mainHand', 'offHand'];
 const QUEST_TYPES = new Set(['gather', 'kill', 'talk']);
 
-// Нормализовать одного НПС (приводим к безопасному виду; квесту даём стабильный id)
+// Нормализовать один квест НПС (стабильный id с индексом)
+function normQuest(q, loc, x, y, i) {
+  if (!q || typeof q !== 'object' || !QUEST_TYPES.has(q.type)) return null;
+  return {
+    id: `q_${loc}_${x}_${y}_${i}`,
+    title: String(q.title || 'Задание').slice(0, 60),
+    desc: String(q.desc || '').slice(0, 300),
+    type: q.type,
+    target: String(q.target || ''),            // gather: itemId; kill: тип моба; talk: метка/имя НПС
+    count: q.type === 'talk' ? 1 : Math.max(1, q.count | 0),
+    reward: Math.max(0, q.reward | 0),          // золото
+    rewardItem: (q.rewardItem && q.rewardItem.id) ? { id: String(q.rewardItem.id), qty: Math.max(1, q.rewardItem.qty | 0) } : null,
+    thanks: String(q.thanks || 'Спасибо за помощь!').slice(0, 300),
+    repeatable: !!q.repeatable,                 // повторяемый — можно брать снова после выполнения
+  };
+}
+
+// Нормализовать одного НПС (приводим к безопасному виду; квестам даём стабильные id)
 function normNpc(n, loc, idx) {
   const x = n.x | 0, y = n.y | 0;
   const appearance = (n.appearance && typeof n.appearance === 'object') ? { ...n.appearance } : {};
   const equipment = {};
   if (n.equipment && typeof n.equipment === 'object') for (const s of EQUIP_SLOTS) if (n.equipment[s]) equipment[s] = String(n.equipment[s]);
-  let quest = null;
-  if (n.quest && typeof n.quest === 'object' && QUEST_TYPES.has(n.quest.type)) {
-    const q = n.quest;
-    quest = {
-      id: `q_${loc}_${x}_${y}`,
-      title: String(q.title || 'Задание'),
-      desc: String(q.desc || ''),
-      type: q.type,
-      target: String(q.target || ''),          // gather: itemId; kill: тип моба; talk: метка/имя НПС
-      count: q.type === 'talk' ? 1 : Math.max(1, q.count | 0),
-      reward: Math.max(0, q.reward | 0),        // золото
-      rewardItem: (q.rewardItem && q.rewardItem.id) ? { id: String(q.rewardItem.id), qty: Math.max(1, q.rewardItem.qty | 0) } : null,
-      thanks: String(q.thanks || 'Спасибо за помощь!'),
-    };
-  }
+  // Квесты: новый формат — массив quests; легаси — одиночный quest
+  const rawQuests = Array.isArray(n.quests) ? n.quests : (n.quest ? [n.quest] : []);
+  const quests = rawQuests.map((q, i) => normQuest(q, loc, x, y, i)).filter(Boolean);
+  const sells = Array.isArray(n.sells) ? [...new Set(n.sells.map(String))] : [];   // товары (игрок покупает)
   return {
     id: `n_${loc}_${x}_${y}`,
     x, y,
     name: String(n.name || 'НПС').slice(0, 24),
     link: String(n.link || '').slice(0, 24),     // метка для talk-квестов (пусто → используется имя)
+    description: String(n.description || '').slice(0, 300), // вступительный текст в окне разговора
     appearance, equipment,
-    trader: !!n.trader,
+    trader: !!n.trader,                          // принимает на продажу (игрок продаёт ему)
+    sells,                                       // продаёт игроку эти предметы (Купить)
     dialogue: String(n.dialogue || '').slice(0, 300),
     talkText: String(n.talkText || '').slice(0, 300), // финальный диалог, если этот НПС завершает talk-квест
-    quest,
+    quests,
   };
 }
 
@@ -192,7 +200,7 @@ function teleportTarget(loc, x, y) {
 
 // Публичный вид НПС для игрока (talkText не отдаём — он выдаётся сервером при завершении talk-квеста)
 function publicNpc(n) {
-  return { id: n.id, x: n.x, y: n.y, name: n.name, link: n.link, appearance: n.appearance, equipment: n.equipment, trader: n.trader, dialogue: n.dialogue, quest: n.quest || null };
+  return { id: n.id, x: n.x, y: n.y, name: n.name, link: n.link, description: n.description, appearance: n.appearance, equipment: n.equipment, trader: n.trader, sells: n.sells || [], dialogue: n.dialogue, quests: n.quests || [] };
 }
 function npcsOf(loc) { const L = locations[loc]; return L ? (L.npcs || []).map(publicNpc) : []; }
 function npcAt(loc, x, y) { const L = locations[loc]; if (!L) return null; return (L.npcs || []).find(n => n.x === x && n.y === y) || null; }

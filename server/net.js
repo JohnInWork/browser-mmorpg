@@ -162,6 +162,27 @@ function setup(io) {
       socket.emit('loot', { gold: g });
     });
 
+    // Цена покупки у НПС-продавца — с наценкой ×2 от базовой
+    const buyPrice = (id) => Math.max(1, ((playersMod.ITEMS[id] && playersMod.ITEMS[id].price) || 0) * 2);
+    // НПС-продавец рядом, у которого товар id (Купить)
+    const sellerNear = (id) => {
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = world.npcAt(player.location, player.x + dx, player.y + dy);
+        if (n && Array.isArray(n.sells) && n.sells.includes(id)) return n;
+      }
+      return null;
+    };
+    // Купить предмет у НПС
+    socket.on('buyItem', ({ id } = {}) => {
+      if (typeof id !== 'string' || !sellerNear(id)) return;
+      const price = buyPrice(id);
+      if (player.gold < price) { socket.emit('buyResult', { ok: false, reason: 'gold' }); return; }
+      if (!playersMod.addItem(player, id, 1)) { socket.emit('buyResult', { ok: false, reason: 'full' }); return; }
+      player.gold -= price;
+      socket.emit('inventoryUpdate', playersMod.invState(player));
+      socket.emit('buyResult', { ok: true, id, price });
+    });
+
     // --- Крафт у станции (плавильня/наковальня) ---
     const nearTile = (tile) => {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]])

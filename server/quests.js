@@ -16,12 +16,12 @@ function talkTarget(def)   { return def.type === 'talk'   ? def.target : null; }
 function defaultState() { return { story: 0, progress: 0, completed: [], active: {} }; }
 function activeStory(p) { return QUESTS.story[p.quests.story] || null; }
 
-// Завершить НПС-квест: пометить выполненным, выдать золото. rewardItem возвращаем — выдаёт net.
+// Завершить НПС-квест: выдать золото. Повторяемый — НЕ уходит в completed (можно взять снова).
 function finishNpc(p, id, def) {
   delete p.quests.active[id];
-  if (!p.quests.completed.includes(id)) p.quests.completed.push(id);
+  if (!def.repeatable && !p.quests.completed.includes(id)) p.quests.completed.push(id);
   p.gold += def.reward || 0;
-  return { quest: def, done: true, reward: def.reward || 0, rewardItem: def.rewardItem || null };
+  return { quest: def, done: true, reward: def.reward || 0, rewardItem: def.rewardItem || null, repeatable: !!def.repeatable };
 }
 
 // Засчитать убийство моба mobType: сюжет + активные НПС-квесты типа kill. Возвращает массив результатов.

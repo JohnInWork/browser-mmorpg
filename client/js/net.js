@@ -1,6 +1,6 @@
 // Сетевой слой клиента: подписка на события сервера и обновление состояния.
 import { S } from './state.js';
-import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, openSign } from './ui.js';
+import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, openSign, npcHubMessage } from './ui.js';
 import { itemName } from './items.js';
 
 // Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
@@ -109,11 +109,13 @@ export function setupNet() {
     else if (l && l.id) chatLoot(`+${l.qty || 1} ${itemName(l.id)}`);
   });
 
-  // Разговор с НПС: сервер ответил (завершён talk-квест → финальный текст; иначе — обычная реплика)
-  socket.on('talkResult', ({ x, y, completed, text }) => {
-    if (completed && text) { openSign(text); return; }
-    const npc = (S.npcs || []).find(n => n.x === x && n.y === y);   // обычный разговор — показать реплику
-    if (npc && npc.dialogue) openSign(npc.dialogue);
+  // Разговор с НПС: сервер ответил — завершён talk-квест → финальный текст показываем в окне разговора
+  socket.on('talkResult', ({ completed, text }) => { if (completed && text) npcHubMessage(text); });
+
+  // Результат покупки у НПС
+  socket.on('buyResult', ({ ok, reason }) => {
+    if (ok) return;                                  // успех — инвентарь/золото уже обновлены
+    chatSystem(reason === 'gold' ? 'Недостаточно золота.' : reason === 'full' ? 'Рюкзак полон.' : 'Купить не удалось.');
   });
 
   // Квесты

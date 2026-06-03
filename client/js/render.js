@@ -419,13 +419,16 @@ function drawNpc(cx, cy, appearance, equipment, marker) {
   }
 }
 
-// Маркер квеста авторского НПС: '!' если у него есть невзятый квест
+// Маркер квеста авторского НПС: '!' если есть невзятый квест, '?' если есть взятый незавершённый
 function authNpcMarker(n) {
-  if (!n.quest) return null;
-  const qid = n.quest.id;
-  if ((S.quests.completed || []).includes(qid)) return null;
-  if (S.quests.active && S.quests.active[qid] != null) return '?';   // взят, но не сдан
-  return '!';
+  const qs = n.quests || [];
+  let active = false;
+  for (const q of qs) {
+    if ((S.quests.completed || []).includes(q.id)) continue;
+    if (S.quests.active && S.quests.active[q.id] != null) { active = true; continue; }
+    return '!';   // есть доступный к взятию
+  }
+  return active ? '?' : null;
 }
 // Авторский НПС: персонаж со своей внешностью/экипировкой + имя + маркер квеста
 function drawAuthNpc(cx, cy, n) {

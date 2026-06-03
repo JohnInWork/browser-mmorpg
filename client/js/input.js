@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { BLOCKED, MOVE_SPEED } from './config.js';
 import { screenToTile } from './iso.js';
-import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, closeInteractions } from './ui.js';
+import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, closeInteractions } from './ui.js';
 
 // Имя моба/НПС: из данных сервера (mobTypes), иначе из TYPE_NAMES
 function mobLabel(type) { return (S.mobTypes[type] && S.mobTypes[type].name) || TYPE_NAMES[type] || 'Существо'; }
@@ -311,10 +311,8 @@ function decideStep() {
     } else if (a.kind === 'npc') {
       const npc = npcAt(a.x, a.y);
       if (npc && adjOrtho(me.x, me.y, a.x, a.y)) {
-        if (talkQuestTargeting(npc)) S.socket.emit('talkNpc', { x: a.x, y: a.y });   // завершить talk-квест
-        else if (npc.quest) openQuestDialog(npc);                                    // квестодатель
-        else if (npc.trader) openTrade();                                            // торговец
-        else S.socket.emit('talkNpc', { x: a.x, y: a.y });                           // обычный разговор/реплика
+        openNpcHub(npc);                                                  // окно разговора: имя, описание, действия
+        if (talkQuestTargeting(npc)) S.socket.emit('talkNpc', { x: a.x, y: a.y }); // завершить talk-квест (текст придёт в хаб)
       }
     }
     S.pendingAction = null;

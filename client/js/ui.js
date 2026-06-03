@@ -349,6 +349,8 @@ export function closeInteractions() {
   closeTrade();
   closeCraft();
   closeBank();
+  closeBuy();
+  closeNpcHub();
   const qd = document.getElementById('questDialog'); if (qd) qd.classList.add('hidden');
 }
 export function renderCraft() {
@@ -621,10 +623,11 @@ export function renderQuests() {
 }
 
 // --- Диалог квеста от НПС (взять / отказаться / спасибо) ---
-// arg: строка-тип моба (легаси questgiver) ИЛИ объект авторского НПС с .quest
+// arg: объект-определение квеста (def) ИЛИ строка-тип моба (легаси questgiver)
 export function openQuestDialog(arg) {
   let def;
-  if (arg && typeof arg === 'object' && arg.quest) def = arg.quest;                 // авторский НПС
+  if (arg && typeof arg === 'object' && arg.id && arg.type) def = arg;              // готовое определение квеста
+  else if (arg && typeof arg === 'object' && arg.quest) def = arg.quest;           // легаси: объект с .quest
   else { const qid = S.mobTypes[arg] && S.mobTypes[arg].quest; def = qid && S.questDefs.npc && S.questDefs.npc[qid]; }
   const panel = document.getElementById('questDialog');
   if (!def || !panel) return;
@@ -653,3 +656,55 @@ export function openQuestDialog(arg) {
   const acc = panel.querySelector('#qdAccept');
   if (acc) acc.addEventListener('click', () => { S.socket.emit('acceptQuest', qid); close(); });
 }
+
+// --- Окно разговора с НПС: имя, описание, кнопки (Поговорить / Квесты / Купить / Продать) ---
+let hubNpc = null;
+function setHubMsg(text) { const el = document.getElementById('npcMsg'); if (el) { el.textContent = text || ''; el.classList.toggle('show', !!text); } }
+// Сообщение в открытый хаб (для завершения talk-квеста); если хаб закрыт — обычной табличкой
+export function npcHubMessage(text) { if (hubNpc && !document.getElementById('npcDialog').classList.contains('hidden')) setHubMsg(text); else openSign(text); }
+
+export function openNpcHub(npc) {
+  const panel = document.getElementById('npcDialog');
+  if (!panel) return;
+  hubNpc = npc;
+  const questBtns = (npc.quests || []).map((q, i) => {
+    const status = (S.quests.completed || []).includes(q.id) ? 'done'
+      : (S.quests.active && S.quests.active[q.id] != null) ? 'active' : 'offer';
+    const tag = status === 'active' ? ' · в процессе' : status === 'done' ? ' · выполнен' : '';
+    return `<button class="npc-act" data-act="quest" data-i="${i}">Квест: ${escHtml(q.title)}${tag}</button>`;
+  }).join('');
+  const talkBtn = npc.dialogue ? `<button class="npc-act" data-act="talk">Поговорить</button>` : '';
+  const buyBtn = (npc.sells && npc.sells.length) ? `<button class="npc-act" data-act="buy">Купить</button>` : '';
+  const sellBtn = npc.trader ? `<button class="npc-act" data-act="sell">Продать</button>` : '';
+  panel.innerHTML = `<button class="popup-close" id="npcClose">✕</button>
+    <h3>${escHtml(npc.name)}</h3>
+    ${npc.description ? `<p class="npc-desc">${escHtml(npc.description)}</p>` : ''}
+    <div class="npc-msg" id="npcMsg"></div>
+    <div class="npc-acts">${talkBtn}${questBtns}${buyBtn}${sellBtn}</div>`;
+  panel.classList.remove('hidden');
+  panel.querySelector('#npcClose').addEventListener('click', () => { panel.classList.add('hidden'); hubNpc = null; });
+  panel.querySelectorAll('.npc-act').forEach(b => b.addEventListener('click', () => {
+    const act = b.dataset.act;
+    if (act === 'talk') setHubMsg(npc.dialogue);
+    else if (act === 'quest') openQuestDialog(npc.quests[+b.dataset.i]);
+    else if (act === 'buy') openBuy(npc);
+    else if (act === 'sell') openTrade();
+  }));
+}
+
+// --- Окно покупки у НПС-продавца (цена = базовая ×2) ---
+export function openBuy(npc) {
+  const panel = document.getElementById('buyPanel');
+  if (!panel) return;
+  const rows = (npc.sells || []).map(id => {
+    const price = Math.max(1, (itemPrice(id) || 0) * 2);
+    return `<div class="buy-row"><span class="buy-ic">${itemIcon(id)}</span><span class="buy-name">${escHtml(itemName(id))}</span><button class="buy-btn" data-id="${id}">${UI_SVG.coin} ${price}</button></div>`;
+  }).join('');
+  panel.innerHTML = `<button class="popup-close" id="buyClose">✕</button><h3>Купить — ${escHtml(npc.name)}</h3>
+    <div class="buy-list">${rows || '<div class="buy-empty">Нет товаров</div>'}</div>`;
+  panel.classList.remove('hidden');
+  panel.querySelector('#buyClose').addEventListener('click', () => panel.classList.add('hidden'));
+  panel.querySelectorAll('.buy-btn').forEach(b => b.addEventListener('click', () => S.socket.emit('buyItem', { id: b.dataset.id })));
+}
+export function closeBuy() { const p = document.getElementById('buyPanel'); if (p) p.classList.add('hidden'); }
+export function closeNpcHub() { const p = document.getElementById('npcDialog'); if (p) p.classList.add('hidden'); hubNpc = null; }
