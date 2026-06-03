@@ -121,6 +121,8 @@ const ICONS = {
 // ДОБАВИТЬ = положить svg в client/assets/ и дописать строку. Правка этого файла меняет иконку повсюду.
 export const ITEM_TEX = {
   pickaxe: '/assets/pickaxe.svg',
+  axe: '/assets/axe.svg',
+  shovel: '/assets/shovel.svg',
 };
 
 // Иконка предмета. Приоритет: загруженная текстура-файл → вид брони на персонаже → нарисованная иконка.
