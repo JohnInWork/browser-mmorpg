@@ -334,6 +334,18 @@ body {
 .buy-btn svg { width: 13px; height: 13px; }
 .buy-empty { color: #777; font-size: 13px; }
 
+/* Админ-сундук (тест) */
+#creativePanel { left: 50%; right: auto; top: 70px; bottom: auto; transform: translateX(-50%); width: 360px; max-width: 94vw; max-height: 76vh; display: flex; flex-direction: column; }
+.cr-hint { font-size: 12px; color: #9aa0b0; margin-bottom: 8px; }
+.cr-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; overflow-y: auto; }
+.cr-item { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; background: #1a1a24; border: 1px solid #2f2f3c; border-radius: 8px; cursor: pointer; color: #cfd6e4; }
+.cr-item:hover { border-color: #e0a93b; background: #23232f; }
+.cr-item svg, .cr-item img { width: 30px; height: 30px; }
+.cr-name { font-size: 9px; line-height: 1.1; text-align: center; }
+.cr-clear { margin-top: 10px; padding: 9px; border: none; border-radius: 8px; background: #e74c3c; color: #fff; font-weight: 700; cursor: pointer; }
+.cr-clear:hover { background: #d63a2a; }
+.cr-empty { color: #777; font-size: 13px; }
+
 /* Квесты */
 #questPanel { width: 300px; max-width: 92vw; max-height: 70vh; display: flex; flex-direction: column; }
 #questBody { overflow-y: auto; }

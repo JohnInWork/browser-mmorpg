@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Админ-сундук (тест): яркий выделяющийся куб со звездой. Клик → взять любой предмет. -->
+  <ellipse cx="256" cy="452" rx="150" ry="30" fill="#000000" fill-opacity="0.18"/>
+  <!-- куб: верх + 2 грани, кислотно-розовый -->
+  <polygon points="256,150 396,220 256,290 116,220" fill="#ff5fb0"/>
+  <polygon points="116,220 256,290 256,440 116,370" fill="#a8276e"/>
+  <polygon points="396,220 256,290 256,440 396,370" fill="#d63a8e"/>
+  <!-- обводка-свечение -->
+  <polygon points="256,150 396,220 256,290 116,220" fill="none" stroke="#ffd1ec" stroke-width="6" stroke-linejoin="round"/>
+  <!-- звезда сверху -->
+  <path d="M256 188 L268 214 L296 217 L275 236 L281 264 L256 249 L231 264 L237 236 L216 217 L244 214 Z" fill="#fff3b0" stroke="#e0a93b" stroke-width="3"/>
+  <!-- буква A на передней грани -->
+  <text x="318" y="365" font-family="sans-serif" font-size="80" font-weight="bold" fill="#ffe6f4" text-anchor="middle">A</text>
+</svg>

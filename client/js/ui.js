@@ -351,12 +351,30 @@ export function openCraft(station) {
 export function closeCraft() { craftStation = null; document.getElementById('craftPanel').classList.add('hidden'); }
 
 // Закрыть все окна взаимодействия с НПС/станциями (вызывается, когда игрок отошёл/двинулся)
+// --- Админ-сундук (тест): взять любой предмет игры ---
+export function openCreative() {
+  const panel = document.getElementById('creativePanel');
+  if (!panel) return;
+  const ids = Object.keys(S.items || {});
+  const grid = ids.map(id => `<button class="cr-item" data-id="${id}" title="${escHtml(itemName(id))}">${itemIcon(id)}<span class="cr-name">${escHtml(itemName(id))}</span></button>`).join('');
+  panel.innerHTML = `<button class="popup-close" id="crClose">✕</button><h3>Админ-сундук</h3>
+    <p class="cr-hint">Клик — взять предмет (стопкой). Тест-режим.</p>
+    <div class="cr-grid">${grid || '<div class="cr-empty">Нет данных предметов</div>'}</div>
+    <button id="crClear" class="cr-clear">Очистить рюкзак</button>`;
+  panel.classList.remove('hidden');
+  panel.querySelector('#crClose').addEventListener('click', closeCreative);
+  panel.querySelector('#crClear').addEventListener('click', () => S.socket.emit('creativeClear'));
+  panel.querySelectorAll('.cr-item').forEach(b => b.addEventListener('click', () => S.socket.emit('creativeTake', { id: b.dataset.id })));
+}
+export function closeCreative() { const p = document.getElementById('creativePanel'); if (p) p.classList.add('hidden'); }
+
 export function closeInteractions() {
   closeTrade();
   closeCraft();
   closeBank();
   closeBuy();
   closeNpcHub();
+  closeCreative();
   const qd = document.getElementById('questDialog'); if (qd) qd.classList.add('hidden');
 }
 export function renderCraft() {

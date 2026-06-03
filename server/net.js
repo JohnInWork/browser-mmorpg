@@ -268,6 +268,19 @@ function setup(io) {
       socket.emit('chatMessage', { cat: 'system', text: n > 0 ? `Колодец: наполнено колб водой — ${n}` : 'Нет пустых колб для наполнения.' });
     });
 
+    // --- Админ-сундук (тест): взять любой предмет / очистить рюкзак (рядом с сундуком) ---
+    const nearAdminChest = () => nearTile(cfg.TILES.ADMIN_CHEST);
+    socket.on('creativeTake', ({ id } = {}) => {
+      if (!nearAdminChest() || !playersMod.ITEMS[id]) return;
+      const qty = playersMod.ITEMS[id].stackable ? 10 : 1;
+      if (playersMod.addItem(player, id, qty)) { socket.emit('inventoryUpdate', playersMod.invState(player)); socket.emit('loot', { id, qty }); }
+    });
+    socket.on('creativeClear', () => {
+      if (!nearAdminChest()) return;
+      for (let i = 0; i < player.inventory.length; i++) player.inventory[i] = null;
+      socket.emit('inventoryUpdate', playersMod.invState(player));
+    });
+
     // Вылить колбу (ПКМ → «Вылить»): waterFlask → emptyFlask
     socket.on('pourFlask', ({ invIndex } = {}) => {
       if (playersMod.pourFlask(player, invIndex)) socket.emit('inventoryUpdate', playersMod.invState(player));

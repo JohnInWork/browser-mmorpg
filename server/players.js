@@ -44,13 +44,8 @@ function create(id) {
     hp: PLAYER_MAX_HP, maxHp: PLAYER_MAX_HP,
     appearance: { skin:'#f3cfa6', hair:'#4a3525', hairStyle:'h1' },
     gold: 0,
-    // стартовый инвентарь: топор + комплект брони (чтобы было что надеть)
-    inventory: [
-      { id: 'axe', qty: 1 }, { id: 'pickaxe', qty: 1 }, { id: 'shovel', qty: 1 },
-      { id: 'helmet', qty: 1 }, { id: 'chest', qty: 1 }, { id: 'gloves', qty: 1 },
-      { id: 'pants', qty: 1 }, { id: 'boots', qty: 1 }, { id: 'cloak', qty: 1 },
-      { id: 'bearHelmet', qty: 1 }, { id: 'ironSword', qty: 1 }, { id: 'ironGreatsword', qty: 1 }, { id: 'ironShield', qty: 1 },
-    ],
+    // стартовый инвентарь пуст — всё берётся из Админ-сундука (для тестов)
+    inventory: [],
     hotbar: [null, null, null, null, null, null], // 6 слотов: id предмета или null
     activeSlot: null,  // индекс активного слота хотбара (предмет «в руке»)
     activeInvId: null, // id инструмента, активированного прямо из рюкзака (без переноса в слот)

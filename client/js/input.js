@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { BLOCKED, MOVE_SPEED } from './config.js';
 import { screenToTile } from './iso.js';
-import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, closeInteractions } from './ui.js';
+import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, openCreative, closeInteractions } from './ui.js';
 
 // Имя моба: пришло с сервера (label), иначе запасное
 function mobLabel(m) { return (m && m.label) || 'Существо'; }
@@ -18,6 +18,7 @@ function stationAt(x, y) {
   return null;
 }
 function chestAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 10; }
+function adminChestAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 34; }
 
 function isWalkable(x, y) {
   if (!S.MAP || x < 0 || y < 0 || x >= S.mapW || y >= S.mapH) return false;
@@ -147,6 +148,7 @@ export function setupInput() {
     else if (npc) { showTip(npc.name); canvas.style.cursor = 'pointer'; }
     else if (pl) { showTip(pl.name); canvas.style.cursor = 'pointer'; }
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
+    else if (adminChestAt(t.x, t.y)) { showTip('Админ-сундук'); canvas.style.cursor = 'pointer'; }
     else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
     else if (wellAt(t.x, t.y)) { showTip('Колодец'); canvas.style.cursor = 'pointer'; }
     else if (signAt(t.x, t.y)) { showTip('Табличка'); canvas.style.cursor = 'pointer'; }
@@ -192,6 +194,14 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'station', x: t.x, y: t.y, station: st.station };
+      S.path = ap.path; S.targetTile = null;
+      return;
+    }
+    // Клик по админ-сундуку — подойти и открыть творческое окно (взять любой предмет)
+    if (adminChestAt(t.x, t.y)) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      S.pendingAction = { kind: 'creative', x: t.x, y: t.y };
       S.path = ap.path; S.targetTile = null;
       return;
     }
@@ -285,6 +295,8 @@ function decideStep() {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openCraft(a.station);
     } else if (a.kind === 'chest') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) S.socket.emit('openBank');
+    } else if (a.kind === 'creative') {
+      if (adjOrtho(me.x, me.y, a.x, a.y)) openCreative();
     } else if (a.kind === 'well') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) S.socket.emit('fillWater');
     } else if (a.kind === 'questnpc') {
