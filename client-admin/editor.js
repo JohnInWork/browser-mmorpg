@@ -9,6 +9,8 @@ const saveBtn = document.getElementById('saveBtn');
 const statusEl = document.getElementById('status');
 const locTabsEl = document.getElementById('locTabs');
 const sidInput = document.getElementById('sidInput');
+const mapWInput = document.getElementById('mapWInput');
+const mapHInput = document.getElementById('mapHInput');
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
@@ -85,9 +87,9 @@ function buildLocTabs() {
     locTabsEl.appendChild(del);
   }
 }
-// Пустая новая локация: комната 20×14 со стенами по краю и травой внутри
+// Пустая новая локация: комната 32×24 со стенами по краю и травой внутри (размер можно менять)
 function blankLocation() {
-  const W = 20, H = 14, map = [], floor = [];
+  const W = 32, H = 24, map = [], floor = [];
   for (let y = 0; y < H; y++) {
     const mr = [], fr = [];
     for (let x = 0; x < W; x++) { const b = (x === 0 || y === 0 || x === W - 1 || y === H - 1); mr.push(b ? 2 : 0); fr.push(0); }
@@ -112,9 +114,33 @@ function switchLoc(name) {
   if (!LOCS[name]) return;
   curLoc = name;
   MAP = LOCS[name].map; FLOOR = LOCS[name].floor; mapW = LOCS[name].W; mapH = LOCS[name].H;
+  mapWInput.value = mapW; mapHInput.value = mapH;     // поля размера = размер текущей локации
   centerMap();
   buildLocTabs();
 }
+
+// Изменить размер текущей локации (содержимое сохраняется, новые клетки — трава)
+function applyResize() {
+  const w = Math.max(5, Math.min(60, parseInt(mapWInput.value, 10) || mapW));
+  const h = Math.max(5, Math.min(60, parseInt(mapHInput.value, 10) || mapH));
+  mapWInput.value = w; mapHInput.value = h;
+  if (w === mapW && h === mapH) return;
+  const nm = [], nf = [];
+  for (let y = 0; y < h; y++) {
+    const mr = [], fr = [];
+    for (let x = 0; x < w; x++) {
+      const inOld = (y < MAP.length && x < MAP[0].length);
+      mr.push(inOld ? MAP[y][x] : 0);
+      fr.push(inOld ? FLOOR[y][x] : 0);
+    }
+    nm.push(mr); nf.push(fr);
+  }
+  const tele = LOCS[curLoc].teleports.filter(e => e.x < w && e.y < h);   // выкинуть телепорты за границей
+  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, W: w, H: h };
+  switchLoc(curLoc);
+}
+mapWInput.addEventListener('change', applyResize);
+mapHInput.addEventListener('change', applyResize);
 // Телепорты текущей локации
 function removeTele(x, y) { LOCS[curLoc].teleports = LOCS[curLoc].teleports.filter(e => !(e.x === x && e.y === y)); }
 function setTele(x, y, sid) { removeTele(x, y); LOCS[curLoc].teleports.push({ x, y, sid }); }
