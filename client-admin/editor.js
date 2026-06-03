@@ -46,7 +46,7 @@ const CATEGORIES = [
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
-  { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#2ecc71' } ] },
+  { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
 ];
 let selected = 0; // выбранный id тайла
@@ -341,11 +341,12 @@ function drawWell(cx, cy) {
   ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
 }
-function drawSpawn(cx, cy) {                          // маркер точки спавна (только в редакторе)
+function drawSpawn(cx, cy) {                          // маркер точки спавна (только в редакторе) — красный, чтобы не сливался с травой
   const z = zoom;
-  ctx.fillStyle = 'rgba(46,204,113,.35)'; ctx.beginPath(); ctx.ellipse(cx, cy, 12 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(231,76,60,.4)'; ctx.beginPath(); ctx.ellipse(cx, cy, 12 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * z; ctx.stroke();
   ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 2 * z; ctx.beginPath(); ctx.moveTo(cx, cy + 2 * z); ctx.lineTo(cx, cy - 18 * z); ctx.stroke();
-  ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.moveTo(cx, cy - 18 * z); ctx.lineTo(cx + 12 * z, cy - 14 * z); ctx.lineTo(cx, cy - 10 * z); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.moveTo(cx, cy - 18 * z); ctx.lineTo(cx + 12 * z, cy - 14 * z); ctx.lineTo(cx, cy - 10 * z); ctx.closePath(); ctx.fill();
 }
 function drawPortal(cx, cy, outer, inner) {
   const z = zoom;
