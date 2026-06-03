@@ -264,7 +264,13 @@ canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
 canvas.addEventListener('mousedown', (e) => {
   if (e.button === 2) { panning = true; lastX = e.clientX; lastY = e.clientY; }
-  else if (e.button === 0) { painting = true; paintAt(e, true); }   // true = одиночный клик (можно спросить текст/правку)
+  else if (e.button === 0) {
+    // Инструменты с диалогом (табличка/изменить) — только одиночный клик, БЕЗ протяжки:
+    // prompt() блокирует поток и «съедает» mouseup, иначе курсор продолжал бы рисовать.
+    const dialogTool = (selected === SIGN || selected === EDIT);
+    if (!dialogTool) painting = true;
+    paintAt(e, true);   // true = одиночный клик (можно спросить текст/правку)
+  }
 });
 window.addEventListener('mouseup', () => { painting = false; panning = false; });
 
