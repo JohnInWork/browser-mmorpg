@@ -17,9 +17,11 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Статика: игра на "/", редактор на "/admin"
-app.use('/admin', express.static(path.join(__dirname, '..', 'client-admin')));
-app.use(express.static(path.join(__dirname, '..', 'client')));
+// Статика: игра на "/", редактор на "/admin".
+// no-store — браузер всегда берёт свежие файлы (иначе старый кэш JS/HTML рассинхронится и ломает страницу).
+const noCache = { etag: false, lastModified: false, setHeaders: (res) => res.setHeader('Cache-Control', 'no-store') };
+app.use('/admin', express.static(path.join(__dirname, '..', 'client-admin'), noCache));
+app.use(express.static(path.join(__dirname, '..', 'client'), noCache));
 
 // Порядок важен: карта → мобы/ресурсы (нужна карта) → сеть → циклы
 world.load();
