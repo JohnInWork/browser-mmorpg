@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Деревянный указатель: столб + доска со стрелкой. Заготовка. -->
+  <ellipse cx="256" cy="448" rx="80" ry="20" fill="#000000" fill-opacity="0.18"/>
+  <!-- столб -->
+  <rect x="238" y="150" width="36" height="296" fill="#8a5a28"/>
+  <rect x="238" y="150" width="14" height="296" fill="#a9743f"/>
+  <!-- доска-стрелка вправо -->
+  <polygon points="120,170 360,170 420,230 360,290 120,290" fill="#b07a42"/>
+  <polygon points="120,170 360,170 360,290 120,290" fill="#c1884e"/>
+  <!-- кромка доски -->
+  <polygon points="120,170 360,170 420,230 360,290 120,290" fill="none" stroke="#7a4d22" stroke-width="8" stroke-linejoin="round"/>
+  <!-- «надпись» (плоские штрихи) -->
+  <rect x="160" y="208" width="150" height="14" rx="6" fill="#7a4d22"/>
+  <rect x="160" y="240" width="110" height="14" rx="6" fill="#7a4d22"/>
+</svg>

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Забор: деревянная секция (2 столба + 2 перекладины), cel. Заготовка. -->
+  <ellipse cx="256" cy="430" rx="170" ry="28" fill="#000000" fill-opacity="0.16"/>
+  <!-- перекладины -->
+  <rect x="70" y="250" width="372" height="34" rx="8" fill="#a9743f"/>
+  <rect x="70" y="320" width="372" height="34" rx="8" fill="#925f30"/>
+  <!-- столбы -->
+  <rect x="96" y="190" width="56" height="230" rx="10" fill="#8a5a28"/>
+  <rect x="360" y="190" width="56" height="230" rx="10" fill="#8a5a28"/>
+  <!-- светлые верхушки столбов -->
+  <polygon points="96,190 124,166 152,190" fill="#b07a42"/>
+  <polygon points="360,190 388,166 416,190" fill="#b07a42"/>
+  <rect x="96" y="190" width="56" height="10" fill="#b07a42"/>
+  <rect x="360" y="190" width="56" height="10" fill="#b07a42"/>
+</svg>

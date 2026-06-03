@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 320" width="512" height="320">
+  <!-- Мост: деревянный настил с поперечными досками + перила. Лежит плоско. Заготовка. -->
+  <!-- настил -->
+  <rect x="18" y="72" width="476" height="176" fill="#b07a42"/>
+  <!-- доски (поперёк) -->
+  <g fill="#9a6634">
+    <rect x="46"  y="72" width="20" height="176"/>
+    <rect x="106" y="72" width="20" height="176"/>
+    <rect x="166" y="72" width="20" height="176"/>
+    <rect x="226" y="72" width="20" height="176"/>
+    <rect x="286" y="72" width="20" height="176"/>
+    <rect x="346" y="72" width="20" height="176"/>
+    <rect x="406" y="72" width="20" height="176"/>
+    <rect x="446" y="72" width="20" height="176"/>
+  </g>
+  <!-- перила (верх/низ) -->
+  <rect x="18" y="48" width="476" height="26" rx="6" fill="#8a5a28"/>
+  <rect x="18" y="246" width="476" height="26" rx="6" fill="#7a4d22"/>
+  <!-- столбики перил -->
+  <g fill="#8a5a28">
+    <rect x="30"  y="30" width="22" height="44"/>
+    <rect x="244" y="30" width="22" height="44"/>
+    <rect x="460" y="30" width="22" height="44"/>
+  </g>
+</svg>

@@ -45,6 +45,14 @@ const stairsUpImg = loadImg('/assets/stairs-up.svg');
 const rockImg = loadImg('/assets/rock.svg');
 const oreImg = loadImg('/assets/ore.svg');
 const portalImg = { 16: loadImg('/assets/portal-blue.svg'), 17: loadImg('/assets/portal-purple.svg'), 18: loadImg('/assets/portal-green.svg') };
+// Новый набор объектов (рельеф/декор) — тоже из SVG
+const mountainImg = loadImg('/assets/mountain.svg');
+const bushImg = loadImg('/assets/bush.svg');
+const boulderImg = loadImg('/assets/boulder.svg');
+const fenceImg = loadImg('/assets/fence.svg');
+const lampImg = loadImg('/assets/lamp.svg');
+const bridgeImg = loadImg('/assets/bridge.svg');
+const signImg = loadImg('/assets/sign.svg');
 // Нарисовать спрайт объекта по центру клетки (как сундук/наковальня)
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * SCALE, H = sz * SCALE; S.ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * SCALE, W, H); } }
 
@@ -93,11 +101,11 @@ function drawTuft(ctx, bx, by, z, rnd) {
     blade(ctx, bx, by - 0.5 * z, (5 + rnd() * 3.5) * z, lean, 1.2 * z, i === (n >> 1) ? '#88d06a' : '#63b653');
   }
 }
-function drawGrass(cx, cy, x, y) {
+function drawGrass(cx, cy, x, y, base) {
   const ctx = S.ctx, z = SCALE;
   const seed = tileSeed(x, y), rnd = mulberry32(seed);
-  // 1) база — ровный зелёный (вариация оттенка по клетке)
-  fillDiamond(cx, cy, GRASS_BASE[(seed >>> 3) & 3], 'rgba(0,0,0,.10)');
+  // 1) база — ровный зелёный (вариация оттенка по клетке; base — переопределение для тёмной травы)
+  fillDiamond(cx, cy, base || GRASS_BASE[(seed >>> 3) & 3], 'rgba(0,0,0,.10)');
   // 2) тёмные «проплешины» земли для неровности (плоские пятна)
   ctx.fillStyle = 'rgba(42,92,42,.16)';
   for (let i = 0; i < 2; i++) {
@@ -116,6 +124,48 @@ function drawGrass(cx, cy, x, y) {
     ctx.fillStyle = rnd() < 0.5 ? '#eee6a3' : '#ece8ee';
     for (let p = 0; p < 4; p++) { const a = p * Math.PI / 2; ctx.beginPath(); ctx.ellipse(fx + Math.cos(a) * 1.8 * z, fy + Math.sin(a) * 1.8 * z, 1.5 * z, 1.5 * z, 0, 0, Math.PI * 2); ctx.fill(); }
     ctx.fillStyle = '#e0a83a'; ctx.beginPath(); ctx.arc(fx, fy, 1.3 * z, 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+// Земля / грязь: плоский ромб с пятнами темнее и редкими камешками (cel-стиль)
+function drawDirt(cx, cy, x, y) {
+  const ctx = S.ctx, z = SCALE;
+  const rnd = mulberry32(tileSeed(x, y));
+  fillDiamond(cx, cy, '#9c7a4d', 'rgba(0,0,0,.16)');
+  ctx.fillStyle = 'rgba(74,52,30,.22)';
+  for (let i = 0; i < 3; i++) {
+    const px = cx + (rnd() - 0.5) * TW * 0.55, py = cy + (rnd() - 0.5) * TH * 0.55;
+    ctx.beginPath(); ctx.ellipse(px, py, (4 + rnd() * 3) * z, (2 + rnd() * 1.4) * z, 0, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(120,98,68,.5)';
+  for (let i = 0; i < 2; i++) { const px = cx + (rnd() - 0.5) * TW * 0.5, py = cy + (rnd() - 0.5) * TH * 0.5; ctx.beginPath(); ctx.arc(px, py, 1.2 * z, 0, Math.PI * 2); ctx.fill(); }
+}
+
+// Брусчатка: плоский ромб + сетка швов (камни мостовой)
+function drawCobble(cx, cy, x, y) {
+  const ctx = S.ctx, z = SCALE;
+  fillDiamond(cx, cy, '#8d8f97', 'rgba(0,0,0,.22)');
+  ctx.strokeStyle = 'rgba(60,62,70,.35)'; ctx.lineWidth = 1;
+  for (let i = -1; i <= 1; i++) {
+    ctx.beginPath(); ctx.moveTo(cx - TW / 2 + (i + 1) * TW / 3, cy); ctx.lineTo(cx + (i + 1) * TW / 3 - TW / 6, cy + TH / 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx - TW / 2 + (i + 1) * TW / 3, cy); ctx.lineTo(cx + (i + 1) * TW / 3 - TW / 6, cy - TH / 2); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(170,172,180,.5)';
+  ctx.beginPath(); ctx.ellipse(cx, cy - 2 * z, 6 * z, 3 * z, 0, 0, Math.PI * 2); ctx.fill();
+}
+
+// Цветочная поляна: трава + гарантированные яркие цветы (плоские, cel)
+const FLOWER_COLORS = ['#e8556b', '#e0a83a', '#d27ad0', '#5fb0e0', '#ece8ee'];
+function drawFlowers(cx, cy, x, y) {
+  drawGrass(cx, cy, x, y);
+  const ctx = S.ctx, z = SCALE, rnd = mulberry32(tileSeed(x, y) ^ 0x9e37);
+  const n = 3 + Math.floor(rnd() * 2);
+  for (let f = 0; f < n; f++) {
+    const fx = cx + (rnd() - 0.5) * TW * 0.55, fy = cy + (rnd() - 0.5) * TH * 0.5;
+    const col = FLOWER_COLORS[Math.floor(rnd() * FLOWER_COLORS.length)];
+    ctx.fillStyle = col;
+    for (let p = 0; p < 5; p++) { const a = p * Math.PI * 2 / 5; ctx.beginPath(); ctx.ellipse(fx + Math.cos(a) * 1.9 * z, fy + Math.sin(a) * 1.9 * z, 1.5 * z, 1.5 * z, 0, 0, Math.PI * 2); ctx.fill(); }
+    ctx.fillStyle = '#f4d24a'; ctx.beginPath(); ctx.arc(fx, fy, 1.2 * z, 0, Math.PI * 2); ctx.fill();
   }
 }
 
@@ -223,6 +273,8 @@ function drawWell(cx, cy) { objSprite(wellImg, cx, cy, 42); }
 function drawPortal(cx, cy, tile) { objSprite(portalImg[tile], cx, cy, 36); }
 // Лестница-телепорт — спрайт из SVG (вниз/вверх)
 function drawStairs(cx, cy, down) { objSprite(down ? stairsDownImg : stairsUpImg, cx, cy, 34); }
+// Мост — лежит плоско на клетке (без подъёма), накрывает воду; по нему можно идти
+function drawBridge(cx, cy) { const im = bridgeImg; if (im && im._ready) { const W = 66 * SCALE, H = 42 * SCALE; S.ctx.drawImage(im, cx - W / 2, cy - H / 2, W, H); } }
 
 function drawHpBar(cx, topY, hp, maxHp) {
   const ctx = S.ctx, z = SCALE, w = 28 * z, h = 5 * z;
@@ -390,6 +442,10 @@ export function render() {
       if (f === 1) drawWater(cx, cy, x, y);
       else if (f === 4) fillDiamond(cx, cy, TILE[4].top, 'rgba(0,0,0,.18)'); // тропа
       else if (f === 15) fillDiamond(cx, cy, '#3b3b46', 'rgba(0,0,0,.3)');   // пещерный пол (Шахты)
+      else if (f === 20) drawDirt(cx, cy, x, y);                    // земля / грязь
+      else if (f === 21) drawGrass(cx, cy, x, y, '#3f7e3a');        // тёмная трава (поляна)
+      else if (f === 22) drawFlowers(cx, cy, x, y);                 // цветочная поляна
+      else if (f === 23) drawCobble(cx, cy, x, y);                  // брусчатка
       else drawGrass(cx, cy, x, y);                                 // трава (0) по умолчанию
     }
   }
@@ -418,6 +474,13 @@ export function render() {
       else if (t === 13) drawables.push({ d: x + y + 0.1, kind: 'stairsDown', x, y });
       else if (t === 14) drawables.push({ d: x + y + 0.1, kind: 'stairsUp', x, y });
       else if (t === 16 || t === 17 || t === 18) drawables.push({ d: x + y + 0.1, kind: 'portal', x, y, t });
+      else if (t === 24) drawables.push({ d: x + y + 0.1, kind: 'mountain', x, y });
+      else if (t === 25) drawables.push({ d: x + y + 0.1, kind: 'bush', x, y });
+      else if (t === 26) drawables.push({ d: x + y + 0.1, kind: 'boulder', x, y });
+      else if (t === 27) drawables.push({ d: x + y + 0.1, kind: 'fence', x, y });
+      else if (t === 28) drawables.push({ d: x + y + 0.1, kind: 'lamp', x, y });
+      else if (t === 29) drawables.push({ d: x + y - 0.4, kind: 'bridge', x, y });  // мост — рисуем под игроком (можно идти по нему)
+      else if (t === 30) drawables.push({ d: x + y + 0.1, kind: 'sign', x, y });
     }
   }
   // Мобы и игроки — только из текущей локации
@@ -438,6 +501,13 @@ export function render() {
     else if (o.kind === 'stairsDown') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true);
     else if (o.kind === 'stairsUp') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), false);
     else if (o.kind === 'portal') drawPortal(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.t);
+    else if (o.kind === 'mountain') objSprite(mountainImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 64);
+    else if (o.kind === 'bush') objSprite(bushImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 34);
+    else if (o.kind === 'boulder') objSprite(boulderImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 38);
+    else if (o.kind === 'fence') objSprite(fenceImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42);
+    else if (o.kind === 'lamp') objSprite(lampImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
+    else if (o.kind === 'bridge') drawBridge(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
+    else if (o.kind === 'sign') objSprite(signImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 32);
     else if (o.kind === 'mob') {
       if (o.m.type === 'trader') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), TRADER_APP, TRADER_EQUIP, null);
       else if (o.m.type === 'questgiver') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), FORESTER_APP, FORESTER_EQUIP, npcMarker(o.m));

@@ -23,9 +23,14 @@ module.exports = {
   GATHER_MAX_CHANCE: 0.92,
 
   // Тайлы карты
-  TILES: { GRASS: 0, WATER: 1, WALL: 2, TREE: 3, PATH: 4, STONE: 5, IRON: 6, ANVIL: 7, SMELTER: 8, CAMPFIRE: 9, CHEST: 10, SAND: 11, WELL: 12, STAIRS_DOWN: 13, STAIRS_UP: 14, CAVE: 15, PORTAL_BLUE: 16, PORTAL_PURPLE: 17, PORTAL_GREEN: 18, SPAWN: 19 },
-  // Порталы (13,14,16,17,18), пещерный пол 15 и точка спавна 19 — проходимы.
-  BLOCKED: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12],
+  TILES: {
+    GRASS: 0, WATER: 1, WALL: 2, TREE: 3, PATH: 4, STONE: 5, IRON: 6, ANVIL: 7, SMELTER: 8, CAMPFIRE: 9, CHEST: 10, SAND: 11, WELL: 12, STAIRS_DOWN: 13, STAIRS_UP: 14, CAVE: 15, PORTAL_BLUE: 16, PORTAL_PURPLE: 17, PORTAL_GREEN: 18, SPAWN: 19,
+    // --- Новый набор (декор и рельеф) ---
+    DIRT: 20, DARK_GRASS: 21, FLOWERS: 22, COBBLE: 23,   // полы (проходимы)
+    MOUNTAIN: 24, BUSH: 25, BOULDER: 26, FENCE: 27, LAMP: 28, BRIDGE: 29, SIGN: 30, // объекты
+  },
+  // Порталы (13,14,16,17,18), пещерный пол 15, точка спавна 19, новые полы 20-23 и мост 29 — проходимы.
+  BLOCKED: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 24, 25, 26, 27, 28, 30],
 
   // Хранилище (банк): база + апгрейды за золото
   BANK_BASE: 48,                          // базовый размер (> 32 ячеек рюкзака)

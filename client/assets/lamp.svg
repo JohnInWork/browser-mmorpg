@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Фонарный столб: тёмный металл + жёлтый плоский свет (без градиента). Заготовка. -->
+  <ellipse cx="256" cy="452" rx="90" ry="22" fill="#000000" fill-opacity="0.18"/>
+  <!-- плоское свечение -->
+  <circle cx="256" cy="150" r="120" fill="#f7d96b" fill-opacity="0.22"/>
+  <!-- столб -->
+  <rect x="240" y="170" width="32" height="270" fill="#3a3f47"/>
+  <rect x="240" y="170" width="12" height="270" fill="#4c525c"/>
+  <!-- основание -->
+  <rect x="208" y="430" width="96" height="26" rx="8" fill="#2c3038"/>
+  <!-- фонарь (корпус) -->
+  <polygon points="200,150 312,150 290,80 222,80" fill="#3a3f47"/>
+  <rect x="206" y="86" width="100" height="70" fill="#f4c84a"/>
+  <rect x="226" y="86" width="22" height="70" fill="#fbe27a"/>
+  <!-- крыша фонаря -->
+  <polygon points="190,82 322,82 256,40" fill="#2c3038"/>
+  <rect x="248" y="22" width="16" height="22" fill="#2c3038"/>
+</svg>

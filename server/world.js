@@ -14,10 +14,10 @@ const MAP_FILE = path.join(MAPS_DIR, 'world.json');
 const TEST_MAP_FILE = path.join(__dirname, '..', 'client-test', 'map-data.js');
 const blockedSet = new Set(BLOCKED);
 
-const MAX_TILE = 19;
+const MAX_TILE = 30;
 const SPAWN_TILE = 19;
 const START = 'surface';
-const GROUND = new Set([0, 1, 4, 15]);          // тайлы пола (трава/вода/тропа/пещера)
+const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23]); // тайлы пола (трава/вода/тропа/пещера + земля/тёмн.трава/цветы/брусчатка)
 function isGround(t) { return GROUND.has(t); }
 function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
 function clone(m) { return m.map(r => r.slice()); }
