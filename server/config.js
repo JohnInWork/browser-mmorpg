@@ -23,8 +23,8 @@ module.exports = {
   GATHER_MAX_CHANCE: 0.92,
 
   // Тайлы карты
-  TILES: { GRASS: 0, WATER: 1, WALL: 2, TREE: 3, PATH: 4, STONE: 5, IRON: 6, ANVIL: 7, SMELTER: 8, CAMPFIRE: 9, CHEST: 10, SAND: 11, WELL: 12, STAIRS_DOWN: 13, STAIRS_UP: 14, CAVE: 15, PORTAL_BLUE: 16, PORTAL_PURPLE: 17, PORTAL_GREEN: 18 },
-  // Порталы (13,14,16,17,18) — проходимы (на них наступают для перехода), пещерный пол 15 — проходим.
+  TILES: { GRASS: 0, WATER: 1, WALL: 2, TREE: 3, PATH: 4, STONE: 5, IRON: 6, ANVIL: 7, SMELTER: 8, CAMPFIRE: 9, CHEST: 10, SAND: 11, WELL: 12, STAIRS_DOWN: 13, STAIRS_UP: 14, CAVE: 15, PORTAL_BLUE: 16, PORTAL_PURPLE: 17, PORTAL_GREEN: 18, SPAWN: 19 },
+  // Порталы (13,14,16,17,18), пещерный пол 15 и точка спавна 19 — проходимы.
   BLOCKED: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12],
 
   // Хранилище (банк): база + апгрейды за золото

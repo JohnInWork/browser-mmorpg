@@ -11,7 +11,8 @@ const MAP_FILE = path.join(MAPS_DIR, 'world.json');
 const TEST_MAP_FILE = path.join(__dirname, '..', 'client-test', 'map-data.js');
 const blockedSet = new Set(BLOCKED);
 
-const MAX_TILE = 18;
+const MAX_TILE = 19;
+const SPAWN_TILE = 19;
 const START = 'surface';
 const GROUND = new Set([0, 1, 4, 15]);          // тайлы пола (трава/вода/тропа/пещера)
 function isGround(t) { return GROUND.has(t); }
@@ -102,6 +103,20 @@ function randomSpawn(loc) {
   return { x: 1, y: 1 };
 }
 
+// Расставленные в редакторе точки спавна локации (тайл 19)
+function spawnPoints(loc) {
+  const L = locations[loc]; if (!L) return [];
+  const pts = [];
+  for (let y = 0; y < L.H; y++) for (let x = 0; x < L.W; x++) if (L.map[y][x] === SPAWN_TILE) pts.push({ x, y });
+  return pts;
+}
+// Выбрать точку появления: случайная из расставленных, иначе любая проходимая
+function pickSpawn(loc) {
+  const pts = spawnPoints(loc);
+  if (pts.length) return pts[Math.floor(Math.random() * pts.length)];
+  return randomSpawn(loc);
+}
+
 // Куда ведёт телепорт на (loc,x,y): ищем парный по sid в любой локации
 function teleportTarget(loc, x, y) {
   const L = locations[loc]; if (!L) return null;
@@ -160,4 +175,4 @@ function setLocations(payload) {
   return true;
 }
 
-module.exports = { load, isWalkable, randomSpawn, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap };
+module.exports = { load, isWalkable, randomSpawn, pickSpawn, spawnPoints, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap };

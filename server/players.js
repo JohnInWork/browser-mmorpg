@@ -34,7 +34,7 @@ function moveSlot(srcArr, srcIdx, dstArr, dstIdx) {
 
 function create(id) {
   const location = world.startLocation();
-  const spawn = world.randomSpawn(location);
+  const spawn = world.pickSpawn(location);     // случайная из расставленных точек спавна (иначе любая клетка)
   const player = {
     id,
     name: 'Игрок',
@@ -304,7 +304,7 @@ function invState(p) {
 
 // Смерть → респаун с полным HP в новой точке
 function respawn(io, p) {
-  const s = world.randomSpawn(p.location);
+  const s = world.pickSpawn(p.location);
   p.x = s.x; p.y = s.y; p.hp = PLAYER_MAX_HP;
   p.target = null; p.turn = null; p.gathering = null;
   io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp, location: p.location });

@@ -46,11 +46,12 @@ const CATEGORIES = [
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
+  { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#2ecc71' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
 ];
 let selected = 0; // выбранный id тайла
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e' };
+const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e', 19:'#5fa84e' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
@@ -340,6 +341,12 @@ function drawWell(cx, cy) {
   ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
 }
+function drawSpawn(cx, cy) {                          // маркер точки спавна (только в редакторе)
+  const z = zoom;
+  ctx.fillStyle = 'rgba(46,204,113,.35)'; ctx.beginPath(); ctx.ellipse(cx, cy, 12 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 2 * z; ctx.beginPath(); ctx.moveTo(cx, cy + 2 * z); ctx.lineTo(cx, cy - 18 * z); ctx.stroke();
+  ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.moveTo(cx, cy - 18 * z); ctx.lineTo(cx + 12 * z, cy - 14 * z); ctx.lineTo(cx, cy - 10 * z); ctx.closePath(); ctx.fill();
+}
 function drawPortal(cx, cy, outer, inner) {
   const z = zoom;
   ctx.fillStyle = outer; ctx.beginPath(); ctx.ellipse(cx, cy, 15 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
@@ -393,6 +400,7 @@ function render() {
       else if (t === 13) obj.push({ d: x + y + 0.1, k: 13, x, y });
       else if (t === 14) obj.push({ d: x + y + 0.1, k: 14, x, y });
       else if (t === 16 || t === 17 || t === 18) obj.push({ d: x + y + 0.1, k: t, x, y });
+      else if (t === 19) obj.push({ d: x + y + 0.2, k: 19, x, y });
     }
   obj.sort((a, b) => a.d - b.d);
   for (const o of obj) {
@@ -411,6 +419,7 @@ function render() {
       const te = teleAt(o.x, o.y);                 // показать ID связи на портале
       if (te) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(12 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(te.sid, sx, sy - 16 * zoom); }
     }
+    else if (o.k === 19) drawSpawn(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else drawRock(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.k === 6);
   }
   requestAnimationFrame(render);
