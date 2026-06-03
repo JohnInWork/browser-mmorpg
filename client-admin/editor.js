@@ -66,6 +66,18 @@ function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom,
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 function tileSeed(x, y) { return (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; }
 function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// Пещерная скала в редакторе — тот же тёмный 3D-изо вид, что и в игре
+function drawCaveWallEd(cx, cy, x, y) {
+  const z = zoom, hw = (TW / 2) * z, hh = (TH / 2) * z;
+  const rnd = mulberry32(tileSeed(x, y) ^ 0x7c0f);
+  const bodyH = (26 + rnd() * 14) * z, crest = (6 + rnd() * 13) * z, adx = (rnd() - 0.5) * hw * 0.44;
+  const ty = cy - bodyH;
+  ctx.fillStyle = '#4a4f59'; ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx + hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#333842'; ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx - hw, cy); ctx.lineTo(cx - hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  const ax = cx + adx, ay = ty - crest, T = [cx, ty - hh], R = [cx + hw, ty], B = [cx, ty + hh], L = [cx - hw, ty];
+  const face = (p1, p2, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.lineTo(ax, ay); ctx.closePath(); ctx.fill(); };
+  face(L, T, '#3a3f48'); face(R, T, '#545a64'); face(L, B, '#41464f'); face(R, B, '#646b75');
+}
 // Гора в редакторе — тот же процедурный 3D-изо вид, что и в игре
 function drawMountainEd(cx, cy, x, y) {
   const z = zoom, hw = (TW / 2) * z, hh = (TH / 2) * z;
@@ -89,7 +101,7 @@ let panX = 0, panY = 0; // экранное смещение начала коо
 // --- Палитра тайлов по категориям ---
 const CATEGORIES = [
   { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 31, name: 'Песок (пустыня)', color: '#dcc878' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
-  { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' }, { id: 24, name: 'Горы', color: '#7c8088' }, { id: 27, name: 'Забор', color: '#9a6b3a' } ] },
+  { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' }, { id: 24, name: 'Горы', color: '#7c8088' }, { id: 32, name: 'Скала (пещера)', color: '#4a4f59' }, { id: 27, name: 'Забор', color: '#9a6b3a' } ] },
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Природа',  items: [ { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
@@ -228,6 +240,7 @@ function drawIcon(c, id) {
   if (GROUND.has(id)) return bg(c, TOP[id]);
   // Всё остальное — БЕЗ фона травы (рисуем сам объект на прозрачном; тёмный фон кнопки сам по себе)
   if (id === 2) { c.fillStyle = '#5d626d'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#787e8a'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#9aa0ac'; c.fillRect(7, 4, 16, 4); return; }
+  if (id === 32) { c.fillStyle = '#333842'; c.beginPath(); c.moveTo(15, 24); c.lineTo(6, 19); c.lineTo(6, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#4a4f59'; c.beginPath(); c.moveTo(15, 24); c.lineTo(24, 19); c.lineTo(24, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#646b75'; c.beginPath(); c.moveTo(15, 7); c.lineTo(24, 11); c.lineTo(16, 3); c.lineTo(9, 10); c.closePath(); c.fill(); return; }
   if (typeof id === 'string' && id.startsWith('mob:')) {
     const t = id.slice(4), mi = MOB_IMG[t], info = MOB_INFO[t] || { color: '#888' };
     if (mi && mi._ready) return void c.drawImage(mi, 3, 1, 24, 24);
@@ -466,7 +479,7 @@ function render() {
   // Пол (из слоя FLOOR — под объектами сохраняется земля)
   for (let y = 0; y < mapH; y++) {
     for (let x = 0; x < mapW; x++) {
-      if (MAP[y][x] === 2) continue;                  // под стеной пол не рисуем
+      if (MAP[y][x] === 2 || MAP[y][x] === 32) continue;  // под стеной/скалой пол не рисуем
       fillDiamond(panX + isoX(x, y), panY + isoY(x, y), TOP[FLOOR[y][x]] || TOP[0], 'rgba(0,0,0,.18)');
     }
   }
@@ -481,6 +494,7 @@ function render() {
     for (let x = 0; x < mapW; x++) {
       const t = MAP[y][x];
       if (t === 2) obj.push({ d: x + y, k: 2, x, y });
+      else if (t === 32) obj.push({ d: x + y, k: 32, x, y });
       else if (t === 3) obj.push({ d: x + y + 0.1, k: 3, x, y });
       else if (t === 5) obj.push({ d: x + y + 0.1, k: 5, x, y });
       else if (t === 6) obj.push({ d: x + y + 0.1, k: 6, x, y });
@@ -500,6 +514,7 @@ function render() {
   obj.sort((a, b) => a.d - b.d);
   for (const o of obj) {
     if (o.k === 2) drawCube(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), WALL_H);
+    else if (o.k === 32) drawCaveWallEd(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.x, o.y);
     else if (o.k === 3) drawTree(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.x, o.y);
     else if (o.k === 7) drawAnvil(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 8) drawSmelter(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));

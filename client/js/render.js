@@ -257,6 +257,27 @@ function drawMountain(cx, cy, x, y) {
   }
 }
 
+// Пещерная скала-стена: тёмный объёмный изо-массив со скалистым гребнем (без снега), варьируется по клетке.
+function drawCaveWall(cx, cy, x, y) {
+  const ctx = S.ctx, z = SCALE, hw = TW / 2, hh = TH / 2;
+  const rnd = mulberry32(tileSeed(x, y) ^ 0x7c0f);
+  const bodyH = (26 + rnd() * 14) * z;          // высота стены (около WALL_H, варьируется)
+  const crest = (6 + rnd() * 13) * z;           // невысокий скалистый гребень
+  const adx = (rnd() - 0.5) * TW * 0.22;
+  const ty = cy - bodyH;
+  // тело
+  ctx.fillStyle = '#4a4f59'; ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx + hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#333842'; ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx - hw, cy); ctx.lineTo(cx - hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  // скалистый верх (низкий гранёный гребень)
+  const ax = cx + adx, ay = ty - crest, T = [cx, ty - hh], R = [cx + hw, ty], B = [cx, ty + hh], L = [cx - hw, ty];
+  const face = (p1, p2, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.lineTo(ax, ay); ctx.closePath(); ctx.fill(); };
+  face(L, T, '#3a3f48'); face(R, T, '#545a64'); face(L, B, '#41464f'); face(R, B, '#646b75');
+  // трещины (тёмные штрихи на гранях)
+  ctx.strokeStyle = 'rgba(18,20,26,.45)'; ctx.lineWidth = 1.2 * z;
+  ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx, ty + hh); ctx.stroke();           // переднее ребро
+  ctx.beginPath(); ctx.moveTo(cx + hw * 0.5, cy - bodyH * 0.4); ctx.lineTo(cx + hw * 0.3, cy - bodyH * 0.05); ctx.stroke();
+}
+
 function drawTree(cx, cy, depleted, x, y) {
   const ctx = S.ctx, z = SCALE;
   if (depleted) {
@@ -511,7 +532,7 @@ export function render() {
   // 1) ПОЛ (из слоя FLOOR — он лежит под объектами; тропа/вода сохраняются под сундуком и т.п.)
   for (let y = 0; y < S.mapH; y++) {
     for (let x = 0; x < S.mapW; x++) {
-      if (S.MAP[y][x] === 2) continue;                              // под стеной пол не рисуем (куб закрывает)
+      if (S.MAP[y][x] === 2 || S.MAP[y][x] === 32) continue;        // под стеной/скалой пол не рисуем (объём закрывает)
       const f = (S.FLOOR[y] && S.FLOOR[y][x]) || 0;                 // тайл пола
       const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
       if (f === 1) drawWater(cx, cy, x, y);
@@ -538,6 +559,7 @@ export function render() {
     for (let x = 0; x < S.mapW; x++) {
       const t = S.MAP[y][x];
       if (t === 2) drawables.push({ d: x + y, kind: 'wall', x, y });
+      else if (t === 32) drawables.push({ d: x + y, kind: 'caveWall', x, y });
       else if (t === 3) drawables.push({ d: x + y + 0.1, kind: 'tree', x, y });
       else if (t === 5) drawables.push({ d: x + y + 0.1, kind: 'rock', x, y, ore: false });
       else if (t === 6) drawables.push({ d: x + y + 0.1, kind: 'rock', x, y, ore: true });
@@ -567,6 +589,7 @@ export function render() {
 
   for (const o of drawables) {
     if (o.kind === 'wall') drawCube(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), WALL_H, TILE[2]);
+    else if (o.kind === 'caveWall') drawCaveWall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
     else if (o.kind === 'tree') drawTree(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), S.depletedNodes.has(`${o.x},${o.y}`), o.x, o.y);
     else if (o.kind === 'rock') drawRock(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.ore, S.depletedNodes.has(`${o.x},${o.y}`));
     else if (o.kind === 'anvil') drawAnvil(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
