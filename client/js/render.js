@@ -15,6 +15,11 @@ let bearReady = false;
 bearImg.onload = () => { bearReady = true; };
 bearImg.src = '/assets/bear.svg';
 
+const chickenImg = new Image();
+let chickenReady = false;
+chickenImg.onload = () => { chickenReady = true; };
+chickenImg.src = '/assets/chicken.svg';
+
 // Деревья: 2 текстуры одного дерева (для разнообразия), вариант стабилен по координатам клетки
 const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
@@ -270,50 +275,16 @@ function drawHpBar(cx, topY, hp, maxHp) {
 
 function drawChicken(cx, cy, m) {
   const ctx = S.ctx, z = SCALE * 0.5;   // курица мелкая (в 2 раза меньше прочих мобов)
-  const body = m.flash > 0 ? '#ffffff' : '#f6f5ef';
-  const shade = m.flash > 0 ? '#e9e9e4' : '#dcdbd0';
   // тень
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 3 * z, 14 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
-  // лапки
-  ctx.strokeStyle = '#e8902b'; ctx.lineWidth = 2 * z; ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(cx - 3 * z, cy - 1 * z); ctx.lineTo(cx - 3 * z, cy + 3 * z);
-  ctx.moveTo(cx + 5 * z, cy - 1 * z); ctx.lineTo(cx + 5 * z, cy + 3 * z);
-  ctx.stroke();
-  // хвост (перья сзади-слева)
-  ctx.fillStyle = shade;
-  ctx.beginPath();
-  ctx.moveTo(cx - 9 * z, cy - 13 * z);
-  ctx.quadraticCurveTo(cx - 20 * z, cy - 20 * z, cx - 13 * z, cy - 5 * z);
-  ctx.closePath(); ctx.fill();
-  // тело
-  ctx.fillStyle = body;
-  ctx.beginPath(); ctx.ellipse(cx, cy - 9 * z, 11 * z, 10 * z, 0, 0, Math.PI * 2); ctx.fill();
-  // крыло
-  ctx.fillStyle = shade;
-  ctx.beginPath(); ctx.ellipse(cx + 1 * z, cy - 8 * z, 6 * z, 7 * z, -0.2, 0, Math.PI * 2); ctx.fill();
-  // голова
-  ctx.fillStyle = body;
-  ctx.beginPath(); ctx.arc(cx + 6 * z, cy - 19 * z, 6.5 * z, 0, Math.PI * 2); ctx.fill();
-  // гребень
-  ctx.fillStyle = '#e2473b';
-  ctx.beginPath();
-  ctx.arc(cx + 4 * z, cy - 25 * z, 2.2 * z, 0, Math.PI * 2);
-  ctx.arc(cx + 7 * z, cy - 26 * z, 2.4 * z, 0, Math.PI * 2);
-  ctx.arc(cx + 10 * z, cy - 25 * z, 2 * z, 0, Math.PI * 2);
-  ctx.fill();
-  // клюв
-  ctx.fillStyle = '#f0a02a';
-  ctx.beginPath();
-  ctx.moveTo(cx + 12 * z, cy - 19 * z); ctx.lineTo(cx + 17 * z, cy - 18 * z); ctx.lineTo(cx + 12 * z, cy - 16.5 * z);
-  ctx.closePath(); ctx.fill();
-  // бородка
-  ctx.fillStyle = '#e2473b';
-  ctx.beginPath(); ctx.arc(cx + 12 * z, cy - 15 * z, 1.6 * z, 0, Math.PI * 2); ctx.fill();
-  // глаз
-  ctx.fillStyle = '#1a1a1a';
-  ctx.beginPath(); ctx.arc(cx + 7 * z, cy - 20 * z, 1.5 * z, 0, Math.PI * 2); ctx.fill();
+  // спрайт курицы из того же SVG, что в вики (viewBox -20 -27 38 31, лапки внизу у cy)
+  if (chickenReady) {
+    ctx.save();
+    if (m.flash > 0) ctx.globalAlpha = 0.6; // мигание при ударе (как у волка/медведя)
+    ctx.drawImage(chickenImg, cx - 20 * z, cy - 27 * z, 38 * z, 31 * z);
+    ctx.restore();
+  }
   if (m.hp < m.maxHp) drawHpBar(cx, cy - 34 * z, m.hp, m.maxHp);
 }
 

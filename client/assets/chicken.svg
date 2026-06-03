@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-20 -27 38 31">
+  <!-- лапки -->
+  <g stroke="#e8902b" stroke-width="2" stroke-linecap="round">
+    <line x1="-3" y1="-1" x2="-3" y2="3"/>
+    <line x1="5" y1="-1" x2="5" y2="3"/>
+  </g>
+  <!-- хвост -->
+  <path d="M-9 -13 Q -20 -20 -13 -5 Z" fill="#dcdbd0"/>
+  <!-- тело -->
+  <ellipse cx="0" cy="-9" rx="11" ry="10" fill="#f6f5ef"/>
+  <!-- крыло -->
+  <ellipse cx="1" cy="-8" rx="6" ry="7" fill="#dcdbd0" transform="rotate(-11.5 1 -8)"/>
+  <!-- голова -->
+  <circle cx="6" cy="-19" r="6.5" fill="#f6f5ef"/>
+  <!-- гребень -->
+  <g fill="#e2473b">
+    <circle cx="4" cy="-25" r="2.2"/>
+    <circle cx="7" cy="-26" r="2.4"/>
+    <circle cx="10" cy="-25" r="2"/>
+  </g>
+  <!-- клюв -->
+  <path d="M12 -19 L17 -18 L12 -16.5 Z" fill="#f0a02a"/>
+  <!-- бородка -->
+  <circle cx="12" cy="-15" r="1.6" fill="#e2473b"/>
+  <!-- глаз -->
+  <circle cx="7" cy="-20" r="1.5" fill="#1a1a1a"/>
+</svg>
