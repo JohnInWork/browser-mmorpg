@@ -20,6 +20,11 @@ let chickenReady = false;
 chickenImg.onload = () => { chickenReady = true; };
 chickenImg.src = '/assets/chicken.svg';
 
+const chestImg = new Image();
+let chestReady = false;
+chestImg.onload = () => { chestReady = true; };
+chestImg.src = '/assets/chest.svg';
+
 // Деревья: 2 текстуры одного дерева (для разнообразия), вариант стабилен по координатам клетки
 const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
@@ -263,36 +268,14 @@ function drawCampfire(cx, cy) {
   flame(0, 12 * z, 3.5 * z, '#ffe07a');
 }
 
-// Сундук-хранилище (плоские цвета, без градиентов)
+// Сундук-хранилище — спрайт из SVG пользователя (client/assets/chest.svg)
 function drawChest(cx, cy) {
   const ctx = S.ctx, z = SCALE;
-  const W = 30 * z, baseH = 16 * z, lidH = 11 * z;
-  const x = cx - W / 2, top = cy - 6 * z;          // «стоит» на клетке
+  const W = 42 * z, H = 42 * z, top = cy + 9 * z - H;   // «стоит» на клетке
   // тень
   ctx.fillStyle = 'rgba(0,0,0,.28)';
-  ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 17 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
-  // короб (основание)
-  ctx.fillStyle = '#7a4f24';
-  ctx.fillRect(x, top, W, baseH);
-  ctx.fillStyle = '#5e3c1a';                        // тёмная нижняя полоса
-  ctx.fillRect(x, top + baseH - 4 * z, W, 4 * z);
-  // крышка (полукруг)
-  ctx.fillStyle = '#8a5a28';
-  ctx.beginPath();
-  ctx.moveTo(x, top);
-  ctx.quadraticCurveTo(cx, top - lidH, x + W, top);
-  ctx.closePath(); ctx.fill();
-  // оковки (вертикальные планки)
-  ctx.fillStyle = '#c9a24a';
-  ctx.fillRect(x + 3 * z, top - lidH * 0.4, 4 * z, baseH + lidH * 0.4);
-  ctx.fillRect(x + W - 7 * z, top - lidH * 0.4, 4 * z, baseH + lidH * 0.4);
-  // средняя планка + замок
-  ctx.fillStyle = '#b98e3c';
-  ctx.fillRect(cx - 2 * z, top - lidH * 0.5, 4 * z, baseH + lidH * 0.5);
-  ctx.fillStyle = '#f1c40f';
-  ctx.fillRect(cx - 3 * z, top + baseH * 0.35, 6 * z, 6 * z);
-  ctx.fillStyle = '#7a5a10';
-  ctx.fillRect(cx - 1 * z, top + baseH * 0.45, 2 * z, 2.5 * z);
+  ctx.beginPath(); ctx.ellipse(cx, cy + 5 * z, 18 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  if (chestReady) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 
 function drawHpBar(cx, topY, hp, maxHp) {

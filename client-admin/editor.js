@@ -23,6 +23,7 @@ const TW = 64, TH = 32, WALL_H = 34, TREE_H = 46;
 
 // Деревья: 2 текстуры (как в игре), вариант стабилен по координатам клетки
 const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
+const chestImg = new Image(); chestImg._ready = false; chestImg.onload = () => { chestImg._ready = true; }; chestImg.src = '/assets/chest.svg';
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 let zoom = 1;
 let panX = 0, panY = 0; // экранное смещение начала координат
@@ -230,13 +231,8 @@ function drawCampfire(cx, cy) {
   flame(0, 26 * z, 9 * z, '#e8632a'); flame(-3 * z, 18 * z, 6 * z, '#f4a23d'); flame(3 * z, 16 * z, 5 * z, '#f4a23d'); flame(0, 12 * z, 3.5 * z, '#ffe07a');
 }
 function drawChest(cx, cy) {
-  const z = zoom, W = 30 * z, baseH = 16 * z, lidH = 11 * z, x = cx - W / 2, top = cy - 6 * z;
-  ctx.fillStyle = '#7a4f24'; ctx.fillRect(x, top, W, baseH);
-  ctx.fillStyle = '#5e3c1a'; ctx.fillRect(x, top + baseH - 4 * z, W, 4 * z);
-  ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(x, top); ctx.quadraticCurveTo(cx, top - lidH, x + W, top); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#c9a24a'; ctx.fillRect(x + 3 * z, top - lidH * 0.4, 4 * z, baseH + lidH * 0.4); ctx.fillRect(x + W - 7 * z, top - lidH * 0.4, 4 * z, baseH + lidH * 0.4);
-  ctx.fillStyle = '#b98e3c'; ctx.fillRect(cx - 2 * z, top - lidH * 0.5, 4 * z, baseH + lidH * 0.5);
-  ctx.fillStyle = '#f1c40f'; ctx.fillRect(cx - 3 * z, top + baseH * 0.35, 6 * z, 6 * z);
+  const z = zoom, W = 42 * z, H = 42 * z, top = cy + 9 * z - H;
+  if (chestImg._ready) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 
 function render() {
