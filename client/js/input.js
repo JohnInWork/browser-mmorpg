@@ -92,8 +92,10 @@ function nodeAt(x, y) {
   if (t === 3) return { tool: 'axe', name: 'Дерево', need: 'Нужен топор' };
   if (t === 5) return { tool: 'pickaxe', name: 'Камень', need: 'Нужна кирка' };
   if (t === 6) return { tool: 'pickaxe', name: 'Железная руда', need: 'Нужна кирка' };
+  if (t === 11) return { tool: 'shovel', name: 'Песочная куча', need: 'Нужна лопата' };
   return null;
 }
+function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }
 
 export function setupInput() {
   const canvas = S.canvas;
@@ -121,6 +123,7 @@ export function setupInput() {
     else if (pl) { showTip(pl.name); canvas.style.cursor = 'pointer'; }
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
     else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
+    else if (wellAt(t.x, t.y)) { showTip('Колодец'); canvas.style.cursor = 'pointer'; }
     else if (node) { showTip(node.name); canvas.style.cursor = 'pointer'; }
     else { hideTip(); canvas.style.cursor = ''; }
   });
@@ -177,6 +180,14 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'chest', x: t.x, y: t.y };
+      S.path = ap.path; S.targetTile = null;
+      return;
+    }
+    // Клик по колодцу — подойти и наполнить колбы водой
+    if (wellAt(t.x, t.y)) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      S.pendingAction = { kind: 'well', x: t.x, y: t.y };
       S.path = ap.path; S.targetTile = null;
       return;
     }
@@ -245,6 +256,8 @@ function decideStep() {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openCraft(a.station);
     } else if (a.kind === 'chest') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) S.socket.emit('openBank');
+    } else if (a.kind === 'well') {
+      if (adjOrtho(me.x, me.y, a.x, a.y)) S.socket.emit('fillWater');
     } else if (a.kind === 'questnpc') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openQuestDialog(a.npc);
     } else if (a.kind === 'notice') {

@@ -66,6 +66,7 @@ export function openItemMenu(invIndex, x, y) {
   const canSplit = def.stackable && stack.qty > 1;
   const items = [];
   if (canSplit) items.push({ key: 'split', label: 'Разделить' });
+  if (def.pourTo) items.push({ key: 'pour', label: 'Вылить' });   // напр. колба с водой → пустая колба
   items.push({ key: 'wiki', label: 'Посмотреть в вики' });
   items.push({ key: 'chat', label: 'Отправить в чат' });
   items.push({ key: 'destroy', label: 'Уничтожить', danger: true });
@@ -90,6 +91,7 @@ function ctxAction(act) {
   if (act === 'wiki') showItemInGuide(stack.id);
   else if (act === 'chat') insertItemLinkToChat(stack.id);
   else if (act === 'split') openSplitDialog(idx);
+  else if (act === 'pour') S.socket.emit('pourFlask', { invIndex: idx });
   else if (act === 'destroy') openDestroyDialog(idx);
 }
 
@@ -510,7 +512,7 @@ function guideItemHtml(id) {
   if (it.slot && SLOT_NAMES[it.slot]) stats.push(`Слот: <b>${SLOT_NAMES[it.slot]}</b>`);
   if (it.onHitHeal) stats.push(`${UI_SVG.star} За удар по врагу: <b>+${it.onHitHeal} HP</b>`);
   if (it.heal) stats.push(`${UI_SVG.heart} Лечит: <b>+${it.heal}</b>`);
-  if (it.gathers) stats.push(`Добывает: <b>${it.gathers === 'tree' ? 'древесину' : 'камень/руду'}</b>`);
+  if (it.gathers) stats.push(`Добывает: <b>${({ tree: 'древесину', rock: 'камень/руду', sand: 'песок' })[it.gathers] || it.gathers}</b>`);
   if (it.price) stats.push(`${UI_SVG.coin} Цена продажи: <b>${it.price}</b> зол.`);
   if (stats.length) h += `<div class="g-sec">Характеристики</div><div class="g-stats">${stats.map(s => `<div>${s}</div>`).join('')}</div>`;
   const rf = recipeFor(id);

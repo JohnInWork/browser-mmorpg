@@ -237,6 +237,27 @@ function setup(io) {
       if (nearChest() && playersMod.upgradeBank(player)) sendBank();
     });
 
+    // --- Колодец: наполнить пустые колбы водой (рядом с колодцем) ---
+    const nearWell = () => {
+      const m = world.getState().map;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const x = player.x + dx, y = player.y + dy;
+        if (m[y] && m[y][x] === cfg.TILES.WELL) return true;
+      }
+      return false;
+    };
+    socket.on('fillWater', () => {
+      if (!nearWell()) return;
+      const n = playersMod.fillFlasks(player);
+      socket.emit('inventoryUpdate', playersMod.invState(player));
+      socket.emit('chatMessage', { cat: 'system', text: n > 0 ? `Колодец: наполнено колб водой — ${n}` : 'Нет пустых колб для наполнения.' });
+    });
+
+    // Вылить колбу (ПКМ → «Вылить»): waterFlask → emptyFlask
+    socket.on('pourFlask', ({ invIndex } = {}) => {
+      if (playersMod.pourFlask(player, invIndex)) socket.emit('inventoryUpdate', playersMod.invState(player));
+    });
+
     // Надеть броню из рюкзака
     socket.on('equip', (invIndex) => {
       if (playersMod.equipItem(player, invIndex)) {

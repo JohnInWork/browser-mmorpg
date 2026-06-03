@@ -243,6 +243,30 @@ function drawChest(cx, cy) {
   if (chestReady) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 
+// Песочная куча (плоские cel-тона). depleted — выкопана (плоское пятно).
+function drawSandPile(cx, cy, depleted) {
+  const ctx = S.ctx, z = SCALE;
+  if (depleted) { ctx.fillStyle = '#cdb274'; ctx.beginPath(); ctx.ellipse(cx, cy, 10 * z, 4.5 * z, 0, 0, Math.PI * 2); ctx.fill(); return; }
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 15 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#c9ad6a'; ctx.beginPath(); ctx.ellipse(cx, cy + 2 * z, 15 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();           // основание
+  ctx.fillStyle = '#dcc480'; ctx.beginPath(); ctx.moveTo(cx - 13 * z, cy + 3 * z); ctx.quadraticCurveTo(cx, cy - 14 * z, cx + 13 * z, cy + 3 * z); ctx.closePath(); ctx.fill(); // горка
+  ctx.fillStyle = '#ecdca0'; ctx.beginPath(); ctx.moveTo(cx - 6 * z, cy - 1 * z); ctx.quadraticCurveTo(cx - 1 * z, cy - 11 * z, cx + 5 * z, cy - 2 * z); ctx.closePath(); ctx.fill(); // светлый бок
+  ctx.fillStyle = '#b89a52'; for (let i = 0; i < 5; i++) { const a = i * 1.3; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 8 * z, cy + 1 * z + Math.sin(a) * 3 * z, 0.9 * z, 0, Math.PI * 2); ctx.fill(); } // крупинки
+}
+
+// Колодец (каменное кольцо + вода + крыша на столбах), плоские цвета
+function drawWell(cx, cy) {
+  const ctx = S.ctx, z = SCALE;
+  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 15 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#9aa0aa'; ctx.beginPath(); ctx.ellipse(cx, cy, 13 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();        // каменное кольцо
+  ctx.fillStyle = '#6e747e'; ctx.beginPath(); ctx.ellipse(cx, cy, 9 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#3a6aa0'; ctx.beginPath(); ctx.ellipse(cx, cy, 6.5 * z, 3.6 * z, 0, 0, Math.PI * 2); ctx.fill();     // вода
+  ctx.fillStyle = '#4a90cf'; ctx.beginPath(); ctx.ellipse(cx, cy - 0.5 * z, 4.5 * z, 2.4 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7a4f22'; ctx.fillRect(cx - 12 * z, cy - 26 * z, 3 * z, 28 * z); ctx.fillRect(cx + 9 * z, cy - 26 * z, 3 * z, 28 * z); // столбы
+  ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill(); // крыша
+  ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
+}
+
 function drawHpBar(cx, topY, hp, maxHp) {
   const ctx = S.ctx, z = SCALE, w = 28 * z, h = 5 * z;
   const x = cx - w / 2, y = topY;
@@ -431,6 +455,8 @@ export function render() {
       else if (t === 8) drawables.push({ d: x + y + 0.1, kind: 'smelter', x, y });
       else if (t === 9) drawables.push({ d: x + y + 0.1, kind: 'campfire', x, y });
       else if (t === 10) drawables.push({ d: x + y + 0.1, kind: 'chest', x, y });
+      else if (t === 11) drawables.push({ d: x + y + 0.1, kind: 'sandpile', x, y });
+      else if (t === 12) drawables.push({ d: x + y + 0.1, kind: 'well', x, y });
     }
   }
   for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive) drawables.push({ d: m.x + m.y + 0.15, kind: 'mob', m }); }
@@ -445,6 +471,8 @@ export function render() {
     else if (o.kind === 'smelter') drawSmelter(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'campfire') drawCampfire(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'chest') drawChest(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
+    else if (o.kind === 'sandpile') drawSandPile(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), S.depletedNodes.has(`${o.x},${o.y}`));
+    else if (o.kind === 'well') drawWell(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'mob') {
       if (o.m.type === 'trader') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), TRADER_APP, TRADER_EQUIP, null);
       else if (o.m.type === 'questgiver') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), FORESTER_APP, FORESTER_EQUIP, npcMarker(o.m));

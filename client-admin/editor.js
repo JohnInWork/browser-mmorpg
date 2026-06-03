@@ -34,13 +34,13 @@ let panX = 0, panY = 0; // экранное смещение начала коо
 const CATEGORIES = [
   { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 1, name: 'Вода', color: '#3a86c8' } ] },
   { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' } ] },
-  { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' } ] },
+  { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
-  { name: 'Хранилище', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' } ] },
+  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' } ] },
 ];
 let selected = 0; // выбранный id тайла
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e' };
+const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // --- Авторизация ---
@@ -229,6 +229,21 @@ function drawChest(cx, cy) {
   const z = zoom, W = 32 * z, H = 32 * z, top = cy - H / 2 - 5 * z;
   if (chestImg._ready) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
+function drawSandPile(cx, cy) {
+  const z = zoom;
+  ctx.fillStyle = '#c9ad6a'; ctx.beginPath(); ctx.ellipse(cx, cy + 2 * z, 15 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#dcc480'; ctx.beginPath(); ctx.moveTo(cx - 13 * z, cy + 3 * z); ctx.quadraticCurveTo(cx, cy - 14 * z, cx + 13 * z, cy + 3 * z); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#ecdca0'; ctx.beginPath(); ctx.moveTo(cx - 6 * z, cy - 1 * z); ctx.quadraticCurveTo(cx - 1 * z, cy - 11 * z, cx + 5 * z, cy - 2 * z); ctx.closePath(); ctx.fill();
+}
+function drawWell(cx, cy) {
+  const z = zoom;
+  ctx.fillStyle = '#9aa0aa'; ctx.beginPath(); ctx.ellipse(cx, cy, 13 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#6e747e'; ctx.beginPath(); ctx.ellipse(cx, cy, 9 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#4a90cf'; ctx.beginPath(); ctx.ellipse(cx, cy, 6.5 * z, 3.6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#7a4f22'; ctx.fillRect(cx - 12 * z, cy - 26 * z, 3 * z, 28 * z); ctx.fillRect(cx + 9 * z, cy - 26 * z, 3 * z, 28 * z);
+  ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
+}
 
 function render() {
   ctx.fillStyle = '#10131a';
@@ -261,6 +276,8 @@ function render() {
       else if (t === 8) obj.push({ d: x + y + 0.1, k: 8, x, y });
       else if (t === 9) obj.push({ d: x + y + 0.1, k: 9, x, y });
       else if (t === 10) obj.push({ d: x + y + 0.1, k: 10, x, y });
+      else if (t === 11) obj.push({ d: x + y + 0.1, k: 11, x, y });
+      else if (t === 12) obj.push({ d: x + y + 0.1, k: 12, x, y });
     }
   obj.sort((a, b) => a.d - b.d);
   for (const o of obj) {
@@ -270,6 +287,8 @@ function render() {
     else if (o.k === 8) drawSmelter(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 9) drawCampfire(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 10) drawChest(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
+    else if (o.k === 11) drawSandPile(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
+    else if (o.k === 12) drawWell(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else drawRock(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.k === 6);
   }
   requestAnimationFrame(render);

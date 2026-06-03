@@ -15,7 +15,7 @@ module.exports = {
   // Добыча ресурсов
   GATHER_TICK_MS: 700,         // интервал между ударами
   RESOURCE_RESPAWN_MS: 15000,  // ресурс восстанавливается через 15 сек
-  NODE_AMOUNT: { tree: 30, stone: 20, iron: 12 }, // ресурса за ноду (запас)
+  NODE_AMOUNT: { tree: 30, stone: 20, iron: 12, sand: 25 }, // ресурса за ноду (запас)
   // Шанс получить ресурс за удар: растёт с уровнем навыка (удар не всегда успешен)
   GATHER_BASE_CHANCE: 0.45,    // шанс на минимально нужном уровне
   GATHER_PER_LEVEL: 0.035,     // +шанс за уровень выше требуемого
@@ -23,8 +23,8 @@ module.exports = {
   GATHER_MAX_CHANCE: 0.92,
 
   // Тайлы карты
-  TILES: { GRASS: 0, WATER: 1, WALL: 2, TREE: 3, PATH: 4, STONE: 5, IRON: 6, ANVIL: 7, SMELTER: 8, CAMPFIRE: 9, CHEST: 10 },
-  BLOCKED: [1, 2, 3, 5, 6, 7, 8, 9, 10], // непроходимые (вода, стена, дерево, камень, руда, наковальня, плавильня, костёр, сундук)
+  TILES: { GRASS: 0, WATER: 1, WALL: 2, TREE: 3, PATH: 4, STONE: 5, IRON: 6, ANVIL: 7, SMELTER: 8, CAMPFIRE: 9, CHEST: 10, SAND: 11, WELL: 12 },
+  BLOCKED: [1, 2, 3, 5, 6, 7, 8, 9, 10, 11, 12], // непроходимые (+ песочная куча, колодец)
 
   // Хранилище (банк): база + апгрейды за золото
   BANK_BASE: 48,                          // базовый размер (> 32 ячеек рюкзака)

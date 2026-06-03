@@ -44,7 +44,7 @@ function create(id) {
     gold: 0,
     // стартовый инвентарь: топор + комплект брони (чтобы было что надеть)
     inventory: [
-      { id: 'axe', qty: 1 }, { id: 'pickaxe', qty: 1 },
+      { id: 'axe', qty: 1 }, { id: 'pickaxe', qty: 1 }, { id: 'shovel', qty: 1 },
       { id: 'helmet', qty: 1 }, { id: 'chest', qty: 1 }, { id: 'gloves', qty: 1 },
       { id: 'pants', qty: 1 }, { id: 'boots', qty: 1 }, { id: 'cloak', qty: 1 },
       { id: 'bearHelmet', qty: 1 }, { id: 'ironSword', qty: 1 }, { id: 'ironGreatsword', qty: 1 }, { id: 'ironShield', qty: 1 },
@@ -263,6 +263,26 @@ function splitStack(p, invIndex, amount) {
   return true;
 }
 
+// Вылить содержимое колбы (waterFlask → emptyFlask) по полю pourTo. Возвращает true при успехе.
+function pourFlask(p, invIndex) {
+  if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
+  const s = p.inventory[invIndex];
+  if (!s) return false;
+  const to = ITEMS[s.id] && ITEMS[s.id].pourTo;
+  if (!to) return false;
+  s.id = to;                       // тот же стак, тот же объём — просто опустошили
+  return true;
+}
+
+// Наполнить все пустые колбы водой у колодца (emptyFlask → waterFlask). Возвращает число наполненных колб.
+function fillFlasks(p) {
+  let n = 0;
+  for (const s of p.inventory) {
+    if (s && s.id === 'emptyFlask') { n += s.qty || 1; s.id = 'waterFlask'; }
+  }
+  return n;
+}
+
 // Уничтожить стак целиком (клетка становится пустой)
 function destroyStack(p, invIndex) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
@@ -289,4 +309,4 @@ function respawn(io, p) {
 }
 
 module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
-  bankMove, bankQuick, upgradeBank, bankStateOf, invState, ITEMS };
+  bankMove, bankQuick, upgradeBank, bankStateOf, pourFlask, fillFlasks, invState, ITEMS };

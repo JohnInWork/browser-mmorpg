@@ -99,6 +99,22 @@ const ICONS = {
   ironShield: `<svg viewBox="0 0 24 24" width="30" height="30">
     <path d="M12 3 L19 5 V11 C19 16 15.5 19.5 12 21 C8.5 19.5 5 16 5 11 V5 Z" fill="#8a939e" stroke="#5e6670" stroke-width="1.4"/>
     <circle cx="12" cy="11.5" r="2.2" fill="#b9c2cd" stroke="#5e6670" stroke-width="1"/></svg>`,
+  shovel: `<svg viewBox="0 0 24 24" width="30" height="30">
+    <line x1="7" y1="18" x2="15" y2="7" stroke="#8a5a28" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="M5 16 l4 4 l3 -3 l-4 -4 z" fill="#c0c7d0" stroke="#8e979f" stroke-width="0.9"/></svg>`,
+  sand: `<svg viewBox="0 0 24 24" width="30" height="30">
+    <ellipse cx="12" cy="17" rx="9" ry="4" fill="#c9ad6a"/>
+    <path d="M4 17 q8 -11 16 0 z" fill="#dcc480"/>
+    <path d="M9 14 q3 -6 6 0 z" fill="#ecdca0"/>
+    <circle cx="8" cy="16" r="0.8" fill="#b89a52"/><circle cx="14" cy="15" r="0.8" fill="#b89a52"/></svg>`,
+  emptyFlask: `<svg viewBox="0 0 24 24" width="30" height="30">
+    <rect x="10" y="3" width="4" height="5" rx="1" fill="none" stroke="#aeb9c4" stroke-width="1.4"/>
+    <path d="M10 7 L7 16 a5 5 0 0 0 10 0 L14 7 Z" fill="rgba(180,200,220,.25)" stroke="#aeb9c4" stroke-width="1.4"/></svg>`,
+  waterFlask: `<svg viewBox="0 0 24 24" width="30" height="30">
+    <rect x="10" y="3" width="4" height="5" rx="1" fill="none" stroke="#aeb9c4" stroke-width="1.4"/>
+    <path d="M10 7 L7 16 a5 5 0 0 0 10 0 L14 7 Z" fill="rgba(180,200,220,.18)" stroke="#aeb9c4" stroke-width="1.4"/>
+    <path d="M8.2 12 L15.8 12 a5 5 0 0 1 -7.6 0 Z" fill="#4a90cf"/>
+    <ellipse cx="12" cy="17" rx="3.4" ry="2" fill="#4a90cf"/></svg>`,
 };
 
 // Иконка предмета. Для брони — её вид на персонаже (один источник графики), иначе нарисованная иконка.
