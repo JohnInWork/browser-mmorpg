@@ -50,6 +50,7 @@ body {
 }
 .swatch.active { border-color: #fff; }
 .swatch .dot { width: 16px; height: 16px; border-radius: 4px; }
+.swatch .dot-ic { width: 26px; height: 26px; flex: 0 0 auto; }
 #saveBtn {
   padding: 8px 14px; border: none; border-radius: 8px;
   background: #2ecc71; color: #0d2616; font-weight: 700; cursor: pointer;

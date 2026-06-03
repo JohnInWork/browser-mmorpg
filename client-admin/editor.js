@@ -30,11 +30,12 @@ function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t 
 const TW = 64, TH = 32, WALL_H = 34, TREE_H = 46;
 
 // Деревья: 2 текстуры (как в игре), вариант стабилен по координатам клетки
-const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
-const chestImg = new Image(); chestImg._ready = false; chestImg.onload = () => { chestImg._ready = true; }; chestImg.src = '/assets/chest.svg';
-const anvilImg = new Image(); anvilImg._ready = false; anvilImg.onload = () => { anvilImg._ready = true; }; anvilImg.src = '/assets/anvil.svg';
-const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload = () => { campfireImg._ready = true; }; campfireImg.src = '/assets/campfire.svg';
-const mkImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; };
+const onAsset = () => { if (typeof refreshPaletteIcons === 'function') refreshPaletteIcons(); }; // обновить иконки палитры после загрузки SVG
+const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; onAsset(); }; im.src = src; return im; });
+const chestImg = new Image(); chestImg._ready = false; chestImg.onload = () => { chestImg._ready = true; onAsset(); }; chestImg.src = '/assets/chest.svg';
+const anvilImg = new Image(); anvilImg._ready = false; anvilImg.onload = () => { anvilImg._ready = true; onAsset(); }; anvilImg.src = '/assets/anvil.svg';
+const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload = () => { campfireImg._ready = true; onAsset(); }; campfireImg.src = '/assets/campfire.svg';
+const mkImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; onAsset(); }; im.src = src; return im; };
 const MOB_IMG = { passive: mkImg('/assets/chicken.svg'), aggressive: mkImg('/assets/wolf.svg'), bear: mkImg('/assets/bear.svg') };
 const MOB_INFO = { passive: { name: 'Курица', color: '#f1c40f' }, aggressive: { name: 'Волк', color: '#888' }, bear: { name: 'Медведь', color: '#6b4a2b' }, friendly: { name: 'Мирный', color: '#2ecc71' }, trader: { name: 'Торговец', color: '#c79a2a' }, questgiver: { name: 'Лесник', color: '#3f9e63' } };
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
@@ -54,6 +55,7 @@ const CATEGORIES = [
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
 ];
 let selected = 0; // выбранный id тайла
+let iconCanvases = [];                          // {c: canvas, id} — мини-иконки палитры (перерисовка после загрузки SVG)
 
 const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e', 19:'#5fa84e' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
@@ -160,9 +162,38 @@ socket.on('saveResult', ({ ok }) => {
   setTimeout(() => { statusEl.textContent = ''; }, 2000);
 });
 
+// --- Иконки для кнопок палитры (как в игре) ---
+function bg(c, color) { c.fillStyle = color; c.beginPath(); c.moveTo(15, 4); c.lineTo(27, 15); c.lineTo(15, 26); c.lineTo(3, 15); c.closePath(); c.fill(); } // ромб-пол
+function drawIcon(c, id) {
+  c.clearRect(0, 0, 30, 30);
+  const TAU = Math.PI * 2;
+  if (id === 0 || id === 1 || id === 4 || id === 15) return bg(c, TOP[id]);     // пол
+  if (id === 2) { c.fillStyle = '#5d626d'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#787e8a'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#9aa0ac'; c.fillRect(7, 4, 16, 4); return; }
+  const im = { 3: treeImgs[0], 7: anvilImg, 9: campfireImg, 10: chestImg }[id];
+  if (im) { bg(c, '#5fa84e'); if (im._ready) c.drawImage(im, 2, 0, 26, 26); return; }
+  if (typeof id === 'string' && id.startsWith('mob:')) {
+    const t = id.slice(4), mi = MOB_IMG[t], info = MOB_INFO[t] || { color: '#888' };
+    bg(c, '#5fa84e');
+    if (mi && mi._ready) return void c.drawImage(mi, 3, 1, 24, 24);
+    c.fillStyle = info.color; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill(); c.strokeStyle = '#1a1a24'; c.lineWidth = 1; c.stroke();
+    c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
+  }
+  if (id === 5 || id === 6) { bg(c, '#5fa84e'); c.fillStyle = '#828892'; c.beginPath(); c.moveTo(6, 22); c.lineTo(9, 9); c.lineTo(20, 7); c.lineTo(24, 20); c.closePath(); c.fill(); if (id === 6) { c.fillStyle = '#c2641f'; c.beginPath(); c.arc(12, 15, 2, 0, TAU); c.arc(18, 17, 1.8, 0, TAU); c.fill(); } return; }
+  if (id === 11) { bg(c, '#5fa84e'); c.fillStyle = '#c9ad6a'; c.beginPath(); c.ellipse(15, 20, 11, 4, 0, 0, TAU); c.fill(); c.fillStyle = '#dcc480'; c.beginPath(); c.moveTo(5, 21); c.quadraticCurveTo(15, 7, 25, 21); c.closePath(); c.fill(); return; }
+  if (id === 8) { bg(c, '#5fa84e'); c.fillStyle = '#7a808a'; c.beginPath(); c.moveTo(8, 23); c.lineTo(9, 6); c.lineTo(21, 6); c.lineTo(22, 23); c.closePath(); c.fill(); c.fillStyle = '#e8632a'; c.beginPath(); c.arc(15, 14, 4, 0, TAU); c.fill(); return; }
+  if (id === 12) { bg(c, '#5fa84e'); c.fillStyle = '#9aa0aa'; c.beginPath(); c.ellipse(15, 19, 10, 5, 0, 0, TAU); c.fill(); c.fillStyle = '#4a90cf'; c.beginPath(); c.ellipse(15, 19, 5, 2.6, 0, 0, TAU); c.fill(); c.fillStyle = '#8a5a28'; c.fillRect(8, 4, 2, 13); c.fillRect(20, 4, 2, 13); c.fillStyle = '#8a5a28'; c.beginPath(); c.moveTo(6, 6); c.lineTo(15, 1); c.lineTo(24, 6); c.closePath(); c.fill(); return; }
+  if (id === 13 || id === 14) { bg(c, '#5fa84e'); for (let i = 0; i < 4; i++) { const v = id === 13 ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26); c.fillStyle = `rgb(${v},${v},${v + 8})`; const w = 18 - i * 3; c.fillRect(15 - w / 2, 8 + i * 4, w, 3.5); } return; }
+  if (id === 16 || id === 17 || id === 18) { bg(c, '#5fa84e'); const col = PORTAL_COLORS[id]; c.fillStyle = col[0]; c.beginPath(); c.ellipse(15, 16, 10, 6, 0, 0, TAU); c.fill(); c.fillStyle = col[1]; c.beginPath(); c.ellipse(15, 16, 6, 3.6, 0, 0, TAU); c.fill(); c.fillStyle = '#15152a'; c.beginPath(); c.ellipse(15, 16, 3, 1.8, 0, 0, TAU); c.fill(); return; }
+  if (id === 19) { bg(c, '#5fa84e'); c.strokeStyle = '#1a1a24'; c.lineWidth = 2; c.beginPath(); c.moveTo(13, 25); c.lineTo(13, 6); c.stroke(); c.fillStyle = '#e74c3c'; c.beginPath(); c.moveTo(13, 6); c.lineTo(24, 9.5); c.lineTo(13, 13); c.closePath(); c.fill(); return; }
+  if (id === -1) { c.fillStyle = '#2a2a30'; bg(c, '#2a2a30'); c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
+  bg(c, '#888');
+}
+function refreshPaletteIcons() { for (const o of iconCanvases) drawIcon(o.c.getContext('2d'), o.id); }
+
 // --- Палитра (кнопки) ---
 function buildPalette() {
   paletteEl.innerHTML = '';
+  iconCanvases = [];
   CATEGORIES.forEach((cat) => {
     const group = document.createElement('div');
     group.className = 'pal-group';
@@ -170,7 +201,11 @@ function buildPalette() {
     cat.items.forEach((t) => {
       const el = document.createElement('div');
       el.className = 'swatch' + (t.id === selected ? ' active' : '');
-      el.innerHTML = `<span class="dot" style="background:${t.color}"></span>${t.name}`;
+      const ic = document.createElement('canvas'); ic.width = 30; ic.height = 30; ic.className = 'dot-ic';
+      drawIcon(ic.getContext('2d'), t.id);
+      iconCanvases.push({ c: ic, id: t.id });
+      el.appendChild(ic);
+      el.appendChild(document.createTextNode(' ' + t.name));
       el.addEventListener('click', () => {
         selected = t.id;
         document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
