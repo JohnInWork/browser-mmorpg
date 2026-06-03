@@ -22,7 +22,7 @@ const MAP_FILE = path.join(MAPS_DIR, 'world.json');
 const TEST_MAP_FILE = path.join(__dirname, '..', 'client-test', 'map-data.js');
 const blockedSet = new Set(BLOCKED);
 
-const MAX_TILE = 34;
+const MAX_TILE = 35;
 const SPAWN_TILE = 19;
 const START = 'surface';
 const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23, 31]); // полы: трава/вода/тропа/пещера/земля/тёмн.трава/цветы/брусчатка/песок

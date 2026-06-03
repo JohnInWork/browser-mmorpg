@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Серебряная руда: серый камень со светлыми серебристыми вкраплениями. Заготовка. -->
+  <polygon points="120,360 100,250 180,170 320,160 410,240 400,360 256,420" fill="#8a909a"/>
+  <polygon points="120,360 100,250 180,170 220,260 200,380 256,420" fill="#6c727c"/>
+  <polygon points="180,170 320,160 360,225 240,250" fill="#a6adb6"/>
+  <!-- серебряные вкрапления -->
+  <circle cx="200" cy="250" r="20" fill="#e8e8ec"/>
+  <circle cx="200" cy="250" r="10" fill="#ffffff"/>
+  <circle cx="300" cy="230" r="15" fill="#d8d8de"/>
+  <circle cx="270" cy="320" r="17" fill="#e8e8ec"/>
+  <circle cx="270" cy="320" r="8" fill="#ffffff"/>
+  <circle cx="340" cy="300" r="11" fill="#d1d0d0"/>
+</svg>

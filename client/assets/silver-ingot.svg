@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Серебряный слиток. Заготовка. -->
+  <polygon points="110,360 402,360 360,250 152,250" fill="#aeb4bc"/>
+  <polygon points="152,250 360,250 380,210 132,210" fill="#dfe3e8"/>
+  <polygon points="110,360 402,360 392,392 120,392" fill="#8f959d"/>
+  <polygon points="160,232 250,232 240,250 170,250" fill="#ffffff" opacity="0.6"/>
+</svg>

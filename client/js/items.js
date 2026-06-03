@@ -124,6 +124,8 @@ export const ITEM_TEX = {
   axe: '/assets/axe.svg',
   shovel: '/assets/shovel.svg',
   leather: '/assets/leather.svg',
+  silverOre: '/assets/silver-ore.svg',
+  silverIngot: '/assets/silver-ingot.svg',
 };
 
 // Иконка предмета. Приоритет: загруженная текстура-файл → вид брони на персонаже → нарисованная иконка.

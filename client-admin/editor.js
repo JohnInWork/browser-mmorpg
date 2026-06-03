@@ -8,11 +8,11 @@ const socket = io({ query: { mode: 'admin' } });
 // --- Данные для конструктора НПС ---
 // Экипируемые предметы по слотам (id → имя). Только те, у кого есть визуал на персонаже.
 const EQUIP_ITEMS = {
-  helmet: [['', '— нет —'], ['helmet', 'Железный шлем'], ['leatherHat', 'Кожаный капюшон'], ['bearHelmet', 'Медвежий шлем']],
-  chest: [['', '— нет —'], ['chest', 'Железный нагрудник'], ['leatherTunic', 'Кожаный нагрудник'], ['merchantRobe', 'Кафтан торговца'], ['forestTunic', 'Лесная туника']],
-  gloves: [['', '— нет —'], ['leatherMitts', 'Кожаные перчатки'], ['blueGloves', 'Синие перчатки']],
-  pants: [['', '— нет —'], ['leatherLegs', 'Кожаные поножи'], ['goldPants', 'Золотые штаны'], ['brownPants', 'Кожаные штаны'], ['redPants', 'Красные штаны']],
-  boots: [['', '— нет —'], ['leatherShoes', 'Кожаные сапоги'], ['leatherBoots', 'Кожаные сапоги (одежда)']],
+  helmet: [['', '— нет —'], ['helmet', 'Железный шлем'], ['leatherHat', 'Кожаный капюшон'], ['silverHelmet', 'Серебряный шлем'], ['bearHelmet', 'Медвежий шлем']],
+  chest: [['', '— нет —'], ['chest', 'Железный нагрудник'], ['leatherTunic', 'Кожаный нагрудник'], ['silverChest', 'Серебряный нагрудник'], ['merchantRobe', 'Кафтан торговца'], ['forestTunic', 'Лесная туника']],
+  gloves: [['', '— нет —'], ['leatherMitts', 'Кожаные перчатки'], ['silverGloves', 'Серебряные перчатки'], ['blueGloves', 'Синие перчатки']],
+  pants: [['', '— нет —'], ['leatherLegs', 'Кожаные поножи'], ['silverLegs', 'Серебряные поножи'], ['goldPants', 'Золотые штаны'], ['brownPants', 'Кожаные штаны'], ['redPants', 'Красные штаны']],
+  boots: [['', '— нет —'], ['leatherShoes', 'Кожаные сапоги'], ['silverBoots', 'Серебряные сапоги'], ['leatherBoots', 'Кожаные сапоги (одежда)']],
   cloak: [['', '— нет —'], ['cloak', 'Плащ']],
   mainHand: [['', '— нет —'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч']],
   offHand: [['', '— нет —'], ['ironShield', 'Железный щит']],
@@ -23,7 +23,7 @@ const GATHER_TARGETS = [['wood', 'Древесина'], ['stone', 'Камень'
 const KILL_TARGETS = [['passive', 'Курица'], ['aggressive', 'Волк'], ['bear', 'Медведь']];
 // Предметы, которые можно выдать в награду
 const REWARD_ITEMS = [['', '— нет —'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['sand', 'Песок'],
-  ['leather', 'Кожа'], ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник']];
+  ['leather', 'Кожа'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток'], ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['silverHelmet', 'Серебряный шлем'], ['silverChest', 'Серебряный нагрудник']];
 
 // --- DOM ---
 const paletteEl = document.getElementById('palette');
@@ -69,7 +69,7 @@ try { savedMobs = JSON.parse(localStorage.getItem('mmorpg_savedMobs') || '[]'); 
 function persistSavedMobs() { try { localStorage.setItem('mmorpg_savedMobs', JSON.stringify(savedMobs)); } catch (e) {} }
 function mobLabelFor(m) { return (m && m.name) || (m && SPRITE_INFO[m.sprite] && SPRITE_INFO[m.sprite].name) || 'Моб'; }
 // Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
-const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg') };
+const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg') };
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 function tileSeed(x, y) { return (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; }
@@ -110,7 +110,7 @@ let panX = 0, panY = 0; // экранное смещение начала коо
 const CATEGORIES = [
   { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 31, name: 'Песок (пустыня)', color: '#dcc878' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
   { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' }, { id: 24, name: 'Горы', color: '#7c8088' }, { id: 32, name: 'Скала (пещера)', color: '#4a4f59' }, { id: 27, name: 'Забор', color: '#9a6b3a' } ] },
-  { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
+  { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 35, name: 'Серебро', color: '#c0c0c0' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Природа',  items: [ { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' }, { id: 33, name: 'Верстак', color: '#a9743f' } ] },
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 28, name: 'Фонарь', color: '#f0c24a' }, { id: 29, name: 'Мост', color: '#a9743f' }, { id: 30, name: 'Табличка', color: '#9a6b3a' }, { id: 34, name: 'Админ-сундук', color: '#ff5fb0' } ] },
@@ -123,7 +123,7 @@ const CATEGORIES = [
 let selected = 0; // выбранный id тайла
 let iconCanvases = [];                          // {c: canvas, id} — мини-иконки палитры (перерисовка после загрузки SVG)
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e', 19:'#5fa84e', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#5fa84e', 25:'#5fa84e', 26:'#5fa84e', 27:'#5fa84e', 28:'#5fa84e', 29:'#3a86c8', 30:'#5fa84e', 31:'#dcc878', 33:'#5fa84e', 34:'#5fa84e' };
+const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e', 19:'#5fa84e', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#5fa84e', 25:'#5fa84e', 26:'#5fa84e', 27:'#5fa84e', 28:'#5fa84e', 29:'#3a86c8', 30:'#5fa84e', 31:'#dcc878', 33:'#5fa84e', 34:'#5fa84e', 35:'#5fa84e' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
@@ -551,7 +551,7 @@ function render() {
       else if (t === 14) obj.push({ d: x + y + 0.1, k: 14, x, y });
       else if (t === 16 || t === 17 || t === 18) obj.push({ d: x + y + 0.1, k: t, x, y });
       else if (t === 19) obj.push({ d: x + y + 0.2, k: 19, x, y });
-      else if (t === 24 || t === 25 || t === 26 || t === 27 || t === 28 || t === 30 || t === 33 || t === 34) obj.push({ d: x + y + 0.1, k: t, x, y });
+      else if (t === 24 || t === 25 || t === 26 || t === 27 || t === 28 || t === 30 || t === 33 || t === 34 || t === 35) obj.push({ d: x + y + 0.1, k: t, x, y });
       else if (t === 29) obj.push({ d: x + y - 0.4, k: 29, x, y });
     }
   obj.sort((a, b) => a.d - b.d);
@@ -580,6 +580,7 @@ function render() {
     else if (o.k === 28) objSprite(OBJ_IMG[28], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 33) objSprite(OBJ_IMG[33], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 34) objSprite(OBJ_IMG[34], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
+    else if (o.k === 35) objSprite(OBJ_IMG[35], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);
     else if (o.k === 29) { const im = OBJ_IMG[29]; if (im && im._ready) { const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y), W = 66 * zoom, H = 42 * zoom; ctx.drawImage(im, sx - W / 2, sy - H / 2, W, H); } }
     else if (o.k === 30) {
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
@@ -606,8 +607,9 @@ const escAttr = escHtml;
 const SELL_ITEMS = [
   ['axe', 'Топор'], ['pickaxe', 'Кирка'], ['shovel', 'Лопата'], ['emptyFlask', 'Пустая колба'], ['cookedChicken', 'Жареная курица'],
   ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'],
-  ['leather', 'Кожа'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'],
+  ['leather', 'Кожа'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'],
   ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['leatherMitts', 'Кожаные перчатки'], ['leatherLegs', 'Кожаные поножи'], ['leatherShoes', 'Кожаные сапоги'],
+  ['silverHelmet', 'Серебряный шлем'], ['silverChest', 'Серебряный нагрудник'], ['silverGloves', 'Серебряные перчатки'], ['silverLegs', 'Серебряные поножи'], ['silverBoots', 'Серебряные сапоги'],
   ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['ironGreatsword', 'Двуручный меч'],
 ];
 function npcDefaults() { return { name: 'НПС', link: '', description: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, sells: [], dialogue: '', talkText: '', quests: [] }; }
@@ -755,7 +757,7 @@ function openNpcEditor(x, y, existing) {
 }
 
 // --- Конструктор моба ---
-const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['leather', 'Кожа'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник']];
+const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['leather', 'Кожа'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток']];
 const MOB_SPRITE_OPTS = MOB_TEXTURES.map(t => [t.id, t.name]);
 function mobTexSize(id) { return (MOB_TEX_BY_ID[id] && MOB_TEX_BY_ID[id].size) || 46; }
 function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, size: 0, loot: [] }; }

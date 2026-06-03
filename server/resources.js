@@ -14,6 +14,7 @@ const KINDS = {
   [cfg.TILES.STONE]: { kind: 'stone', tool: 'pickaxe', gives: 'stone', amount: cfg.NODE_AMOUNT.stone, skill: 'mining',      reqLevel: 1, xp: 8 },
   [cfg.TILES.IRON]:  { kind: 'iron',  tool: 'pickaxe', gives: 'ore',   amount: cfg.NODE_AMOUNT.iron,  skill: 'mining',      reqLevel: 1, xp: 15 },
   [cfg.TILES.SAND]:  { kind: 'sand',  tool: 'shovel',  gives: 'sand',  amount: cfg.NODE_AMOUNT.sand,  skill: 'mining',      reqLevel: 1, xp: 8 },
+  [cfg.TILES.SILVER_ORE]: { kind: 'silver', tool: 'pickaxe', gives: 'silverOre', amount: cfg.NODE_AMOUNT.silver, skill: 'mining', reqLevel: 1, xp: 22 },
 };
 
 const nodes = {};   // id -> { id, x, y, kind, tool, gives, amount, maxAmount, alive }

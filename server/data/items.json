@@ -39,6 +39,14 @@
     "leatherTunic": { "name": "Кожаный нагрудник", "type": "armor", "cat": "armor", "slot": "chest",  "armor": 1, "price": 10, "tags": ["броня", "кожа", "верстак"], "desc": "Кожаный доспех на торс. Делается на верстаке." },
     "leatherMitts": { "name": "Кожаные перчатки",  "type": "armor", "cat": "armor", "slot": "gloves", "armor": 1, "price": 6,  "tags": ["броня", "кожа", "верстак"], "desc": "Кожаные перчатки. Делаются на верстаке." },
     "leatherLegs":  { "name": "Кожаные поножи",    "type": "armor", "cat": "armor", "slot": "pants",  "armor": 1, "price": 7,  "tags": ["броня", "кожа", "верстак"], "desc": "Кожаная защита ног. Делается на верстаке." },
-    "leatherShoes": { "name": "Кожаные сапоги",    "type": "armor", "cat": "armor", "slot": "boots",  "armor": 1, "price": 6,  "tags": ["броня", "кожа", "верстак"], "desc": "Кожаные сапоги. Делаются на верстаке." }
+    "leatherShoes": { "name": "Кожаные сапоги",    "type": "armor", "cat": "armor", "slot": "boots",  "armor": 1, "price": 6,  "tags": ["броня", "кожа", "верстак"], "desc": "Кожаные сапоги. Делаются на верстаке." },
+
+    "silverOre":    { "name": "Серебряная руда",   "type": "resource", "cat": "material", "stackable": true, "price": 12, "tags": ["материал", "серебро", "плавка"], "desc": "Добывается киркой из серебряных жил. Плавится в серебряные слитки на плавильне." },
+    "silverIngot":  { "name": "Серебряный слиток", "type": "resource", "cat": "material", "stackable": true, "price": 28, "tags": ["материал", "серебро", "крафт", "кузнечное дело"], "desc": "Выплавляется из серебряной руды. Материал для серебряной брони." },
+    "silverHelmet": { "name": "Серебряный шлем",      "type": "armor", "cat": "armor", "slot": "helmet", "armor": 2, "price": 26, "tags": ["броня", "серебро", "кузнечное дело"], "desc": "Серебряный шлем. Защита 2. Куётся на наковальне." },
+    "silverChest":  { "name": "Серебряный нагрудник", "type": "armor", "cat": "armor", "slot": "chest",  "armor": 2, "price": 40, "tags": ["броня", "серебро", "кузнечное дело"], "desc": "Серебряный нагрудник. Защита 2. Куётся на наковальне." },
+    "silverGloves": { "name": "Серебряные перчатки",  "type": "armor", "cat": "armor", "slot": "gloves", "armor": 2, "price": 22, "tags": ["броня", "серебро", "кузнечное дело"], "desc": "Серебряные перчатки. Защита 2." },
+    "silverLegs":   { "name": "Серебряные поножи",    "type": "armor", "cat": "armor", "slot": "pants",  "armor": 2, "price": 30, "tags": ["броня", "серебро", "кузнечное дело"], "desc": "Серебряные поножи. Защита 2." },
+    "silverBoots":  { "name": "Серебряные сапоги",    "type": "armor", "cat": "armor", "slot": "boots",  "armor": 2, "price": 24, "tags": ["броня", "серебро", "кузнечное дело"], "desc": "Серебряные сапоги. Защита 2." }
   }
 }

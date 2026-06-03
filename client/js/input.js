@@ -108,6 +108,7 @@ function nodeAt(x, y) {
   if (t === 5) return { tool: 'pickaxe', name: 'Камень', need: 'Нужна кирка' };
   if (t === 6) return { tool: 'pickaxe', name: 'Железная руда', need: 'Нужна кирка' };
   if (t === 11) return { tool: 'shovel', name: 'Песочная куча', need: 'Нужна лопата' };
+  if (t === 35) return { tool: 'pickaxe', name: 'Серебряная жила', need: 'Нужна кирка' };
   return null;
 }
 function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }

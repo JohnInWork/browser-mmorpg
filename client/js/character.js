@@ -76,6 +76,9 @@ const ARMOR_TEX = {
   leatherHat: '/assets/leather-helmet.svg', leatherTunic: '/assets/leather-chest.svg',
   leatherMitts: '/assets/leather-gloves.svg', leatherLegs: '/assets/leather-pants.svg',
   leatherShoes: '/assets/leather-boots.svg',
+  silverHelmet: '/assets/silver-helmet.svg', silverChest: '/assets/silver-chest.svg',
+  silverGloves: '/assets/silver-gloves.svg', silverLegs: '/assets/silver-legs.svg',
+  silverBoots: '/assets/silver-boots.svg',
 };
 const ARMOR_ART_CACHE = {};   // id → внутреннее содержимое svg (для композита персонажа)
 
