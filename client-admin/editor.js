@@ -8,11 +8,11 @@ const socket = io({ query: { mode: 'admin' } });
 // --- Данные для конструктора НПС ---
 // Экипируемые предметы по слотам (id → имя). Только те, у кого есть визуал на персонаже.
 const EQUIP_ITEMS = {
-  helmet: [['', '— нет —'], ['helmet', 'Шлем'], ['bearHelmet', 'Медвежий шлем']],
-  chest: [['', '— нет —'], ['chest', 'Нагрудник'], ['merchantRobe', 'Кафтан торговца'], ['forestTunic', 'Лесная туника']],
-  gloves: [['', '— нет —'], ['gloves', 'Перчатки'], ['blueGloves', 'Синие перчатки']],
-  pants: [['', '— нет —'], ['pants', 'Поножи'], ['goldPants', 'Золотые штаны'], ['brownPants', 'Кожаные штаны'], ['redPants', 'Красные штаны']],
-  boots: [['', '— нет —'], ['boots', 'Сапоги'], ['leatherBoots', 'Кожаные сапоги']],
+  helmet: [['', '— нет —'], ['helmet', 'Железный шлем'], ['leatherHat', 'Кожаный капюшон'], ['bearHelmet', 'Медвежий шлем']],
+  chest: [['', '— нет —'], ['chest', 'Железный нагрудник'], ['leatherTunic', 'Кожаный нагрудник'], ['merchantRobe', 'Кафтан торговца'], ['forestTunic', 'Лесная туника']],
+  gloves: [['', '— нет —'], ['leatherMitts', 'Кожаные перчатки'], ['blueGloves', 'Синие перчатки']],
+  pants: [['', '— нет —'], ['leatherLegs', 'Кожаные поножи'], ['goldPants', 'Золотые штаны'], ['brownPants', 'Кожаные штаны'], ['redPants', 'Красные штаны']],
+  boots: [['', '— нет —'], ['leatherShoes', 'Кожаные сапоги'], ['leatherBoots', 'Кожаные сапоги (одежда)']],
   cloak: [['', '— нет —'], ['cloak', 'Плащ']],
   mainHand: [['', '— нет —'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч']],
   offHand: [['', '— нет —'], ['ironShield', 'Железный щит']],
@@ -23,7 +23,7 @@ const GATHER_TARGETS = [['wood', 'Древесина'], ['stone', 'Камень'
 const KILL_TARGETS = [['passive', 'Курица'], ['aggressive', 'Волк'], ['bear', 'Медведь']];
 // Предметы, которые можно выдать в награду
 const REWARD_ITEMS = [['', '— нет —'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['sand', 'Песок'],
-  ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['helmet', 'Шлем'], ['chest', 'Нагрудник']];
+  ['leather', 'Кожа'], ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник']];
 
 // --- DOM ---
 const paletteEl = document.getElementById('palette');
@@ -606,7 +606,8 @@ const escAttr = escHtml;
 const SELL_ITEMS = [
   ['axe', 'Топор'], ['pickaxe', 'Кирка'], ['shovel', 'Лопата'], ['emptyFlask', 'Пустая колба'], ['cookedChicken', 'Жареная курица'],
   ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'],
-  ['helmet', 'Шлем'], ['chest', 'Нагрудник'], ['gloves', 'Перчатки'], ['pants', 'Поножи'], ['boots', 'Сапоги'],
+  ['leather', 'Кожа'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'],
+  ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['leatherMitts', 'Кожаные перчатки'], ['leatherLegs', 'Кожаные поножи'], ['leatherShoes', 'Кожаные сапоги'],
   ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['ironGreatsword', 'Двуручный меч'],
 ];
 function npcDefaults() { return { name: 'НПС', link: '', description: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, sells: [], dialogue: '', talkText: '', quests: [] }; }
@@ -754,7 +755,7 @@ function openNpcEditor(x, y, existing) {
 }
 
 // --- Конструктор моба ---
-const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Шлем'], ['chest', 'Нагрудник'], ['gloves', 'Перчатки'], ['pants', 'Поножи'], ['boots', 'Сапоги']];
+const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['leather', 'Кожа'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник']];
 const MOB_SPRITE_OPTS = MOB_TEXTURES.map(t => [t.id, t.name]);
 function mobTexSize(id) { return (MOB_TEX_BY_ID[id] && MOB_TEX_BY_ID[id].size) || 46; }
 function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, size: 0, loot: [] }; }
