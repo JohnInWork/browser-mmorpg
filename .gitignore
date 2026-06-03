@@ -1,5 +1,4 @@
 node_modules/
-server/maps/world.json
 .DS_Store
 *.log
 .playwright-mcp/
