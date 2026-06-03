@@ -20,7 +20,6 @@ let curLoc = 'surface';        // редактируемая локация
 let MAP = null, FLOOR = null, mapW = 0, mapH = 0;  // ссылки на текущую локацию
 const GROUND = new Set([0, 1, 4, 15]);             // тайлы пола (+ пещера)
 const TELES = new Set([13, 14, 16, 17, 18]);       // порталы-телепорты (вид отвязан от связи)
-const PORTAL_COLORS = { 16: ['#2f6aa8', '#5fa8e0'], 17: ['#6f2f9e', '#a86fd0'], 18: ['#1f9e63', '#5fe0a0'] };
 const isGround = (t) => GROUND.has(t);
 const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
 const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты' };
@@ -38,6 +37,9 @@ const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload 
 const mkImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; onAsset(); }; im.src = src; return im; };
 const MOB_IMG = { passive: mkImg('/assets/chicken.svg'), aggressive: mkImg('/assets/wolf.svg'), bear: mkImg('/assets/bear.svg') };
 const MOB_INFO = { passive: { name: 'Курица', color: '#f1c40f' }, aggressive: { name: 'Волк', color: '#888' }, bear: { name: 'Медведь', color: '#6b4a2b' }, friendly: { name: 'Мирный', color: '#2ecc71' }, trader: { name: 'Торговец', color: '#c79a2a' }, questgiver: { name: 'Лесник', color: '#3f9e63' } };
+// Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
+const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg') };
+function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 let zoom = 1;
 let panX = 0, panY = 0; // экранное смещение начала координат
@@ -171,22 +173,16 @@ function drawIcon(c, id) {
   if (id === 0 || id === 1 || id === 4 || id === 15) return bg(c, TOP[id]);
   // Всё остальное — БЕЗ фона травы (рисуем сам объект на прозрачном; тёмный фон кнопки сам по себе)
   if (id === 2) { c.fillStyle = '#5d626d'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#787e8a'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#9aa0ac'; c.fillRect(7, 4, 16, 4); return; }
-  const im = { 3: treeImgs[0], 7: anvilImg, 9: campfireImg, 10: chestImg }[id];
-  if (im) { if (im._ready) c.drawImage(im, 2, 0, 26, 26); return; }
   if (typeof id === 'string' && id.startsWith('mob:')) {
     const t = id.slice(4), mi = MOB_IMG[t], info = MOB_INFO[t] || { color: '#888' };
     if (mi && mi._ready) return void c.drawImage(mi, 3, 1, 24, 24);
     c.fillStyle = info.color; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill(); c.strokeStyle = '#1a1a24'; c.lineWidth = 1; c.stroke();
     c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
   }
-  if (id === 5 || id === 6) { c.fillStyle = '#828892'; c.beginPath(); c.moveTo(6, 22); c.lineTo(9, 9); c.lineTo(20, 7); c.lineTo(24, 20); c.closePath(); c.fill(); if (id === 6) { c.fillStyle = '#c2641f'; c.beginPath(); c.arc(12, 15, 2, 0, TAU); c.arc(18, 17, 1.8, 0, TAU); c.fill(); } return; }
-  if (id === 11) { c.fillStyle = '#c9ad6a'; c.beginPath(); c.ellipse(15, 20, 11, 4, 0, 0, TAU); c.fill(); c.fillStyle = '#dcc480'; c.beginPath(); c.moveTo(5, 21); c.quadraticCurveTo(15, 7, 25, 21); c.closePath(); c.fill(); return; }
-  if (id === 8) { c.fillStyle = '#7a808a'; c.beginPath(); c.moveTo(8, 23); c.lineTo(9, 6); c.lineTo(21, 6); c.lineTo(22, 23); c.closePath(); c.fill(); c.fillStyle = '#e8632a'; c.beginPath(); c.arc(15, 14, 4, 0, TAU); c.fill(); return; }
-  if (id === 12) { c.fillStyle = '#9aa0aa'; c.beginPath(); c.ellipse(15, 19, 10, 5, 0, 0, TAU); c.fill(); c.fillStyle = '#4a90cf'; c.beginPath(); c.ellipse(15, 19, 5, 2.6, 0, 0, TAU); c.fill(); c.fillStyle = '#8a5a28'; c.fillRect(8, 4, 2, 13); c.fillRect(20, 4, 2, 13); c.fillStyle = '#8a5a28'; c.beginPath(); c.moveTo(6, 6); c.lineTo(15, 1); c.lineTo(24, 6); c.closePath(); c.fill(); return; }
-  if (id === 13 || id === 14) { for (let i = 0; i < 4; i++) { const v = id === 13 ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26); c.fillStyle = `rgb(${v},${v},${v + 8})`; const w = 18 - i * 3; c.fillRect(15 - w / 2, 8 + i * 4, w, 3.5); } return; }
-  if (id === 16 || id === 17 || id === 18) { const col = PORTAL_COLORS[id]; c.fillStyle = col[0]; c.beginPath(); c.ellipse(15, 16, 10, 6, 0, 0, TAU); c.fill(); c.fillStyle = col[1]; c.beginPath(); c.ellipse(15, 16, 6, 3.6, 0, 0, TAU); c.fill(); c.fillStyle = '#15152a'; c.beginPath(); c.ellipse(15, 16, 3, 1.8, 0, 0, TAU); c.fill(); return; }
-  if (id === 19) { c.strokeStyle = '#1a1a24'; c.lineWidth = 2; c.beginPath(); c.moveTo(13, 25); c.lineTo(13, 6); c.stroke(); c.fillStyle = '#e74c3c'; c.beginPath(); c.moveTo(13, 6); c.lineTo(24, 9.5); c.lineTo(13, 13); c.closePath(); c.fill(); return; }
   if (id === -1) { c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
+  // Все объекты — из единых SVG (OBJ_IMG). Перерисовал svg-файл → иконка обновилась везде.
+  const im = OBJ_IMG[id];
+  if (im && im._ready) c.drawImage(im, 2, 0, 26, 26);
 }
 function refreshPaletteIcons() { for (const o of iconCanvases) drawIcon(o.c.getContext('2d'), o.id); }
 
@@ -333,24 +329,7 @@ function drawTree(cx, cy, x, y) {
   const W = 56 * z, H = 56 * z, top = cy + 6 * z - H;
   if (img._ready) ctx.drawImage(img, cx - W / 2, top, W, H);
 }
-function drawRock(cx, cy, ore) {
-  const z = zoom;
-  ctx.fillStyle = '#828892';
-  ctx.beginPath();
-  ctx.moveTo(cx - 20 * z, cy + 2 * z); ctx.lineTo(cx - 14 * z, cy - 14 * z); ctx.lineTo(cx + 2 * z, cy - 20 * z);
-  ctx.lineTo(cx + 18 * z, cy - 11 * z); ctx.lineTo(cx + 21 * z, cy + 3 * z); ctx.lineTo(cx + 4 * z, cy + 10 * z);
-  ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#9aa0aa';
-  ctx.beginPath(); ctx.moveTo(cx - 20 * z, cy + 2 * z); ctx.lineTo(cx - 14 * z, cy - 14 * z); ctx.lineTo(cx + 2 * z, cy - 20 * z); ctx.lineTo(cx - 2 * z, cy - 2 * z); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#646a74';
-  ctx.beginPath(); ctx.moveTo(cx + 2 * z, cy - 20 * z); ctx.lineTo(cx + 18 * z, cy - 11 * z); ctx.lineTo(cx + 21 * z, cy + 3 * z); ctx.lineTo(cx + 4 * z, cy + 10 * z); ctx.lineTo(cx - 2 * z, cy - 2 * z); ctx.closePath(); ctx.fill();
-  if (ore) {
-    ctx.fillStyle = '#c2641f';
-    ctx.beginPath(); ctx.arc(cx - 6 * z, cy - 6 * z, 2.6 * z, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 8 * z, cy - 4 * z, 2.2 * z, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 2 * z, cy - 13 * z, 2 * z, 0, Math.PI * 2); ctx.fill();
-  }
-}
+function drawRock(cx, cy, ore) { objSprite(OBJ_IMG[ore ? 6 : 5], cx, cy, 42); }
 function drawAnvil(cx, cy) {
   const z = zoom, W = 32 * z, H = 32 * z, top = cy - H / 2 - 5 * z;
   if (anvilImg._ready) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
@@ -367,15 +346,7 @@ function drawMobMarker(cx, cy, type) {                 // существо в р
   ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 3 * z; ctx.strokeText(info.name, cx, cy + 16 * z);
   ctx.fillStyle = '#fff'; ctx.fillText(info.name, cx, cy + 16 * z);
 }
-function drawSmelter(cx, cy) {
-  const z = zoom;
-  ctx.fillStyle = '#7a808a';
-  ctx.beginPath(); ctx.moveTo(cx - 18 * z, cy + 2 * z); ctx.lineTo(cx - 16 * z, cy - 30 * z); ctx.lineTo(cx + 16 * z, cy - 30 * z); ctx.lineTo(cx + 18 * z, cy + 2 * z); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#2a2d33'; ctx.beginPath(); ctx.ellipse(cx, cy - 10 * z, 9 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#e8632a'; ctx.beginPath(); ctx.ellipse(cx, cy - 9 * z, 6 * z, 4.5 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#f4b73d'; ctx.beginPath(); ctx.ellipse(cx, cy - 8 * z, 3 * z, 2.4 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#646a74'; ctx.fillRect(cx + 6 * z, cy - 40 * z, 8 * z, 12 * z);
-}
+function drawSmelter(cx, cy) { objSprite(OBJ_IMG[8], cx, cy, 40); }
 function drawCampfire(cx, cy) {
   const z = zoom, W = 34 * z, H = 34 * z, top = cy - H / 2 - 5 * z;
   if (campfireImg._ready) ctx.drawImage(campfireImg, cx - W / 2, top, W, H);
@@ -384,45 +355,11 @@ function drawChest(cx, cy) {
   const z = zoom, W = 32 * z, H = 32 * z, top = cy - H / 2 - 5 * z;
   if (chestImg._ready) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
-function drawSandPile(cx, cy) {
-  const z = zoom;
-  ctx.fillStyle = '#c9ad6a'; ctx.beginPath(); ctx.ellipse(cx, cy + 2 * z, 15 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#dcc480'; ctx.beginPath(); ctx.moveTo(cx - 13 * z, cy + 3 * z); ctx.quadraticCurveTo(cx, cy - 14 * z, cx + 13 * z, cy + 3 * z); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#ecdca0'; ctx.beginPath(); ctx.moveTo(cx - 6 * z, cy - 1 * z); ctx.quadraticCurveTo(cx - 1 * z, cy - 11 * z, cx + 5 * z, cy - 2 * z); ctx.closePath(); ctx.fill();
-}
-function drawWell(cx, cy) {
-  const z = zoom;
-  ctx.fillStyle = '#9aa0aa'; ctx.beginPath(); ctx.ellipse(cx, cy, 13 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#6e747e'; ctx.beginPath(); ctx.ellipse(cx, cy, 9 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#4a90cf'; ctx.beginPath(); ctx.ellipse(cx, cy, 6.5 * z, 3.6 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#7a4f22'; ctx.fillRect(cx - 12 * z, cy - 26 * z, 3 * z, 28 * z); ctx.fillRect(cx + 9 * z, cy - 26 * z, 3 * z, 28 * z);
-  ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill();
-  ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
-}
-function drawSpawn(cx, cy) {                          // маркер точки спавна (только в редакторе) — красный, чтобы не сливался с травой
-  const z = zoom;
-  ctx.fillStyle = 'rgba(231,76,60,.4)'; ctx.beginPath(); ctx.ellipse(cx, cy, 12 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5 * z; ctx.stroke();
-  ctx.strokeStyle = '#1a1a24'; ctx.lineWidth = 2 * z; ctx.beginPath(); ctx.moveTo(cx, cy + 2 * z); ctx.lineTo(cx, cy - 18 * z); ctx.stroke();
-  ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.moveTo(cx, cy - 18 * z); ctx.lineTo(cx + 12 * z, cy - 14 * z); ctx.lineTo(cx, cy - 10 * z); ctx.closePath(); ctx.fill();
-}
-function drawPortal(cx, cy, outer, inner) {
-  const z = zoom;
-  ctx.fillStyle = outer; ctx.beginPath(); ctx.ellipse(cx, cy, 15 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = inner; ctx.beginPath(); ctx.ellipse(cx, cy, 11 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#15152a'; ctx.beginPath(); ctx.ellipse(cx, cy, 7 * z, 4 * z, 0, 0, Math.PI * 2); ctx.fill();
-}
-function drawStairs(cx, cy, down) {
-  const z = zoom, n = 4, sh = 5 * z;
-  ctx.fillStyle = down ? '#23232a' : '#7c828b';
-  ctx.beginPath(); ctx.moveTo(cx, cy - 13 * z); ctx.lineTo(cx + 16 * z, cy); ctx.lineTo(cx, cy + 13 * z); ctx.lineTo(cx - 16 * z, cy); ctx.closePath(); ctx.fill();
-  const top = cy - (n * sh) / 2;
-  for (let i = 0; i < n; i++) {
-    const w = (24 - i * 4) * z, y = top + i * sh, v = down ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26);
-    ctx.fillStyle = `rgb(${v},${v},${v + 8})`;
-    ctx.beginPath(); ctx.moveTo(cx, y - sh * 0.5); ctx.lineTo(cx + w / 2, y); ctx.lineTo(cx, y + sh * 0.5); ctx.lineTo(cx - w / 2, y); ctx.closePath(); ctx.fill();
-  }
-}
+function drawSandPile(cx, cy) { objSprite(OBJ_IMG[11], cx, cy, 36); }
+function drawWell(cx, cy) { objSprite(OBJ_IMG[12], cx, cy, 42); }
+function drawSpawn(cx, cy) { objSprite(OBJ_IMG[19], cx, cy, 38); }       // точка спавна (маркер из SVG)
+function drawPortal(cx, cy, tile) { objSprite(OBJ_IMG[tile], cx, cy, 36); }
+function drawStairs(cx, cy, down) { objSprite(OBJ_IMG[down ? 13 : 14], cx, cy, 34); }
 
 function render() {
   ctx.fillStyle = '#10131a';
@@ -474,7 +411,7 @@ function render() {
     else if (o.k === 13 || o.k === 14 || o.k === 16 || o.k === 17 || o.k === 18) {
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
       if (o.k === 13 || o.k === 14) drawStairs(sx, sy, o.k === 13);
-      else { const c = PORTAL_COLORS[o.k]; drawPortal(sx, sy, c[0], c[1]); }
+      else drawPortal(sx, sy, o.k);
       const te = teleAt(o.x, o.y);                 // показать ID связи на портале
       if (te) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(12 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(te.sid, sx, sy - 16 * zoom); }
     }

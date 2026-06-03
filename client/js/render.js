@@ -35,6 +35,19 @@ let campfireReady = false;
 campfireImg.onload = () => { campfireReady = true; };
 campfireImg.src = '/assets/campfire.svg';
 
+// Прочие объекты — тоже из SVG-файлов (единый источник: правишь файл — меняется в игре, редакторе и палитре)
+const loadImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; };
+const smelterImg = loadImg('/assets/smelter.svg');
+const wellImg = loadImg('/assets/well.svg');
+const sandpileImg = loadImg('/assets/sandpile.svg');
+const stairsDownImg = loadImg('/assets/stairs-down.svg');
+const stairsUpImg = loadImg('/assets/stairs-up.svg');
+const rockImg = loadImg('/assets/rock.svg');
+const oreImg = loadImg('/assets/ore.svg');
+const portalImg = { 16: loadImg('/assets/portal-blue.svg'), 17: loadImg('/assets/portal-purple.svg'), 18: loadImg('/assets/portal-green.svg') };
+// Нарисовать спрайт объекта по центру клетки (как сундук/наковальня)
+function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * SCALE, H = sz * SCALE; S.ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * SCALE, W, H); } }
+
 // Деревья: 2 текстуры одного дерева (для разнообразия), вариант стабилен по координатам клетки
 const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
@@ -165,38 +178,13 @@ function drawTree(cx, cy, depleted, x, y) {
 // Камень / железная руда (фасеточный валун в cel-стиле). ore — вкрапления руды; depleted — обломки.
 function drawRock(cx, cy, ore, depleted) {
   const ctx = S.ctx, z = SCALE;
-  if (depleted) {
+  if (depleted) {                                   // обломки после добычи
     ctx.fillStyle = '#7a808a';
     ctx.beginPath(); ctx.ellipse(cx - 3 * z, cy - 2 * z, 5 * z, 3 * z, 0, 0, Math.PI * 2); ctx.fill();
     ctx.beginPath(); ctx.ellipse(cx + 5 * z, cy, 4 * z, 2.5 * z, 0, 0, Math.PI * 2); ctx.fill();
     return;
   }
-  // силуэт валуна
-  ctx.fillStyle = '#828892';
-  ctx.beginPath();
-  ctx.moveTo(cx - 20 * z, cy + 2 * z); ctx.lineTo(cx - 14 * z, cy - 14 * z); ctx.lineTo(cx + 2 * z, cy - 20 * z);
-  ctx.lineTo(cx + 18 * z, cy - 11 * z); ctx.lineTo(cx + 21 * z, cy + 3 * z); ctx.lineTo(cx + 4 * z, cy + 10 * z);
-  ctx.closePath(); ctx.fill();
-  // светлая грань (лево-верх)
-  ctx.fillStyle = '#9aa0aa';
-  ctx.beginPath();
-  ctx.moveTo(cx - 20 * z, cy + 2 * z); ctx.lineTo(cx - 14 * z, cy - 14 * z); ctx.lineTo(cx + 2 * z, cy - 20 * z); ctx.lineTo(cx - 2 * z, cy - 2 * z);
-  ctx.closePath(); ctx.fill();
-  // тёмная грань (право)
-  ctx.fillStyle = '#646a74';
-  ctx.beginPath();
-  ctx.moveTo(cx + 2 * z, cy - 20 * z); ctx.lineTo(cx + 18 * z, cy - 11 * z); ctx.lineTo(cx + 21 * z, cy + 3 * z); ctx.lineTo(cx + 4 * z, cy + 10 * z); ctx.lineTo(cx - 2 * z, cy - 2 * z);
-  ctx.closePath(); ctx.fill();
-  // руда — оранжевые вкрапления
-  if (ore) {
-    ctx.fillStyle = '#c2641f';
-    ctx.beginPath(); ctx.arc(cx - 6 * z, cy - 6 * z, 2.6 * z, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 8 * z, cy - 4 * z, 2.2 * z, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 2 * z, cy - 13 * z, 2 * z, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = '#e6953f';
-    ctx.beginPath(); ctx.arc(cx - 5 * z, cy - 7 * z, 1.1 * z, 0, Math.PI * 2); ctx.fill();
-    ctx.beginPath(); ctx.arc(cx + 9 * z, cy - 5 * z, 1 * z, 0, Math.PI * 2); ctx.fill();
-  }
+  objSprite(ore ? oreImg : rockImg, cx, cy, 42);
 }
 
 // Наковальня — спрайт из SVG пользователя (client/assets/anvil.svg)
@@ -206,28 +194,8 @@ function drawAnvil(cx, cy) {
   if (anvilReady) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
 }
 
-// Плавильня — каменная печь со светящимся жерлом
-function drawSmelter(cx, cy) {
-  const ctx = S.ctx, z = SCALE;
-  // корпус печи
-  ctx.fillStyle = '#7a808a';
-  ctx.beginPath();
-  ctx.moveTo(cx - 18 * z, cy + 2 * z); ctx.lineTo(cx - 16 * z, cy - 30 * z); ctx.lineTo(cx + 16 * z, cy - 30 * z);
-  ctx.lineTo(cx + 18 * z, cy + 2 * z); ctx.closePath(); ctx.fill();
-  // тёмная правая грань
-  ctx.fillStyle = '#5e646e';
-  ctx.beginPath(); ctx.moveTo(cx, cy + 2 * z); ctx.lineTo(cx, cy - 30 * z); ctx.lineTo(cx + 16 * z, cy - 30 * z); ctx.lineTo(cx + 18 * z, cy + 2 * z); ctx.closePath(); ctx.fill();
-  // жерло с огнём
-  ctx.fillStyle = '#2a2d33';
-  ctx.beginPath(); ctx.ellipse(cx, cy - 10 * z, 9 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#e8632a';
-  ctx.beginPath(); ctx.ellipse(cx, cy - 9 * z, 6 * z, 4.5 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#f4b73d';
-  ctx.beginPath(); ctx.ellipse(cx, cy - 8 * z, 3 * z, 2.4 * z, 0, 0, Math.PI * 2); ctx.fill();
-  // труба
-  ctx.fillStyle = '#646a74';
-  ctx.fillRect(cx + 6 * z, cy - 40 * z, 8 * z, 12 * z);
-}
+// Плавильня — спрайт из SVG (client/assets/smelter.svg)
+function drawSmelter(cx, cy) { objSprite(smelterImg, cx, cy, 40); }
 
 // Костёр — спрайт из SVG пользователя (client/assets/campfire.svg)
 function drawCampfire(cx, cy) {
@@ -243,61 +211,18 @@ function drawChest(cx, cy) {
   if (chestReady) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 
-// Песочная куча (плоские cel-тона). depleted — выкопана (плоское пятно).
+// Песочная куча — спрайт из SVG; depleted — выкопана (плоское пятно)
 function drawSandPile(cx, cy, depleted) {
   const ctx = S.ctx, z = SCALE;
   if (depleted) { ctx.fillStyle = '#cdb274'; ctx.beginPath(); ctx.ellipse(cx, cy, 10 * z, 4.5 * z, 0, 0, Math.PI * 2); ctx.fill(); return; }
-  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 15 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#c9ad6a'; ctx.beginPath(); ctx.ellipse(cx, cy + 2 * z, 15 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();           // основание
-  ctx.fillStyle = '#dcc480'; ctx.beginPath(); ctx.moveTo(cx - 13 * z, cy + 3 * z); ctx.quadraticCurveTo(cx, cy - 14 * z, cx + 13 * z, cy + 3 * z); ctx.closePath(); ctx.fill(); // горка
-  ctx.fillStyle = '#ecdca0'; ctx.beginPath(); ctx.moveTo(cx - 6 * z, cy - 1 * z); ctx.quadraticCurveTo(cx - 1 * z, cy - 11 * z, cx + 5 * z, cy - 2 * z); ctx.closePath(); ctx.fill(); // светлый бок
-  ctx.fillStyle = '#b89a52'; for (let i = 0; i < 5; i++) { const a = i * 1.3; ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 8 * z, cy + 1 * z + Math.sin(a) * 3 * z, 0.9 * z, 0, Math.PI * 2); ctx.fill(); } // крупинки
+  objSprite(sandpileImg, cx, cy, 36);
 }
-
-// Колодец (каменное кольцо + вода + крыша на столбах), плоские цвета
-function drawWell(cx, cy) {
-  const ctx = S.ctx, z = SCALE;
-  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 15 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#9aa0aa'; ctx.beginPath(); ctx.ellipse(cx, cy, 13 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();        // каменное кольцо
-  ctx.fillStyle = '#6e747e'; ctx.beginPath(); ctx.ellipse(cx, cy, 9 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#3a6aa0'; ctx.beginPath(); ctx.ellipse(cx, cy, 6.5 * z, 3.6 * z, 0, 0, Math.PI * 2); ctx.fill();     // вода
-  ctx.fillStyle = '#4a90cf'; ctx.beginPath(); ctx.ellipse(cx, cy - 0.5 * z, 4.5 * z, 2.4 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#7a4f22'; ctx.fillRect(cx - 12 * z, cy - 26 * z, 3 * z, 28 * z); ctx.fillRect(cx + 9 * z, cy - 26 * z, 3 * z, 28 * z); // столбы
-  ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill(); // крыша
-  ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
-}
-
-// Магический портал-телепорт (плоские cel-цвета, без градиентов). Лежит на полу как «пад».
-function drawPortal(cx, cy, outer, inner) {
-  const ctx = S.ctx, z = SCALE;
-  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 16 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = outer; ctx.beginPath(); ctx.ellipse(cx, cy, 15 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = inner; ctx.beginPath(); ctx.ellipse(cx, cy, 11 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#15152a'; ctx.beginPath(); ctx.ellipse(cx, cy, 7 * z, 4 * z, 0, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = inner;                                 // искорки
-  for (let i = 0; i < 4; i++) { const a = i * 1.7 + (cx % 3); ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 9 * z, cy + Math.sin(a) * 4.5 * z, 0.9 * z, 0, Math.PI * 2); ctx.fill(); }
-}
-const PORTAL_COLORS = { 16: ['#2f6aa8', '#5fa8e0'], 17: ['#6f2f9e', '#a86fd0'], 18: ['#1f9e63', '#5fe0a0'] };
-
-// Лестница-телепорт. down=true — вниз (тёмный проём), иначе вверх (светлый камень).
-function drawStairs(cx, cy, down) {
-  const ctx = S.ctx, z = SCALE, n = 4, sh = 5 * z;
-  // рамка проёма
-  ctx.fillStyle = down ? '#23232a' : '#7c828b';
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - 13 * z); ctx.lineTo(cx + 16 * z, cy); ctx.lineTo(cx, cy + 13 * z); ctx.lineTo(cx - 16 * z, cy);
-  ctx.closePath(); ctx.fill();
-  // ступени (сужающиеся ромбы): вниз — темнеют, вверх — светлеют
-  const top = cy - (n * sh) / 2;
-  for (let i = 0; i < n; i++) {
-    const w = (24 - i * 4) * z, y = top + i * sh;
-    const v = down ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26);
-    ctx.fillStyle = `rgb(${v},${v},${v + 8})`;
-    ctx.beginPath();
-    ctx.moveTo(cx, y - sh * 0.5); ctx.lineTo(cx + w / 2, y); ctx.lineTo(cx, y + sh * 0.5); ctx.lineTo(cx - w / 2, y);
-    ctx.closePath(); ctx.fill();
-  }
-}
+// Колодец — спрайт из SVG (client/assets/well.svg)
+function drawWell(cx, cy) { objSprite(wellImg, cx, cy, 42); }
+// Портал-телепорт — спрайт из SVG по цвету тайла (16/17/18)
+function drawPortal(cx, cy, tile) { objSprite(portalImg[tile], cx, cy, 36); }
+// Лестница-телепорт — спрайт из SVG (вниз/вверх)
+function drawStairs(cx, cy, down) { objSprite(down ? stairsDownImg : stairsUpImg, cx, cy, 34); }
 
 function drawHpBar(cx, topY, hp, maxHp) {
   const ctx = S.ctx, z = SCALE, w = 28 * z, h = 5 * z;
@@ -512,7 +437,7 @@ export function render() {
     else if (o.kind === 'well') drawWell(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'stairsDown') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true);
     else if (o.kind === 'stairsUp') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), false);
-    else if (o.kind === 'portal') { const c = PORTAL_COLORS[o.t]; drawPortal(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), c[0], c[1]); }
+    else if (o.kind === 'portal') drawPortal(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.t);
     else if (o.kind === 'mob') {
       if (o.m.type === 'trader') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), TRADER_APP, TRADER_EQUIP, null);
       else if (o.m.type === 'questgiver') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), FORESTER_APP, FORESTER_EQUIP, npcMarker(o.m));
