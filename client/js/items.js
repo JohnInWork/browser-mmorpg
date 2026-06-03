@@ -117,8 +117,15 @@ const ICONS = {
     <ellipse cx="12" cy="17" rx="3.4" ry="2" fill="#4a90cf"/></svg>`,
 };
 
-// Иконка предмета. Для брони — её вид на персонаже (один источник графики), иначе нарисованная иконка.
+// Файл-текстуры предметов: один SVG = иконка ВЕЗДЕ (инвентарь/продажа/покупка/вики/крафт/чат).
+// ДОБАВИТЬ = положить svg в client/assets/ и дописать строку. Правка этого файла меняет иконку повсюду.
+export const ITEM_TEX = {
+  pickaxe: '/assets/pickaxe.svg',
+};
+
+// Иконка предмета. Приоритет: загруженная текстура-файл → вид брони на персонаже → нарисованная иконка.
 export function itemIcon(id) {
+  if (ITEM_TEX[id]) return `<svg class="item-ic" viewBox="0 0 512 512" width="30" height="30"><image href="${ITEM_TEX[id]}" width="512" height="512"/></svg>`;
   const it = ITEMS[id];
   if (it && it.type === 'armor' && it.slot) { const w = wornIconSVG(id, it.slot); if (w) return w; }
   return ICONS[id] || '';
