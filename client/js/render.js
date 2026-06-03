@@ -221,6 +221,42 @@ function drawCube(cx, cy, h, c) {
   fillDiamond(cx, cy - h, c.top, 'rgba(0,0,0,.15)');
 }
 
+// Гора: процедурный 3D-изо массив (скальное тело + гранёный пик + снег), вид варьируется по клетке.
+// Используется как «стены»-границы — образует хаотичный красивый хребет.
+function drawMountain(cx, cy, x, y) {
+  const ctx = S.ctx, z = SCALE, hw = TW / 2, hh = TH / 2;
+  const rnd = mulberry32(tileSeed(x, y) ^ 0x51a3);
+  const bodyH = (14 + rnd() * 22) * z;          // высота скального тела
+  const peakH = (20 + rnd() * 30) * z;          // высота пика над телом
+  const adx = (rnd() - 0.5) * TW * 0.34;        // смещение вершины (наклон горы)
+  const ty = cy - bodyH;                         // верх тела = основание пика
+  // 1) Скальное тело (две боковые грани куба)
+  ctx.fillStyle = '#646b75';
+  ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx + hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#474d56';
+  ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx - hw, cy); ctx.lineTo(cx - hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  // 2) Пик (4-гранная пирамида от верхнего ромба к вершине); задние грани — раньше
+  const ax = cx + adx, ay = ty - peakH;
+  const T = [cx, ty - hh], R = [cx + hw, ty], B = [cx, ty + hh], L = [cx - hw, ty];
+  const face = (p1, p2, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.lineTo(ax, ay); ctx.closePath(); ctx.fill(); };
+  face(L, T, '#565c66');   // задняя-левая
+  face(R, T, '#727983');   // задняя-правая
+  face(L, B, '#5c636d');   // передняя-левая (тень)
+  face(R, B, '#8a929c');   // передняя-правая (свет)
+  // ребро от вершины вниз (лёгкий объём)
+  ctx.strokeStyle = 'rgba(30,33,40,.35)'; ctx.lineWidth = 1.2 * z;
+  ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(B[0], B[1]); ctx.stroke();
+  // 3) Снежная шапка (часто)
+  if (rnd() < 0.62) {
+    const sh = peakH * (0.28 + rnd() * 0.14);
+    const lx = ax - (sh * 0.8), rx = ax + (sh * 0.8);
+    ctx.fillStyle = '#cdd6e0';
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay + sh); ctx.lineTo(lx, ay + sh * 0.7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#eef3f8';
+    ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay + sh); ctx.lineTo(rx, ay + sh * 0.7); ctx.closePath(); ctx.fill();
+  }
+}
+
 function drawTree(cx, cy, depleted, x, y) {
   const ctx = S.ctx, z = SCALE;
   if (depleted) {
@@ -542,7 +578,7 @@ export function render() {
     else if (o.kind === 'stairsDown') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true);
     else if (o.kind === 'stairsUp') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), false);
     else if (o.kind === 'portal') drawPortal(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.t);
-    else if (o.kind === 'mountain') objSprite(mountainImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 64);
+    else if (o.kind === 'mountain') drawMountain(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
     else if (o.kind === 'bush') objSprite(bushImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 34);
     else if (o.kind === 'boulder') objSprite(boulderImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 38);
     else if (o.kind === 'fence') objSprite(fenceImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42);

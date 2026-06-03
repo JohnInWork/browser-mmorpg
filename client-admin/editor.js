@@ -64,6 +64,25 @@ const MOB_INFO = { passive: { name: 'Курица', color: '#f1c40f' }, aggressi
 const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg') };
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
+function tileSeed(x, y) { return (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; }
+function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+// Гора в редакторе — тот же процедурный 3D-изо вид, что и в игре
+function drawMountainEd(cx, cy, x, y) {
+  const z = zoom, hw = (TW / 2) * z, hh = (TH / 2) * z;
+  const rnd = mulberry32(tileSeed(x, y) ^ 0x51a3);
+  const bodyH = (14 + rnd() * 22) * z, peakH = (20 + rnd() * 30) * z, adx = (rnd() - 0.5) * hw * 0.68;
+  const ty = cy - bodyH;
+  ctx.fillStyle = '#646b75'; ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx + hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#474d56'; ctx.beginPath(); ctx.moveTo(cx, cy + hh); ctx.lineTo(cx - hw, cy); ctx.lineTo(cx - hw, ty); ctx.lineTo(cx, ty + hh); ctx.closePath(); ctx.fill();
+  const ax = cx + adx, ay = ty - peakH, T = [cx, ty - hh], R = [cx + hw, ty], B = [cx, ty + hh], L = [cx - hw, ty];
+  const face = (p1, p2, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(p1[0], p1[1]); ctx.lineTo(p2[0], p2[1]); ctx.lineTo(ax, ay); ctx.closePath(); ctx.fill(); };
+  face(L, T, '#565c66'); face(R, T, '#727983'); face(L, B, '#5c636d'); face(R, B, '#8a929c');
+  if (rnd() < 0.62) {
+    const sh = peakH * (0.28 + rnd() * 0.14);
+    ctx.fillStyle = '#cdd6e0'; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay + sh); ctx.lineTo(ax - sh * 0.8, ay + sh * 0.7); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#eef3f8'; ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax, ay + sh); ctx.lineTo(ax + sh * 0.8, ay + sh * 0.7); ctx.closePath(); ctx.fill();
+  }
+}
 let zoom = 1;
 let panX = 0, panY = 0; // экранное смещение начала координат
 
@@ -496,7 +515,7 @@ function render() {
       if (te) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(12 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(te.sid, sx, sy - 16 * zoom); }
     }
     else if (o.k === 19) drawSpawn(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
-    else if (o.k === 24) objSprite(OBJ_IMG[24], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 64);
+    else if (o.k === 24) drawMountainEd(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.x, o.y);
     else if (o.k === 25) objSprite(OBJ_IMG[25], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 34);
     else if (o.k === 26) objSprite(OBJ_IMG[26], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 38);
     else if (o.k === 27) objSprite(OBJ_IMG[27], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);
