@@ -167,26 +167,26 @@ function bg(c, color) { c.fillStyle = color; c.beginPath(); c.moveTo(15, 4); c.l
 function drawIcon(c, id) {
   c.clearRect(0, 0, 30, 30);
   const TAU = Math.PI * 2;
-  if (id === 0 || id === 1 || id === 4 || id === 15) return bg(c, TOP[id]);     // пол
+  // Тайлы пола — это и есть цвет-иконка (оставляем заливку ромбом)
+  if (id === 0 || id === 1 || id === 4 || id === 15) return bg(c, TOP[id]);
+  // Всё остальное — БЕЗ фона травы (рисуем сам объект на прозрачном; тёмный фон кнопки сам по себе)
   if (id === 2) { c.fillStyle = '#5d626d'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#787e8a'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#9aa0ac'; c.fillRect(7, 4, 16, 4); return; }
   const im = { 3: treeImgs[0], 7: anvilImg, 9: campfireImg, 10: chestImg }[id];
-  if (im) { bg(c, '#5fa84e'); if (im._ready) c.drawImage(im, 2, 0, 26, 26); return; }
+  if (im) { if (im._ready) c.drawImage(im, 2, 0, 26, 26); return; }
   if (typeof id === 'string' && id.startsWith('mob:')) {
     const t = id.slice(4), mi = MOB_IMG[t], info = MOB_INFO[t] || { color: '#888' };
-    bg(c, '#5fa84e');
     if (mi && mi._ready) return void c.drawImage(mi, 3, 1, 24, 24);
     c.fillStyle = info.color; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill(); c.strokeStyle = '#1a1a24'; c.lineWidth = 1; c.stroke();
     c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
   }
-  if (id === 5 || id === 6) { bg(c, '#5fa84e'); c.fillStyle = '#828892'; c.beginPath(); c.moveTo(6, 22); c.lineTo(9, 9); c.lineTo(20, 7); c.lineTo(24, 20); c.closePath(); c.fill(); if (id === 6) { c.fillStyle = '#c2641f'; c.beginPath(); c.arc(12, 15, 2, 0, TAU); c.arc(18, 17, 1.8, 0, TAU); c.fill(); } return; }
-  if (id === 11) { bg(c, '#5fa84e'); c.fillStyle = '#c9ad6a'; c.beginPath(); c.ellipse(15, 20, 11, 4, 0, 0, TAU); c.fill(); c.fillStyle = '#dcc480'; c.beginPath(); c.moveTo(5, 21); c.quadraticCurveTo(15, 7, 25, 21); c.closePath(); c.fill(); return; }
-  if (id === 8) { bg(c, '#5fa84e'); c.fillStyle = '#7a808a'; c.beginPath(); c.moveTo(8, 23); c.lineTo(9, 6); c.lineTo(21, 6); c.lineTo(22, 23); c.closePath(); c.fill(); c.fillStyle = '#e8632a'; c.beginPath(); c.arc(15, 14, 4, 0, TAU); c.fill(); return; }
-  if (id === 12) { bg(c, '#5fa84e'); c.fillStyle = '#9aa0aa'; c.beginPath(); c.ellipse(15, 19, 10, 5, 0, 0, TAU); c.fill(); c.fillStyle = '#4a90cf'; c.beginPath(); c.ellipse(15, 19, 5, 2.6, 0, 0, TAU); c.fill(); c.fillStyle = '#8a5a28'; c.fillRect(8, 4, 2, 13); c.fillRect(20, 4, 2, 13); c.fillStyle = '#8a5a28'; c.beginPath(); c.moveTo(6, 6); c.lineTo(15, 1); c.lineTo(24, 6); c.closePath(); c.fill(); return; }
-  if (id === 13 || id === 14) { bg(c, '#5fa84e'); for (let i = 0; i < 4; i++) { const v = id === 13 ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26); c.fillStyle = `rgb(${v},${v},${v + 8})`; const w = 18 - i * 3; c.fillRect(15 - w / 2, 8 + i * 4, w, 3.5); } return; }
-  if (id === 16 || id === 17 || id === 18) { bg(c, '#5fa84e'); const col = PORTAL_COLORS[id]; c.fillStyle = col[0]; c.beginPath(); c.ellipse(15, 16, 10, 6, 0, 0, TAU); c.fill(); c.fillStyle = col[1]; c.beginPath(); c.ellipse(15, 16, 6, 3.6, 0, 0, TAU); c.fill(); c.fillStyle = '#15152a'; c.beginPath(); c.ellipse(15, 16, 3, 1.8, 0, 0, TAU); c.fill(); return; }
-  if (id === 19) { bg(c, '#5fa84e'); c.strokeStyle = '#1a1a24'; c.lineWidth = 2; c.beginPath(); c.moveTo(13, 25); c.lineTo(13, 6); c.stroke(); c.fillStyle = '#e74c3c'; c.beginPath(); c.moveTo(13, 6); c.lineTo(24, 9.5); c.lineTo(13, 13); c.closePath(); c.fill(); return; }
-  if (id === -1) { c.fillStyle = '#2a2a30'; bg(c, '#2a2a30'); c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
-  bg(c, '#888');
+  if (id === 5 || id === 6) { c.fillStyle = '#828892'; c.beginPath(); c.moveTo(6, 22); c.lineTo(9, 9); c.lineTo(20, 7); c.lineTo(24, 20); c.closePath(); c.fill(); if (id === 6) { c.fillStyle = '#c2641f'; c.beginPath(); c.arc(12, 15, 2, 0, TAU); c.arc(18, 17, 1.8, 0, TAU); c.fill(); } return; }
+  if (id === 11) { c.fillStyle = '#c9ad6a'; c.beginPath(); c.ellipse(15, 20, 11, 4, 0, 0, TAU); c.fill(); c.fillStyle = '#dcc480'; c.beginPath(); c.moveTo(5, 21); c.quadraticCurveTo(15, 7, 25, 21); c.closePath(); c.fill(); return; }
+  if (id === 8) { c.fillStyle = '#7a808a'; c.beginPath(); c.moveTo(8, 23); c.lineTo(9, 6); c.lineTo(21, 6); c.lineTo(22, 23); c.closePath(); c.fill(); c.fillStyle = '#e8632a'; c.beginPath(); c.arc(15, 14, 4, 0, TAU); c.fill(); return; }
+  if (id === 12) { c.fillStyle = '#9aa0aa'; c.beginPath(); c.ellipse(15, 19, 10, 5, 0, 0, TAU); c.fill(); c.fillStyle = '#4a90cf'; c.beginPath(); c.ellipse(15, 19, 5, 2.6, 0, 0, TAU); c.fill(); c.fillStyle = '#8a5a28'; c.fillRect(8, 4, 2, 13); c.fillRect(20, 4, 2, 13); c.fillStyle = '#8a5a28'; c.beginPath(); c.moveTo(6, 6); c.lineTo(15, 1); c.lineTo(24, 6); c.closePath(); c.fill(); return; }
+  if (id === 13 || id === 14) { for (let i = 0; i < 4; i++) { const v = id === 13 ? Math.max(20, 70 - i * 16) : Math.min(220, 120 + i * 26); c.fillStyle = `rgb(${v},${v},${v + 8})`; const w = 18 - i * 3; c.fillRect(15 - w / 2, 8 + i * 4, w, 3.5); } return; }
+  if (id === 16 || id === 17 || id === 18) { const col = PORTAL_COLORS[id]; c.fillStyle = col[0]; c.beginPath(); c.ellipse(15, 16, 10, 6, 0, 0, TAU); c.fill(); c.fillStyle = col[1]; c.beginPath(); c.ellipse(15, 16, 6, 3.6, 0, 0, TAU); c.fill(); c.fillStyle = '#15152a'; c.beginPath(); c.ellipse(15, 16, 3, 1.8, 0, 0, TAU); c.fill(); return; }
+  if (id === 19) { c.strokeStyle = '#1a1a24'; c.lineWidth = 2; c.beginPath(); c.moveTo(13, 25); c.lineTo(13, 6); c.stroke(); c.fillStyle = '#e74c3c'; c.beginPath(); c.moveTo(13, 6); c.lineTo(24, 9.5); c.lineTo(13, 13); c.closePath(); c.fill(); return; }
+  if (id === -1) { c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
 }
 function refreshPaletteIcons() { for (const o of iconCanvases) drawIcon(o.c.getContext('2d'), o.id); }
 
