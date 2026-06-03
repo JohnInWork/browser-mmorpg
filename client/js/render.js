@@ -141,6 +141,21 @@ function drawDirt(cx, cy, x, y) {
   for (let i = 0; i < 2; i++) { const px = cx + (rnd() - 0.5) * TW * 0.5, py = cy + (rnd() - 0.5) * TH * 0.5; ctx.beginPath(); ctx.arc(px, py, 1.2 * z, 0, Math.PI * 2); ctx.fill(); }
 }
 
+// Песок (пустыня): тёплый ромб + лёгкая рябь дюн (плоские штрихи, cel)
+function drawSand(cx, cy, x, y) {
+  const ctx = S.ctx, z = SCALE;
+  const rnd = mulberry32(tileSeed(x, y));
+  fillDiamond(cx, cy, '#dcc878', 'rgba(0,0,0,.10)');
+  ctx.strokeStyle = 'rgba(180,150,90,.45)'; ctx.lineWidth = 1.3 * z; ctx.lineCap = 'round';
+  for (let i = 0; i < 2; i++) {
+    const px = cx + (rnd() - 0.5) * TW * 0.4, py = cy + (rnd() - 0.5) * TH * 0.5;
+    ctx.beginPath(); ctx.moveTo(px - 7 * z, py); ctx.quadraticCurveTo(px, py - 2 * z, px + 7 * z, py); ctx.stroke();
+  }
+  ctx.fillStyle = 'rgba(245,228,170,.5)';
+  const fx = cx + (rnd() - 0.5) * TW * 0.4, fy = cy + (rnd() - 0.5) * TH * 0.4;
+  ctx.beginPath(); ctx.arc(fx, fy, 1.1 * z, 0, Math.PI * 2); ctx.fill();
+}
+
 // Брусчатка: плоский ромб + сетка швов (камни мостовой)
 function drawCobble(cx, cy, x, y) {
   const ctx = S.ctx, z = SCALE;
@@ -470,6 +485,7 @@ export function render() {
       else if (f === 21) drawGrass(cx, cy, x, y, '#3f7e3a');        // тёмная трава (поляна)
       else if (f === 22) drawFlowers(cx, cy, x, y);                 // цветочная поляна
       else if (f === 23) drawCobble(cx, cy, x, y);                  // брусчатка
+      else if (f === 31) drawSand(cx, cy, x, y);                    // песок (пустыня)
       else drawGrass(cx, cy, x, y);                                 // трава (0) по умолчанию
     }
   }

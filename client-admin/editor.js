@@ -39,7 +39,7 @@ const ctx = canvas.getContext('2d');
 let LOCS = {};                 // { name: {map,floor,teleports,W,H} }
 let curLoc = 'surface';        // редактируемая локация
 let MAP = null, FLOOR = null, mapW = 0, mapH = 0;  // ссылки на текущую локацию
-const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23]); // тайлы пола (+ пещера, земля, тёмн.трава, цветы, брусчатка)
+const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23, 31]); // тайлы пола (+ пещера, земля, тёмн.трава, цветы, брусчатка, песок)
 const TELES = new Set([13, 14, 16, 17, 18]);       // порталы-телепорты (вид отвязан от связи)
 const isGround = (t) => GROUND.has(t);
 const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
@@ -69,7 +69,7 @@ let panX = 0, panY = 0; // экранное смещение начала коо
 
 // --- Палитра тайлов по категориям ---
 const CATEGORIES = [
-  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
+  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 31, name: 'Песок (пустыня)', color: '#dcc878' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
   { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' }, { id: 24, name: 'Горы', color: '#7c8088' }, { id: 27, name: 'Забор', color: '#9a6b3a' } ] },
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Природа',  items: [ { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
@@ -84,7 +84,7 @@ const CATEGORIES = [
 let selected = 0; // выбранный id тайла
 let iconCanvases = [];                          // {c: canvas, id} — мини-иконки палитры (перерисовка после загрузки SVG)
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e', 19:'#5fa84e', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#5fa84e', 25:'#5fa84e', 26:'#5fa84e', 27:'#5fa84e', 28:'#5fa84e', 29:'#3a86c8', 30:'#5fa84e' };
+const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e', 19:'#5fa84e', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#5fa84e', 25:'#5fa84e', 26:'#5fa84e', 27:'#5fa84e', 28:'#5fa84e', 29:'#3a86c8', 30:'#5fa84e', 31:'#dcc878' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.

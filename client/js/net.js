@@ -4,7 +4,7 @@ import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, 
 import { itemName } from './items.js';
 
 // Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
-const GROUND_TILES = new Set([0, 1, 4, 15, 20, 21, 22, 23]);
+const GROUND_TILES = new Set([0, 1, 4, 15, 20, 21, 22, 23, 31]);
 function floorFrom(map) { return map.map(row => row.map(t => (GROUND_TILES.has(t) ? t : 0))); }
 
 export function setupNet() {
