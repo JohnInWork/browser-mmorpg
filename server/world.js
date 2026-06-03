@@ -109,7 +109,7 @@ function teleportTarget(loc, x, y) {
   if (!here) return null;
   for (const ln in locations)
     for (const e of (locations[ln].teleports || []))
-      if (e.sid === here.sid && !(ln === loc && e.x === x && e.y === y)) return { location: ln, x: e.x, y: e.y };
+      if (String(e.sid) === String(here.sid) && !(ln === loc && e.x === x && e.y === y)) return { location: ln, x: e.x, y: e.y };
   return null;
 }
 
@@ -147,7 +147,10 @@ function setLocations(payload) {
     const map = L.map, floor = Array.isArray(L.floor) ? L.floor : deriveFloor(map);
     if (!isValidMap(map) || !isValidMap(floor)) return false;
     if (map.length !== floor.length || map[0].length !== floor[0].length) return false;
-    const teleports = Array.isArray(L.teleports) ? L.teleports.filter(e => Number.isInteger(e.x) && Number.isInteger(e.y) && Number.isInteger(e.sid)) : [];
+    const teleports = Array.isArray(L.teleports)
+      ? L.teleports.filter(e => Number.isInteger(e.x) && Number.isInteger(e.y) && e.sid != null && String(e.sid).trim() !== '')
+          .map(e => ({ x: e.x, y: e.y, sid: String(e.sid).trim() }))   // связь — строка-метка (число или слово)
+      : [];
     next[k] = { map, floor, teleports, H: map.length, W: map[0].length };
   }
   if (!next[START]) return false;                 // Поверхность обязательна (стартовая локация)

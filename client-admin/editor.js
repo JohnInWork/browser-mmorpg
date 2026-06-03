@@ -166,9 +166,9 @@ function buildPalette() {
         selected = t.id;
         document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
         el.classList.add('active');
-        if (TELES.has(t.id)) {                       // выбрал портал — сразу спросить ID связи
-          const v = prompt(`ID связи для «${t.name}» (одинаковый у пары порталов):`, sidInput.value || '1');
-          if (v !== null) sidInput.value = Math.max(1, parseInt(v, 10) || 1);
+        if (TELES.has(t.id)) {                       // выбрал портал — сразу спросить связь (число ИЛИ слово)
+          const v = prompt(`Связь для «${t.name}» (одинаковая метка у пары порталов, напр. 1 или «Лес»):`, sidInput.value || '1');
+          if (v !== null && v.trim()) sidInput.value = v.trim();
         }
       });
       group.appendChild(el);
@@ -247,9 +247,9 @@ function paintAt(e) {
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
     FLOOR[t.y][t.x] = selected;
     if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
-  } else if (TELES.has(selected)) {                  // лестница-телепорт: кладём + записываем ID связи (sid)
+  } else if (TELES.has(selected)) {                  // портал: кладём + записываем связь (метка-строка)
     MAP[t.y][t.x] = selected;
-    setTele(t.x, t.y, Math.max(1, parseInt(sidInput.value, 10) || 1));
+    setTele(t.x, t.y, (sidInput.value || '').trim() || '1');
   } else {                                           // прочий объект: поверх пола; если была лестница — убрать связь
     MAP[t.y][t.x] = selected; removeTele(t.x, t.y);
   }
