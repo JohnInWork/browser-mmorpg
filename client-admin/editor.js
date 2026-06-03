@@ -209,7 +209,7 @@ function drawRock(cx, cy, ore) {
   }
 }
 function drawAnvil(cx, cy) {
-  const z = zoom, W = 32 * z, H = 32 * z, top = cy + 6 * z - H;
+  const z = zoom, W = 32 * z, H = 32 * z, top = cy - H / 2;
   if (anvilImg._ready) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
 }
 function drawSmelter(cx, cy) {
@@ -222,11 +222,11 @@ function drawSmelter(cx, cy) {
   ctx.fillStyle = '#646a74'; ctx.fillRect(cx + 6 * z, cy - 40 * z, 8 * z, 12 * z);
 }
 function drawCampfire(cx, cy) {
-  const z = zoom, W = 34 * z, H = 34 * z, top = cy + 6 * z - H;
+  const z = zoom, W = 34 * z, H = 34 * z, top = cy - H / 2;
   if (campfireImg._ready) ctx.drawImage(campfireImg, cx - W / 2, top, W, H);
 }
 function drawChest(cx, cy) {
-  const z = zoom, W = 32 * z, H = 32 * z, top = cy + 6 * z - H;
+  const z = zoom, W = 32 * z, H = 32 * z, top = cy - H / 2;
   if (chestImg._ready) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 

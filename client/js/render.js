@@ -202,7 +202,7 @@ function drawRock(cx, cy, ore, depleted) {
 // Наковальня — спрайт из SVG пользователя (client/assets/anvil.svg)
 function drawAnvil(cx, cy) {
   const ctx = S.ctx, z = SCALE;
-  const W = 32 * z, H = 32 * z, top = cy + 6 * z - H;
+  const W = 32 * z, H = 32 * z, top = cy - H / 2;   // по центру клетки
   if (anvilReady) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
 }
 
@@ -232,14 +232,14 @@ function drawSmelter(cx, cy) {
 // Костёр — спрайт из SVG пользователя (client/assets/campfire.svg)
 function drawCampfire(cx, cy) {
   const ctx = S.ctx, z = SCALE;
-  const W = 34 * z, H = 34 * z, top = cy + 6 * z - H;
+  const W = 34 * z, H = 34 * z, top = cy - H / 2;   // по центру клетки
   if (campfireReady) ctx.drawImage(campfireImg, cx - W / 2, top, W, H);
 }
 
 // Сундук-хранилище — спрайт из SVG пользователя (client/assets/chest.svg)
 function drawChest(cx, cy) {
   const ctx = S.ctx, z = SCALE;
-  const W = 32 * z, H = 32 * z, top = cy + 6 * z - H;   // «стоит» на клетке
+  const W = 32 * z, H = 32 * z, top = cy - H / 2;   // по центру клетки
   if (chestReady) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 
