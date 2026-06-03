@@ -3,6 +3,7 @@
 import { BODY_SVG } from './body-data.js';
 import { ARMOR_PARTS } from './armor-data.js';
 import { HAIR_BY_ID, HAIR_COLORS } from './hair-data.js';
+import { HELD_OVERLAY_IDS } from './held-items.js';   // предметы, рисуемые слоем поверх (не в композите)
 export { HAIR_STYLES } from './hair-data.js';   // для экрана создания и редактора НПС
 
 function shade(hex, p){ hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; const t=p<0?0:255,a=Math.abs(p)/100; r=Math.round((t-r)*a+r);g=Math.round((t-g)*a+g);b=Math.round((t-b)*a+b); return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
@@ -92,15 +93,16 @@ export function buildCharacterSVG(app, equipment, opts = {}){
     const art = ITEM_ART[id] || ARMOR_PARTS[slot]; // визуал конкретного предмета, иначе стандартный по слоту
     if (art) armor += art;
   }
-  // Руки: двуручное оружие перекрывает всё; иначе щит (левая) + инструмент или оружие (правая)
+  // Руки: двуручное оружие перекрывает всё; иначе щит (левая) + инструмент или оружие (правая).
+  // Предметы из реестра held-items рисуются ОТДЕЛЬНЫМ слоем в render (overlay), здесь их пропускаем.
   const mh = equipment && equipment.mainHand, oh = equipment && equipment.offHand;
   let hands = '';
-  if (mh && TWO_HANDED.has(mh) && WEAPON_ART[mh]) {
+  if (mh && TWO_HANDED.has(mh) && WEAPON_ART[mh] && !HELD_OVERLAY_IDS.has(mh)) {
     hands = WEAPON_ART[mh];
   } else {
-    if (oh && SHIELD_ART[oh]) hands += SHIELD_ART[oh];
-    if (opts.held && HELD_TOOLS[opts.held]) hands += HELD_TOOLS[opts.held];
-    else if (mh && WEAPON_ART[mh]) hands += WEAPON_ART[mh];
+    if (oh && SHIELD_ART[oh] && !HELD_OVERLAY_IDS.has(oh)) hands += SHIELD_ART[oh];
+    if (opts.held && HELD_TOOLS[opts.held] && !HELD_OVERLAY_IDS.has(opts.held)) hands += HELD_TOOLS[opts.held];
+    else if (mh && WEAPON_ART[mh] && !HELD_OVERLAY_IDS.has(mh)) hands += WEAPON_ART[mh];
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${back}${body}${hair}${armor}${hands}</svg>`;
 }

@@ -4,6 +4,7 @@ import { SCALE, TW, TH, WALL_H, TREE_H, TILE } from './config.js';
 import { isoX, isoY } from './iso.js';
 import { getCharImage, CHAR_RATIO, CHAR_FEET, DEFAULT_APPEARANCE } from './character.js';
 import { MOB_TEX_BY_ID } from './mob-textures.js';
+import { HELD_ITEMS, HAND_POS } from './held-items.js';
 
 // Спрайты мобов из SVG-файлов (client/assets/) — рисуются картинками
 const wolfImg = new Image();
@@ -57,6 +58,23 @@ const signImg = loadImg('/assets/sign.svg');
 // Текстуры мобов из реестра (для НОВЫХ существ — общий рисовальщик; курица/волк/медведь рисуются по-своему)
 const mobTexImg = {};
 for (const id in MOB_TEX_BY_ID) mobTexImg[id] = loadImg(MOB_TEX_BY_ID[id].svg);
+// Картинки предметов «в руке» (оружие/инструменты) — слой поверх персонажа
+const heldImg = {};
+for (const id in HELD_ITEMS) heldImg[id] = loadImg(HELD_ITEMS[id].src);
+// Нарисовать предмет в руке поверх персонажа (не обрезается рамкой)
+function drawHeldItem(cx, topY, W, H, id) {
+  const def = HELD_ITEMS[id], img = heldImg[id];
+  if (!def || !img || !img._ready) return;
+  const hp = HAND_POS[def.hand] || HAND_POS.right;
+  const hx = cx - W / 2 + (hp.x / 512) * W, hy = topY + (hp.y / 512) * H;
+  const dw = (def.size / 512) * W, ar = (img.naturalHeight || 512) / (img.naturalWidth || 512), dh = dw * ar;
+  const ctx = S.ctx;
+  ctx.save();
+  ctx.translate(hx, hy);
+  if (def.rot) ctx.rotate(def.rot * Math.PI / 180);
+  ctx.drawImage(img, -(def.grip.x || 0.5) * dw, -(def.grip.y || 0.5) * dh, dw, dh);
+  ctx.restore();
+}
 // Нарисовать спрайт объекта по центру клетки (как сундук/наковальня)
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * SCALE, H = sz * SCALE; S.ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * SCALE, W, H); } }
 
@@ -476,6 +494,7 @@ function drawPlayer(cx, cy, p, isMe) {
   const H = CHAR_H, W = H * CHAR_RATIO;
   const topY = cy + 5 - H * CHAR_FEET;
   if (ent.ready) ctx.drawImage(ent.img, cx - W / 2, topY, W, H);
+  if (p.held && HELD_ITEMS[p.held]) drawHeldItem(cx, topY, W, H, p.held);   // предмет в руке (слой поверх)
 
   // HP-бар над головой (только при ранении). Имя НЕ рисуем — показывается по наведению сверху экрана.
   if (p.hp != null && p.maxHp && p.hp < p.maxHp) drawHpBar(cx, topY - 4, p.hp, p.maxHp);
