@@ -3,13 +3,17 @@ import { S } from './state.js';
 import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests } from './ui.js';
 import { itemName } from './items.js';
 
+// Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
+const GROUND_TILES = new Set([0, 1, 4]);
+function floorFrom(map) { return map.map(row => row.map(t => (GROUND_TILES.has(t) ? t : 0))); }
+
 export function setupNet() {
   const socket = S.socket;
   const onlineEl = document.getElementById('online');
 
   socket.on('init', (data) => {
     if (data.items) Object.assign(S.items, data.items);   // единый источник данных предметов (наполняем, НЕ переприсваиваем — ссылку держит items.js)
-    S.MAP = data.map; S.mapW = data.width; S.mapH = data.height; S.myId = data.you.id;
+    S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height; S.myId = data.you.id;
     for (const id in data.players) {
       const p = data.players[id];
       S.players[id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null };
@@ -32,7 +36,7 @@ export function setupNet() {
   });
 
   socket.on('mapUpdated', (data) => {
-    S.MAP = data.map; S.mapW = data.width; S.mapH = data.height;
+    S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
     S.depletedNodes.clear(); // деревья пересозданы редактором
   });
 

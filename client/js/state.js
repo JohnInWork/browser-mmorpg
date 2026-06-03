@@ -31,6 +31,7 @@ export const S = {
   activeTool: null,       // id предмета «в руке» (с сервера: из слота или из рюкзака)
   equipment: { helmet:null, chest:null, gloves:null, pants:null, boots:null, cloak:null, mainHand:null, offHand:null },
   armor: 0,
+  FLOOR: [],              // слой пола (трава/тропа/вода) под объектами; MAP — «эффективный» тайл
   bank: { slots: [], level: 0, maxLevel: 5, nextCost: null }, // личное хранилище (сундук)
   depletedNodes: new Set(), // "x,y" истощённых ресурсов (пень/обломки)
   items: {},              // данные предметов (с сервера — единый источник; см. items.js для иконок/цветов)

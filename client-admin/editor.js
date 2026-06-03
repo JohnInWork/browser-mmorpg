@@ -16,7 +16,11 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
 // --- Карта ---
-let MAP = null, mapW = 0, mapH = 0;
+let MAP = null, FLOOR = null, mapW = 0, mapH = 0;
+const GROUND = new Set([0, 1, 4]);                 // тайлы пола
+const isGround = (t) => GROUND.has(t);
+const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
+function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
 
 // --- Изометрия / камера ---
 const TW = 64, TH = 32, WALL_H = 34, TREE_H = 46;
@@ -37,6 +41,7 @@ const CATEGORIES = [
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' } ] },
+  { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
 ];
 let selected = 0; // выбранный id тайла
 
@@ -66,6 +71,7 @@ socket.on('adminAuthResult', ({ ok }) => {
 
 socket.on('mapData', (data) => {
   MAP = data.map.map(row => row.slice()); // копия
+  FLOOR = (data.floor || deriveFloor(data.map)).map(row => row.slice());
   mapW = data.width; mapH = data.height;
 });
 socket.on('saveResult', ({ ok }) => {
@@ -95,7 +101,7 @@ function buildPalette() {
   });
 }
 
-saveBtn.addEventListener('click', () => { socket.emit('saveMap', MAP); });
+saveBtn.addEventListener('click', () => { socket.emit('saveMap', { map: MAP, floor: FLOOR }); });
 
 // --- Геометрия изометрии ---
 function isoX(x, y) { return (x - y) * (TW / 2) * zoom; }
@@ -156,7 +162,14 @@ function paintAt(e) {
   const r = canvas.getBoundingClientRect();
   const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
-  if (MAP[t.y][t.x] !== selected) MAP[t.y][t.x] = selected;
+  if (selected === ERASE) {                          // ластик: убрать объект, оставить пол
+    MAP[t.y][t.x] = FLOOR[t.y][t.x];
+  } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
+    FLOOR[t.y][t.x] = selected;
+    if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
+  } else {                                           // объект: кладём ПОВЕРХ, пол под ним не трогаем
+    MAP[t.y][t.x] = selected;
+  }
 }
 
 // --- Рендер ---
@@ -250,12 +263,11 @@ function render() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!MAP) { requestAnimationFrame(render); return; }
 
-  // Пол
+  // Пол (из слоя FLOOR — под объектами сохраняется земля)
   for (let y = 0; y < mapH; y++) {
     for (let x = 0; x < mapW; x++) {
-      const t = MAP[y][x];
-      if (t === 2) continue;
-      fillDiamond(panX + isoX(x, y), panY + isoY(x, y), TOP[t], 'rgba(0,0,0,.18)');
+      if (MAP[y][x] === 2) continue;                  // под стеной пол не рисуем
+      fillDiamond(panX + isoX(x, y), panY + isoY(x, y), TOP[FLOOR[y][x]] || TOP[0], 'rgba(0,0,0,.18)');
     }
   }
   // Подсветка тайла под курсором

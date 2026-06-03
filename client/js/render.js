@@ -424,15 +424,15 @@ export function render() {
   S.originY = S.canvas.height / 2 - camY;
   const ox = S.originX, oy = S.originY;
 
-  // 1) ПОЛ
+  // 1) ПОЛ (из слоя FLOOR — он лежит под объектами; тропа/вода сохраняются под сундуком и т.п.)
   for (let y = 0; y < S.mapH; y++) {
     for (let x = 0; x < S.mapW; x++) {
-      const t = S.MAP[y][x];
-      if (t === 2) continue;
+      if (S.MAP[y][x] === 2) continue;                              // под стеной пол не рисуем (куб закрывает)
+      const f = (S.FLOOR[y] && S.FLOOR[y][x]) || 0;                 // тайл пола
       const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
-      if (t === 1) drawWater(cx, cy, x, y);
-      else if (TILE[t].top === '#5fa84e') drawGrass(cx, cy, x, y); // трава (под деревом/камнем/станциями тоже)
-      else fillDiamond(cx, cy, TILE[t].top, 'rgba(0,0,0,.18)');     // тропа и пр.
+      if (f === 1) drawWater(cx, cy, x, y);
+      else if (f === 4) fillDiamond(cx, cy, TILE[4].top, 'rgba(0,0,0,.18)'); // тропа
+      else drawGrass(cx, cy, x, y);                                 // трава (0) по умолчанию
     }
   }
 
