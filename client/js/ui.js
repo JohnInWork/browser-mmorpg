@@ -1,6 +1,7 @@
 // UI/HUD-помощники: панель игрока, панель цели боя, инвентарь/хотбар/экипировка, подсказки, цифры урона.
 import { S } from './state.js';
 import { itemIcon, itemName, itemPrice, SLOTS, SLOT_NAMES, ITEMS, CAT_NAMES, RARITY, itemRarity, rarityColor, UI_SVG } from './items.js';
+import { SKILL_TEX } from './textures.js';
 
 // Фон-плитка по редкости (с альфой) для слота с предметом; '' — сброс к стандартному фону
 // Фон слота: НЕПРОЗРАЧНЫЙ — тёмная база слота + лёгкий оттенок редкости (чтобы фон не «просвечивал»).
@@ -495,8 +496,7 @@ const SKILL_ICONS = {
   cooking: `<svg viewBox="0 0 24 24" width="26" height="26"><rect x="5" y="11" width="12" height="7" rx="2" fill="#5e6670" stroke="#3a3f47" stroke-width="1"/><rect x="16" y="13" width="5" height="2.4" rx="1.2" fill="#5e6670"/><path d="M8 9 q1 -2 0 -3 M11 9 q1 -2 0 -3 M14 9 q1 -2 0 -3" stroke="#cfd6dd" stroke-width="1.2" fill="none" stroke-linecap="round"/></svg>`,
   combat: `<svg viewBox="0 0 24 24" width="26" height="26"><path d="M12 2 L14 5 L13 14 L11 14 L10 5 Z" fill="#cfd6dd" stroke="#9aa4b0" stroke-width="0.8"/><rect x="8" y="13.6" width="8" height="2.2" rx="1" fill="#5e6670"/><rect x="11" y="15.8" width="2" height="5" rx="1" fill="#8a5a28"/></svg>`,
 };
-// Иконки навыков из файлов-текстур (как у предметов) — один источник, обновляется правкой svg.
-const SKILL_TEX = { woodcutting: '/assets/axe.svg', mining: '/assets/pickaxe.svg', smithing: '/assets/anvil.svg', cooking: '/assets/campfire.svg' };
+// Иконки навыков — из единого манифеста client/js/textures.js (те же файлы, что у инструментов).
 function skillIcon(key) {
   if (SKILL_TEX[key]) return `<svg viewBox="0 0 512 512" width="26" height="26"><image href="${SKILL_TEX[key]}" width="512" height="512"/></svg>`;
   return SKILL_ICONS[key] || '';

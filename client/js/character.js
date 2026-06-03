@@ -4,6 +4,7 @@ import { BODY_SVG } from './body-data.js';
 import { ARMOR_PARTS } from './armor-data.js';
 import { HAIR_BY_ID, HAIR_COLORS } from './hair-data.js';
 import { HELD_OVERLAY_IDS } from './held-items.js';   // предметы, рисуемые слоем поверх (не в композите)
+import { ARMOR_TEX } from './textures.js';   // пути к svg брони — единый источник
 export { HAIR_STYLES } from './hair-data.js';   // для экрана создания и редактора НПС
 
 function shade(hex, p){ hex=hex.replace('#',''); if(hex.length===3) hex=hex.split('').map(c=>c+c).join(''); const n=parseInt(hex,16); let r=(n>>16)&255,g=(n>>8)&255,b=n&255; const t=p<0?0:255,a=Math.abs(p)/100; r=Math.round((t-r)*a+r);g=Math.round((t-g)*a+g);b=Math.round((t-b)*a+b); return '#'+((1<<24)+(r<<16)+(g<<8)+b).toString(16).slice(1); }
@@ -68,18 +69,9 @@ const SLOT_VIEWBOX = {
   cloak:  '112 170 290 345',
 };
 
-// Текстуры брони из SVG-файлов (нарисованы на теле 512). Один файл = вид на персонаже + иконка.
+// Текстуры брони — из единого манифеста client/js/textures.js (один источник для всей игры).
 // На теле: подгружаем содержимое файла (fetch) и встраиваем (внешние ссылки в <img>-SVG не грузятся).
 // В инвентаре: <image href> в живом DOM грузится напрямую.
-const ARMOR_TEX = {
-  helmet: '/assets/iron-helmet.svg', chest: '/assets/iron-chest.svg',
-  leatherHat: '/assets/leather-helmet.svg', leatherTunic: '/assets/leather-chest.svg',
-  leatherMitts: '/assets/leather-gloves.svg', leatherLegs: '/assets/leather-pants.svg',
-  leatherShoes: '/assets/leather-boots.svg',
-  silverHelmet: '/assets/silver-helmet.svg', silverChest: '/assets/silver-chest.svg',
-  silverGloves: '/assets/silver-gloves.svg', silverLegs: '/assets/silver-legs.svg',
-  silverBoots: '/assets/silver-boots.svg',
-};
 const ARMOR_ART_CACHE = {};   // id → внутреннее содержимое svg (для композита персонажа)
 
 // SVG-иконка надеваемой вещи = её вид на персонаже, обрезанный по слоту (или null, если арта нет).

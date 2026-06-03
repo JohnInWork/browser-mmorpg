@@ -3,6 +3,7 @@
 // Здесь только то, что нужно для интерфейса и чего нет на сервере (SVG-иконки, цвета редкости).
 import { wornIconSVG } from './character.js';
 import { S } from './state.js';
+import { ITEM_TEX } from './textures.js';
 
 // Живая ссылка на серверные данные: S.items наполняется в net.js (Object.assign), НЕ переприсваивается.
 export const ITEMS = S.items;
@@ -117,16 +118,8 @@ const ICONS = {
     <ellipse cx="12" cy="17" rx="3.4" ry="2" fill="#4a90cf"/></svg>`,
 };
 
-// Файл-текстуры предметов: один SVG = иконка ВЕЗДЕ (инвентарь/продажа/покупка/вики/крафт/чат).
-// ДОБАВИТЬ = положить svg в client/assets/ и дописать строку. Правка этого файла меняет иконку повсюду.
-export const ITEM_TEX = {
-  pickaxe: '/assets/pickaxe.svg',
-  axe: '/assets/axe.svg',
-  shovel: '/assets/shovel.svg',
-  leather: '/assets/leather.svg',
-  silverOre: '/assets/silver-ore.svg',
-  silverIngot: '/assets/silver-ingot.svg',
-};
+// Файл-текстуры предметов берутся из единого манифеста client/js/textures.js (один источник для всей игры).
+export { ITEM_TEX };
 
 // Иконка предмета. Приоритет: загруженная текстура-файл → вид брони на персонаже → нарисованная иконка.
 export function itemIcon(id) {
