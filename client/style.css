@@ -232,6 +232,8 @@ body {
 .g-ing { display: inline-flex; align-items: center; gap: 5px; background: rgba(20,20,28,.7); border: 1px solid #3a3a4e; border-radius: 8px; padding: 3px 8px 3px 4px; font-size: 12.5px; }
 .g-ing svg { width: 22px; height: 22px; }
 .g-rar { font-size: 11px; font-weight: 700; color: #1a1a24; padding: 1px 8px; border-radius: 6px; vertical-align: middle; }
+.g-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 8px; }
+.g-tag { font-size: 11px; color: #aeb6c4; background: rgba(20,20,28,.7); border: 1px solid #3a3a4e; border-radius: 6px; padding: 2px 8px; }
 
 /* Маленькие UI-иконки вместо эмодзи */
 .uic { width: 14px; height: 14px; vertical-align: -2px; display: inline-block; }

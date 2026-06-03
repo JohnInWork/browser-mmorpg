@@ -1,36 +1,36 @@
 {
-  "_note": "Контент: предметы. type — поведение (tool/armor/resource/ingredient/food). cat — категория для внутриигрового гайда. price — цена продажи. heal — лечение (food). stackable — стакается ли.",
+  "_note": "Контент: предметы. type — поведение (tool/armor/resource/ingredient/food). cat — категория для внутриигрового гайда. tags — метки для гайда/поиска. price — цена продажи. heal — лечение (food). stackable — стакается ли.",
   "items": {
-    "axe":     { "name": "Топор",      "type": "tool",     "cat": "tool",     "gathers": "tree", "price": 8 },
-    "pickaxe": { "name": "Кирка",      "type": "tool",     "cat": "tool",     "gathers": "rock", "price": 8 },
+    "axe":     { "name": "Топор",      "type": "tool",     "cat": "tool",     "gathers": "tree", "price": 8, "tags": ["инструмент", "рубка", "дерево"] },
+    "pickaxe": { "name": "Кирка",      "type": "tool",     "cat": "tool",     "gathers": "rock", "price": 8, "tags": ["инструмент", "добыча", "камень"] },
 
-    "wood":    { "name": "Древесина",      "type": "resource", "cat": "material", "stackable": true, "price": 1 },
-    "stone":   { "name": "Камень",         "type": "resource", "cat": "material", "stackable": true, "price": 2 },
-    "ore":     { "name": "Железная руда",  "type": "resource", "cat": "material", "stackable": true, "price": 6 },
-    "ingot":   { "name": "Железный слиток", "type": "resource", "cat": "material", "stackable": true, "price": 14 },
+    "wood":    { "name": "Древесина",      "type": "resource", "cat": "material", "stackable": true, "price": 1,  "tags": ["материал", "крафт", "дерево"] },
+    "stone":   { "name": "Камень",         "type": "resource", "cat": "material", "stackable": true, "price": 2,  "tags": ["материал", "крафт", "строительство"] },
+    "ore":     { "name": "Железная руда",  "type": "resource", "cat": "material", "stackable": true, "price": 6,  "tags": ["материал", "металл", "плавка"] },
+    "ingot":   { "name": "Железный слиток", "type": "resource", "cat": "material", "stackable": true, "price": 14, "tags": ["материал", "металл", "крафт", "кузнечное дело"] },
 
-    "rawChicken":    { "name": "Сырая курица",   "type": "ingredient", "cat": "ingredient", "stackable": true, "price": 3 },
-    "cookedChicken": { "name": "Жареная курица", "type": "food",       "cat": "food",       "stackable": true, "price": 6, "heal": 10 },
+    "rawChicken":    { "name": "Сырая курица",   "type": "ingredient", "cat": "ingredient", "stackable": true, "price": 3, "tags": ["ингредиент", "мясо", "готовка"] },
+    "cookedChicken": { "name": "Жареная курица", "type": "food",       "cat": "food",       "stackable": true, "price": 6, "heal": 10, "tags": ["еда", "лечение", "готовка"] },
 
-    "helmet": { "name": "Шлем",       "type": "armor", "cat": "armor", "slot": "helmet", "armor": 1, "price": 6 },
-    "chest":  { "name": "Нагрудник",  "type": "armor", "cat": "armor", "slot": "chest",  "armor": 1, "price": 8 },
-    "gloves": { "name": "Перчатки",   "type": "armor", "cat": "armor", "slot": "gloves", "armor": 1, "price": 5 },
-    "pants":  { "name": "Поножи",     "type": "armor", "cat": "armor", "slot": "pants",  "armor": 1, "price": 6 },
-    "boots":  { "name": "Сапоги",     "type": "armor", "cat": "armor", "slot": "boots",  "armor": 1, "price": 5 },
-    "cloak":  { "name": "Плащ",       "type": "armor", "cat": "armor", "slot": "cloak",  "armor": 1, "price": 5 },
+    "helmet": { "name": "Шлем",       "type": "armor", "cat": "armor", "slot": "helmet", "armor": 1, "price": 6, "tags": ["броня", "металл", "кузнечное дело"] },
+    "chest":  { "name": "Нагрудник",  "type": "armor", "cat": "armor", "slot": "chest",  "armor": 1, "price": 8, "tags": ["броня", "металл", "кузнечное дело"] },
+    "gloves": { "name": "Перчатки",   "type": "armor", "cat": "armor", "slot": "gloves", "armor": 1, "price": 5, "tags": ["броня", "металл", "кузнечное дело"] },
+    "pants":  { "name": "Поножи",     "type": "armor", "cat": "armor", "slot": "pants",  "armor": 1, "price": 6, "tags": ["броня", "металл", "кузнечное дело"] },
+    "boots":  { "name": "Сапоги",     "type": "armor", "cat": "armor", "slot": "boots",  "armor": 1, "price": 5, "tags": ["броня", "металл", "кузнечное дело"] },
+    "cloak":  { "name": "Плащ",       "type": "armor", "cat": "armor", "slot": "cloak",  "armor": 1, "price": 5, "tags": ["броня", "ткань"] },
 
-    "bearHelmet": { "name": "Медвежий шлем", "type": "armor", "cat": "armor", "rarity": "legendary", "slot": "helmet", "armor": 2, "onHitHeal": 1, "price": 120, "desc": "Легендарный шлем. Падает с медведя. Восполняет 1 HP за каждый удар, нанесённый врагу. Очень дорогой." },
+    "bearHelmet": { "name": "Медвежий шлем", "type": "armor", "cat": "armor", "rarity": "legendary", "slot": "helmet", "armor": 2, "onHitHeal": 1, "price": 120, "tags": ["броня", "легендарное", "трофей"], "desc": "Легендарный шлем. Падает с медведя. Восполняет 1 HP за каждый удар, нанесённый врагу. Очень дорогой." },
 
-    "ironSword":      { "name": "Железный меч",  "type": "weapon", "cat": "weapon", "slot": "mainHand", "hands": 1, "damage": 1, "price": 20, "desc": "Одноручный меч в правую руку. +1 к урону." },
-    "ironGreatsword": { "name": "Двуручный меч", "type": "weapon", "cat": "weapon", "slot": "mainHand", "hands": 2, "damage": 2, "price": 35, "desc": "Тяжёлый двуручный меч — занимает обе руки. +2 к урону." },
-    "ironShield":     { "name": "Железный щит",  "type": "shield", "cat": "armor",  "slot": "offHand", "armor": 1, "price": 18, "desc": "Щит в левую руку. +1 к защите." },
+    "ironSword":      { "name": "Железный меч",  "type": "weapon", "cat": "weapon", "slot": "mainHand", "hands": 1, "damage": 1, "price": 20, "tags": ["оружие", "металл", "кузнечное дело"], "desc": "Одноручный меч в правую руку. +1 к урону." },
+    "ironGreatsword": { "name": "Двуручный меч", "type": "weapon", "cat": "weapon", "slot": "mainHand", "hands": 2, "damage": 2, "price": 35, "tags": ["оружие", "двуручное", "металл", "кузнечное дело"], "desc": "Тяжёлый двуручный меч — занимает обе руки. +2 к урону." },
+    "ironShield":     { "name": "Железный щит",  "type": "shield", "cat": "armor",  "slot": "offHand", "armor": 1, "price": 18, "tags": ["щит", "металл", "кузнечное дело"], "desc": "Щит в левую руку. +1 к защите." },
 
-    "merchantRobe": { "name": "Кафтан торговца", "type": "armor", "cat": "clothing", "slot": "chest",  "price": 6, "desc": "Нарядный кафтан. Без брони — это одежда." },
-    "forestTunic":  { "name": "Лесная туника",   "type": "armor", "cat": "clothing", "slot": "chest",  "price": 6, "desc": "Зелёная туника лесника. Одежда без защиты." },
-    "goldPants":    { "name": "Золотые штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "desc": "Яркие штаны. Одежда без защиты." },
-    "brownPants":   { "name": "Кожаные штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "desc": "Простые штаны. Одежда без защиты." },
-    "redPants":     { "name": "Красные штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "desc": "Красные штаны. Одежда без защиты." },
-    "blueGloves":   { "name": "Синие перчатки",  "type": "armor", "cat": "clothing", "slot": "gloves", "price": 4, "desc": "Синие перчатки. Одежда без защиты." },
-    "leatherBoots": { "name": "Кожаные сапоги",  "type": "armor", "cat": "clothing", "slot": "boots",  "price": 5, "desc": "Кожаные сапоги. Одежда без защиты." }
+    "merchantRobe": { "name": "Кафтан торговца", "type": "armor", "cat": "clothing", "slot": "chest",  "price": 6, "tags": ["одежда", "ткань", "торговля"], "desc": "Нарядный кафтан. Без брони — это одежда." },
+    "forestTunic":  { "name": "Лесная туника",   "type": "armor", "cat": "clothing", "slot": "chest",  "price": 6, "tags": ["одежда", "ткань"], "desc": "Зелёная туника лесника. Одежда без защиты." },
+    "goldPants":    { "name": "Золотые штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "tags": ["одежда", "ткань"], "desc": "Яркие штаны. Одежда без защиты." },
+    "brownPants":   { "name": "Кожаные штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "tags": ["одежда", "кожа"], "desc": "Простые штаны. Одежда без защиты." },
+    "redPants":     { "name": "Красные штаны",   "type": "armor", "cat": "clothing", "slot": "pants",  "price": 5, "tags": ["одежда", "ткань"], "desc": "Красные штаны. Одежда без защиты." },
+    "blueGloves":   { "name": "Синие перчатки",  "type": "armor", "cat": "clothing", "slot": "gloves", "price": 4, "tags": ["одежда", "ткань"], "desc": "Синие перчатки. Одежда без защиты." },
+    "leatherBoots": { "name": "Кожаные сапоги",  "type": "armor", "cat": "clothing", "slot": "boots",  "price": 5, "tags": ["одежда", "кожа"], "desc": "Кожаные сапоги. Одежда без защиты." }
   }
 }

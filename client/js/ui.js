@@ -281,16 +281,21 @@ function guideItemHtml(id) {
   const rc = itemRarity(id);
   const badge = rc !== 'common' ? ` <span class="g-rar" style="background:${RARITY[rc].color}">${RARITY[rc].name}</span>` : '';
   const ns = rc !== 'common' ? ` style="color:${RARITY[rc].color}"` : '';
-  let h = `<div class="g-head"><span class="g-bigic" style="background:${rarityBg(id)}">${itemIcon(id)}</span><div><div class="g-name"${ns}>${itemName(id)}${badge}</div><div class="g-sub">${CAT_NAMES[it.cat] || ''}</div></div></div>`;
+  const typeName = CAT_NAMES[it.cat] || '';
+  const rarName = rc !== 'common' ? ` · <span style="color:${RARITY[rc].color}">${RARITY[rc].name}</span>` : '';
+  let h = `<div class="g-head"><span class="g-bigic" style="background:${rarityBg(id)}">${itemIcon(id)}</span><div><div class="g-name"${ns}>${itemName(id)}${badge}</div><div class="g-sub">${typeName}${rarName}</div></div></div>`;
   if (it.desc) h += `<p class="g-desc">${it.desc}</p>`;
+  if (Array.isArray(it.tags) && it.tags.length)
+    h += `<div class="g-tags">` + it.tags.map(t => `<span class="g-tag">${escHtml(t)}</span>`).join('') + `</div>`;
   const stats = [];
   if (it.damage) stats.push(`${UI_SVG.sword} Урон: <b>+${it.damage}</b>${it.hands === 2 ? ' (двуручный)' : ''}`);
   if (it.armor) stats.push(`${UI_SVG.shield} Защита: <b>${it.armor}</b>`);
+  if (it.slot && SLOT_NAMES[it.slot]) stats.push(`Слот: <b>${SLOT_NAMES[it.slot]}</b>`);
   if (it.onHitHeal) stats.push(`${UI_SVG.star} За удар по врагу: <b>+${it.onHitHeal} HP</b>`);
   if (it.heal) stats.push(`${UI_SVG.heart} Лечит: <b>+${it.heal}</b>`);
   if (it.gathers) stats.push(`Добывает: <b>${it.gathers === 'tree' ? 'древесину' : 'камень/руду'}</b>`);
-  if (it.price) stats.push(`Цена продажи: <b>${it.price}</b> зол.`);
-  if (stats.length) h += `<div class="g-stats">${stats.map(s => `<div>${s}</div>`).join('')}</div>`;
+  if (it.price) stats.push(`${UI_SVG.coin} Цена продажи: <b>${it.price}</b> зол.`);
+  if (stats.length) h += `<div class="g-sec">Характеристики</div><div class="g-stats">${stats.map(s => `<div>${s}</div>`).join('')}</div>`;
   const rf = recipeFor(id);
   if (rf) h += `<div class="g-sec">Создаётся · ${STATION_NAMES[rf.station] || rf.station}</div><div class="g-row">`
     + rf.recipe.in.map(ing => link('item', ing.id, `${itemIcon(ing.id)} ${itemName(ing.id)} ×${ing.qty}`)).join('') + `</div>`;
