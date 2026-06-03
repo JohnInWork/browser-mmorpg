@@ -25,6 +25,16 @@ let chestReady = false;
 chestImg.onload = () => { chestReady = true; };
 chestImg.src = '/assets/chest.svg';
 
+const anvilImg = new Image();
+let anvilReady = false;
+anvilImg.onload = () => { anvilReady = true; };
+anvilImg.src = '/assets/anvil.svg';
+
+const campfireImg = new Image();
+let campfireReady = false;
+campfireImg.onload = () => { campfireReady = true; };
+campfireImg.src = '/assets/campfire.svg';
+
 // Деревья: 2 текстуры одного дерева (для разнообразия), вариант стабилен по координатам клетки
 const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
@@ -189,23 +199,11 @@ function drawRock(cx, cy, ore, depleted) {
   }
 }
 
-// Наковальня — на деревянной колоде, чёрная наковальня
+// Наковальня — спрайт из SVG пользователя (client/assets/anvil.svg)
 function drawAnvil(cx, cy) {
   const ctx = S.ctx, z = SCALE;
-  // колода (пень)
-  ctx.fillStyle = '#7a5230';
-  ctx.fillRect(cx - 12 * z, cy - 10 * z, 24 * z, 12 * z);
-  ctx.fillStyle = '#6b4a2b';
-  ctx.fillRect(cx, cy - 10 * z, 12 * z, 12 * z);
-  // наковальня (металл)
-  ctx.fillStyle = '#3a3f47';
-  ctx.beginPath();
-  ctx.moveTo(cx - 16 * z, cy - 22 * z); ctx.lineTo(cx + 14 * z, cy - 22 * z); ctx.lineTo(cx + 22 * z, cy - 18 * z);
-  ctx.lineTo(cx + 10 * z, cy - 16 * z); ctx.lineTo(cx + 8 * z, cy - 12 * z); ctx.lineTo(cx - 8 * z, cy - 12 * z);
-  ctx.lineTo(cx - 10 * z, cy - 16 * z); ctx.lineTo(cx - 14 * z, cy - 18 * z); ctx.closePath();
-  ctx.fill();
-  ctx.fillStyle = '#52596380'; // лёгкий блик
-  ctx.fillRect(cx - 16 * z, cy - 22 * z, 30 * z, 3 * z);
+  const W = 32 * z, H = 32 * z, top = cy + 6 * z - H;
+  if (anvilReady) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
 }
 
 // Плавильня — каменная печь со светящимся жерлом
@@ -231,50 +229,17 @@ function drawSmelter(cx, cy) {
   ctx.fillRect(cx + 6 * z, cy - 40 * z, 8 * z, 12 * z);
 }
 
+// Костёр — спрайт из SVG пользователя (client/assets/campfire.svg)
 function drawCampfire(cx, cy) {
   const ctx = S.ctx, z = SCALE;
-  // кольцо камней
-  ctx.fillStyle = '#7c8088';
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.ellipse(cx + Math.cos(a) * 15 * z, cy + Math.sin(a) * 7 * z, 3.6 * z, 2.9 * z, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  // поленья крест-накрест
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = '#7a4f22'; ctx.lineWidth = 4.5 * z;
-  ctx.beginPath();
-  ctx.moveTo(cx - 11 * z, cy + 2 * z); ctx.lineTo(cx + 11 * z, cy - 4 * z);
-  ctx.moveTo(cx - 11 * z, cy - 4 * z); ctx.lineTo(cx + 11 * z, cy + 2 * z);
-  ctx.stroke();
-  ctx.strokeStyle = '#9a6b34'; ctx.lineWidth = 1.6 * z;
-  ctx.beginPath();
-  ctx.moveTo(cx - 11 * z, cy + 2 * z); ctx.lineTo(cx + 11 * z, cy - 4 * z);
-  ctx.moveTo(cx - 11 * z, cy - 4 * z); ctx.lineTo(cx + 11 * z, cy + 2 * z);
-  ctx.stroke();
-  // пламя (языки)
-  const flame = (ox, h, w, c) => {
-    ctx.fillStyle = c;
-    ctx.beginPath();
-    ctx.moveTo(cx + ox, cy - 2 * z);
-    ctx.quadraticCurveTo(cx + ox - w, cy - h * 0.5, cx + ox, cy - h);
-    ctx.quadraticCurveTo(cx + ox + w, cy - h * 0.5, cx + ox, cy - 2 * z);
-    ctx.closePath(); ctx.fill();
-  };
-  flame(0, 26 * z, 9 * z, '#e8632a');
-  flame(-3 * z, 18 * z, 6 * z, '#f4a23d');
-  flame(3 * z, 16 * z, 5 * z, '#f4a23d');
-  flame(0, 12 * z, 3.5 * z, '#ffe07a');
+  const W = 34 * z, H = 34 * z, top = cy + 6 * z - H;
+  if (campfireReady) ctx.drawImage(campfireImg, cx - W / 2, top, W, H);
 }
 
 // Сундук-хранилище — спрайт из SVG пользователя (client/assets/chest.svg)
 function drawChest(cx, cy) {
   const ctx = S.ctx, z = SCALE;
-  const W = 42 * z, H = 42 * z, top = cy + 9 * z - H;   // «стоит» на клетке
-  // тень
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
-  ctx.beginPath(); ctx.ellipse(cx, cy + 5 * z, 18 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  const W = 32 * z, H = 32 * z, top = cy + 6 * z - H;   // «стоит» на клетке
   if (chestReady) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 

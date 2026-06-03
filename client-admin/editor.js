@@ -24,6 +24,8 @@ const TW = 64, TH = 32, WALL_H = 34, TREE_H = 46;
 // Деревья: 2 текстуры (как в игре), вариант стабилен по координатам клетки
 const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
 const chestImg = new Image(); chestImg._ready = false; chestImg.onload = () => { chestImg._ready = true; }; chestImg.src = '/assets/chest.svg';
+const anvilImg = new Image(); anvilImg._ready = false; anvilImg.onload = () => { anvilImg._ready = true; }; anvilImg.src = '/assets/anvil.svg';
+const campfireImg = new Image(); campfireImg._ready = false; campfireImg.onload = () => { campfireImg._ready = true; }; campfireImg.src = '/assets/campfire.svg';
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 let zoom = 1;
 let panX = 0, panY = 0; // экранное смещение начала координат
@@ -207,10 +209,8 @@ function drawRock(cx, cy, ore) {
   }
 }
 function drawAnvil(cx, cy) {
-  const z = zoom;
-  ctx.fillStyle = '#7a5230'; ctx.fillRect(cx - 12 * z, cy - 10 * z, 24 * z, 12 * z);
-  ctx.fillStyle = '#3a3f47';
-  ctx.beginPath(); ctx.moveTo(cx - 16 * z, cy - 22 * z); ctx.lineTo(cx + 14 * z, cy - 22 * z); ctx.lineTo(cx + 22 * z, cy - 18 * z); ctx.lineTo(cx + 10 * z, cy - 16 * z); ctx.lineTo(cx + 8 * z, cy - 12 * z); ctx.lineTo(cx - 8 * z, cy - 12 * z); ctx.lineTo(cx - 10 * z, cy - 16 * z); ctx.lineTo(cx - 14 * z, cy - 18 * z); ctx.closePath(); ctx.fill();
+  const z = zoom, W = 32 * z, H = 32 * z, top = cy + 6 * z - H;
+  if (anvilImg._ready) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
 }
 function drawSmelter(cx, cy) {
   const z = zoom;
@@ -222,16 +222,11 @@ function drawSmelter(cx, cy) {
   ctx.fillStyle = '#646a74'; ctx.fillRect(cx + 6 * z, cy - 40 * z, 8 * z, 12 * z);
 }
 function drawCampfire(cx, cy) {
-  const z = zoom;
-  ctx.fillStyle = '#7c8088';
-  for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; ctx.beginPath(); ctx.ellipse(cx + Math.cos(a) * 15 * z, cy + Math.sin(a) * 7 * z, 3.6 * z, 2.9 * z, 0, 0, Math.PI * 2); ctx.fill(); }
-  ctx.lineCap = 'round'; ctx.strokeStyle = '#7a4f22'; ctx.lineWidth = 4.5 * z;
-  ctx.beginPath(); ctx.moveTo(cx - 11 * z, cy + 2 * z); ctx.lineTo(cx + 11 * z, cy - 4 * z); ctx.moveTo(cx - 11 * z, cy - 4 * z); ctx.lineTo(cx + 11 * z, cy + 2 * z); ctx.stroke();
-  const flame = (ox, h, w, c) => { ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(cx + ox, cy - 2 * z); ctx.quadraticCurveTo(cx + ox - w, cy - h * 0.5, cx + ox, cy - h); ctx.quadraticCurveTo(cx + ox + w, cy - h * 0.5, cx + ox, cy - 2 * z); ctx.closePath(); ctx.fill(); };
-  flame(0, 26 * z, 9 * z, '#e8632a'); flame(-3 * z, 18 * z, 6 * z, '#f4a23d'); flame(3 * z, 16 * z, 5 * z, '#f4a23d'); flame(0, 12 * z, 3.5 * z, '#ffe07a');
+  const z = zoom, W = 34 * z, H = 34 * z, top = cy + 6 * z - H;
+  if (campfireImg._ready) ctx.drawImage(campfireImg, cx - W / 2, top, W, H);
 }
 function drawChest(cx, cy) {
-  const z = zoom, W = 42 * z, H = 42 * z, top = cy + 9 * z - H;
+  const z = zoom, W = 32 * z, H = 32 * z, top = cy + 6 * z - H;
   if (chestImg._ready) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
 }
 
