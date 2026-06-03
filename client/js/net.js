@@ -8,6 +8,7 @@ export function setupNet() {
   const onlineEl = document.getElementById('online');
 
   socket.on('init', (data) => {
+    if (data.items) Object.assign(S.items, data.items);   // единый источник данных предметов (наполняем, НЕ переприсваиваем — ссылку держит items.js)
     S.MAP = data.map; S.mapW = data.width; S.mapH = data.height; S.myId = data.you.id;
     for (const id in data.players) {
       const p = data.players[id];

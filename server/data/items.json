@@ -1,23 +1,23 @@
 {
   "_note": "Контент: предметы. type — поведение (tool/armor/resource/ingredient/food). cat — категория для внутриигрового гайда. tags — метки для гайда/поиска. price — цена продажи. heal — лечение (food). stackable — стакается ли.",
   "items": {
-    "axe":     { "name": "Топор",      "type": "tool",     "cat": "tool",     "gathers": "tree", "price": 8, "tags": ["инструмент", "рубка", "дерево"] },
-    "pickaxe": { "name": "Кирка",      "type": "tool",     "cat": "tool",     "gathers": "rock", "price": 8, "tags": ["инструмент", "добыча", "камень"] },
+    "axe":     { "name": "Топор",      "type": "tool",     "cat": "tool",     "gathers": "tree", "price": 8, "tags": ["инструмент", "рубка", "дерево"], "desc": "Инструмент для рубки деревьев. Возьми «в руку» и кликай по дереву, чтобы добывать древесину." },
+    "pickaxe": { "name": "Кирка",      "type": "tool",     "cat": "tool",     "gathers": "rock", "price": 8, "tags": ["инструмент", "добыча", "камень"], "desc": "Инструмент для добычи камня и железной руды." },
 
-    "wood":    { "name": "Древесина",      "type": "resource", "cat": "material", "stackable": true, "price": 1,  "tags": ["материал", "крафт", "дерево"] },
-    "stone":   { "name": "Камень",         "type": "resource", "cat": "material", "stackable": true, "price": 2,  "tags": ["материал", "крафт", "строительство"] },
-    "ore":     { "name": "Железная руда",  "type": "resource", "cat": "material", "stackable": true, "price": 6,  "tags": ["материал", "металл", "плавка"] },
-    "ingot":   { "name": "Железный слиток", "type": "resource", "cat": "material", "stackable": true, "price": 14, "tags": ["материал", "металл", "крафт", "кузнечное дело"] },
+    "wood":    { "name": "Древесина",      "type": "resource", "cat": "material", "stackable": true, "price": 1,  "tags": ["материал", "крафт", "дерево"], "desc": "Базовый материал. Добывается топором из деревьев." },
+    "stone":   { "name": "Камень",         "type": "resource", "cat": "material", "stackable": true, "price": 2,  "tags": ["материал", "крафт", "строительство"], "desc": "Добывается киркой из каменных глыб." },
+    "ore":     { "name": "Железная руда",  "type": "resource", "cat": "material", "stackable": true, "price": 6,  "tags": ["материал", "металл", "плавка"], "desc": "Добывается киркой из жил руды. Плавится в слитки на плавильне." },
+    "ingot":   { "name": "Железный слиток", "type": "resource", "cat": "material", "stackable": true, "price": 14, "tags": ["материал", "металл", "крафт", "кузнечное дело"], "desc": "Выплавляется из руды на плавильне. Основной материал для брони и инструментов." },
 
-    "rawChicken":    { "name": "Сырая курица",   "type": "ingredient", "cat": "ingredient", "stackable": true, "price": 3, "tags": ["ингредиент", "мясо", "готовка"] },
-    "cookedChicken": { "name": "Жареная курица", "type": "food",       "cat": "food",       "stackable": true, "price": 6, "heal": 10, "tags": ["еда", "лечение", "готовка"] },
+    "rawChicken":    { "name": "Сырая курица",   "type": "ingredient", "cat": "ingredient", "stackable": true, "price": 3, "tags": ["ингредиент", "мясо", "готовка"], "desc": "Выпадает с курицы. Сырое мясо не лечит — приготовь его на костре." },
+    "cookedChicken": { "name": "Жареная курица", "type": "food",       "cat": "food",       "stackable": true, "price": 6, "heal": 10, "tags": ["еда", "лечение", "готовка"], "desc": "Готовится на костре из сырой курицы. Съешь, чтобы восстановить здоровье." },
 
-    "helmet": { "name": "Шлем",       "type": "armor", "cat": "armor", "slot": "helmet", "armor": 1, "price": 6, "tags": ["броня", "металл", "кузнечное дело"] },
-    "chest":  { "name": "Нагрудник",  "type": "armor", "cat": "armor", "slot": "chest",  "armor": 1, "price": 8, "tags": ["броня", "металл", "кузнечное дело"] },
-    "gloves": { "name": "Перчатки",   "type": "armor", "cat": "armor", "slot": "gloves", "armor": 1, "price": 5, "tags": ["броня", "металл", "кузнечное дело"] },
-    "pants":  { "name": "Поножи",     "type": "armor", "cat": "armor", "slot": "pants",  "armor": 1, "price": 6, "tags": ["броня", "металл", "кузнечное дело"] },
-    "boots":  { "name": "Сапоги",     "type": "armor", "cat": "armor", "slot": "boots",  "armor": 1, "price": 5, "tags": ["броня", "металл", "кузнечное дело"] },
-    "cloak":  { "name": "Плащ",       "type": "armor", "cat": "armor", "slot": "cloak",  "armor": 1, "price": 5, "tags": ["броня", "ткань"] },
+    "helmet": { "name": "Шлем",       "type": "armor", "cat": "armor", "slot": "helmet", "armor": 1, "price": 6, "tags": ["броня", "металл", "кузнечное дело"], "desc": "Защищает голову. Куётся на наковальне." },
+    "chest":  { "name": "Нагрудник",  "type": "armor", "cat": "armor", "slot": "chest",  "armor": 1, "price": 8, "tags": ["броня", "металл", "кузнечное дело"], "desc": "Самая прочная часть брони." },
+    "gloves": { "name": "Перчатки",   "type": "armor", "cat": "armor", "slot": "gloves", "armor": 1, "price": 5, "tags": ["броня", "металл", "кузнечное дело"], "desc": "Защита для рук." },
+    "pants":  { "name": "Поножи",     "type": "armor", "cat": "armor", "slot": "pants",  "armor": 1, "price": 6, "tags": ["броня", "металл", "кузнечное дело"], "desc": "Защита для ног." },
+    "boots":  { "name": "Сапоги",     "type": "armor", "cat": "armor", "slot": "boots",  "armor": 1, "price": 5, "tags": ["броня", "металл", "кузнечное дело"], "desc": "Защита для стоп." },
+    "cloak":  { "name": "Плащ",       "type": "armor", "cat": "armor", "slot": "cloak",  "armor": 1, "price": 5, "tags": ["броня", "ткань"], "desc": "Плащ за спиной. Даёт немного защиты." },
 
     "bearHelmet": { "name": "Медвежий шлем", "type": "armor", "cat": "armor", "rarity": "legendary", "slot": "helmet", "armor": 2, "onHitHeal": 1, "price": 120, "tags": ["броня", "легендарное", "трофей"], "desc": "Легендарный шлем. Падает с медведя. Восполняет 1 HP за каждый удар, нанесённый врагу. Очень дорогой." },
 

@@ -33,6 +33,7 @@ export const S = {
   armor: 0,
   bank: { slots: [], level: 0, maxLevel: 5, nextCost: null }, // личное хранилище (сундук)
   depletedNodes: new Set(), // "x,y" истощённых ресурсов (пень/обломки)
+  items: {},              // данные предметов (с сервера — единый источник; см. items.js для иконок/цветов)
   recipes: { smelter: [], anvil: [], campfire: [] }, // рецепты крафта (с сервера)
   mobTypes: {},           // типы мобов с сервера (для энциклопедии)
   guideNav: [],           // стек навигации энциклопедии: [{kind:'index'|'item'|'mob', id}]

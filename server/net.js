@@ -46,7 +46,7 @@ function setup(io) {
     // --- Обычный игрок ---
     const player = playersMod.create(socket.id);
 
-    socket.emit('init', { ...world.getState(), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, questDefs: QUESTS });
+    socket.emit('init', { ...world.getState(), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, questDefs: QUESTS });
     socket.broadcast.emit('playerJoined', player);
     io.emit('count', playersMod.count());
 
