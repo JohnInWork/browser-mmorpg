@@ -606,7 +606,8 @@ function openNpcEditor(x, y, existing) {
         <label class="npc-f">Реплика (кнопка «Поговорить»)<textarea id="npcDialogue" maxlength="300" rows="2">${escHtml(data.dialogue)}</textarea></label>
         <label class="npc-f">Финальный диалог talk-квеста<textarea id="npcTalk" maxlength="300" rows="2" placeholder="покажется, когда игрок придёт сюда завершить квест «поговори с…»">${escHtml(data.talkText)}</textarea></label>
         <label class="npc-chk"><input id="npcTrader" type="checkbox"${data.trader ? ' checked' : ''}> Принимает товары (игрок ПРОДАЁТ ему)</label>
-        <div class="npc-f">Продаёт игроку (игрок ПОКУПАЕТ):<div class="npc-sells" id="npcSells">${sellChecks}</div></div>
+        <label class="npc-chk"><input id="npcSeller" type="checkbox"${data.sells.length ? ' checked' : ''}> Продаёт товары (игрок ПОКУПАЕТ)</label>
+        <div class="npc-f npc-sellbox${data.sells.length ? '' : ' hidden'}" id="npcSellBox">Что продаёт:<div class="npc-sells" id="npcSells">${sellChecks}</div></div>
         <div class="npc-f">Квесты<div id="npcQuests"></div><button id="npcAddQuest" class="npc-addq">+ Добавить квест</button></div>
         <div class="npc-btns">
           ${existing ? '<button id="npcDelete" class="m-danger">Удалить</button>' : ''}
@@ -634,6 +635,8 @@ function openNpcEditor(x, y, existing) {
   const questsBox = $('npcQuests');
   data.quests.forEach(q => questsBox.appendChild(makeQuestBlock(q)));
   $('npcAddQuest').addEventListener('click', () => questsBox.appendChild(makeQuestBlock(questDefaults())));
+  // Список товаров доступен только если включён «продавец»
+  $('npcSeller').addEventListener('change', () => $('npcSellBox').classList.toggle('hidden', !$('npcSeller').checked));
 
   const close = () => { ov.classList.add('hidden'); ov.innerHTML = ''; };
   $('npcCancel').addEventListener('click', close);
@@ -645,7 +648,7 @@ function openNpcEditor(x, y, existing) {
     data.trader = $('npcTrader').checked;
     data.dialogue = ($('npcDialogue').value || '').slice(0, 300);
     data.talkText = ($('npcTalk').value || '').slice(0, 300);
-    data.sells = [...ov.querySelectorAll('[data-sell]')].filter(c => c.checked).map(c => c.dataset.sell);
+    data.sells = $('npcSeller').checked ? [...ov.querySelectorAll('[data-sell]')].filter(c => c.checked).map(c => c.dataset.sell) : [];
     data.quests = [...questsBox.querySelectorAll('.npc-qblock')].map(readQuestBlock);
     delete data.quest;       // убрать легаси-поле
     setNpc(x, y, data);
