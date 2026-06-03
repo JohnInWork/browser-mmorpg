@@ -313,10 +313,12 @@ function paintAt(e, isClick) {
   } else if (TELES.has(selected)) {                  // портал: кладём + записываем связь (метка-строка)
     MAP[t.y][t.x] = selected;
     setTele(t.x, t.y, (sidInput.value || '').trim() || '1');
-  } else if (selected === SIGN) {                    // табличка: кладём + спрашиваем текст (только при клике)
+  } else if (selected === SIGN) {                    // табличка: СНАЧАЛА спрашиваем текст, ставим только если не отменили
+    const cur = signAt(t.x, t.y);
+    const txt = prompt('Текст таблички (его увидит игрок):', cur ? cur.text : '');
+    if (txt === null) return;                        // «Отмена» — передумал, ничего не ставим
     MAP[t.y][t.x] = SIGN; removeTele(t.x, t.y);
-    if (isClick) { const cur = signAt(t.x, t.y); const txt = prompt('Текст таблички (его увидит игрок):', cur ? cur.text : ''); if (txt !== null) setSign(t.x, t.y, txt); else if (!cur) setSign(t.x, t.y, ''); }
-    else if (!signAt(t.x, t.y)) setSign(t.x, t.y, '');
+    setSign(t.x, t.y, txt);
   } else {                                           // прочий объект: поверх пола; если была лестница — убрать связь
     MAP[t.y][t.x] = selected; removeTele(t.x, t.y);
   }
