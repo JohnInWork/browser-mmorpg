@@ -96,7 +96,10 @@ function nodeAt(x, y) {
   return null;
 }
 function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }
-function stairsAt(x, y) { const t = S.MAP && S.MAP[y] && S.MAP[y][x]; return t === 13 ? 'Лестница вниз' : t === 14 ? 'Лестница вверх' : null; }
+function stairsAt(x, y) {
+  const t = S.MAP && S.MAP[y] && S.MAP[y][x];
+  return t === 13 ? 'Лестница вниз' : t === 14 ? 'Лестница вверх' : (t === 16 || t === 17 || t === 18) ? 'Портал' : null;
+}
 
 export function setupInput() {
   const canvas = S.canvas;

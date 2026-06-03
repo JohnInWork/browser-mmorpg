@@ -267,6 +267,18 @@ function drawWell(cx, cy) {
   ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
 }
 
+// Магический портал-телепорт (плоские cel-цвета, без градиентов). Лежит на полу как «пад».
+function drawPortal(cx, cy, outer, inner) {
+  const ctx = S.ctx, z = SCALE;
+  ctx.fillStyle = 'rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 16 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = outer; ctx.beginPath(); ctx.ellipse(cx, cy, 15 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = inner; ctx.beginPath(); ctx.ellipse(cx, cy, 11 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#15152a'; ctx.beginPath(); ctx.ellipse(cx, cy, 7 * z, 4 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = inner;                                 // искорки
+  for (let i = 0; i < 4; i++) { const a = i * 1.7 + (cx % 3); ctx.beginPath(); ctx.arc(cx + Math.cos(a) * 9 * z, cy + Math.sin(a) * 4.5 * z, 0.9 * z, 0, Math.PI * 2); ctx.fill(); }
+}
+const PORTAL_COLORS = { 16: ['#2f6aa8', '#5fa8e0'], 17: ['#6f2f9e', '#a86fd0'], 18: ['#1f9e63', '#5fe0a0'] };
+
 // Лестница-телепорт. down=true — вниз (тёмный проём), иначе вверх (светлый камень).
 function drawStairs(cx, cy, down) {
   const ctx = S.ctx, z = SCALE, n = 4, sh = 5 * z;
@@ -480,6 +492,7 @@ export function render() {
       else if (t === 12) drawables.push({ d: x + y + 0.1, kind: 'well', x, y });
       else if (t === 13) drawables.push({ d: x + y + 0.1, kind: 'stairsDown', x, y });
       else if (t === 14) drawables.push({ d: x + y + 0.1, kind: 'stairsUp', x, y });
+      else if (t === 16 || t === 17 || t === 18) drawables.push({ d: x + y + 0.1, kind: 'portal', x, y, t });
     }
   }
   // Мобы и игроки — только из текущей локации
@@ -499,6 +512,7 @@ export function render() {
     else if (o.kind === 'well') drawWell(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'stairsDown') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true);
     else if (o.kind === 'stairsUp') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), false);
+    else if (o.kind === 'portal') { const c = PORTAL_COLORS[o.t]; drawPortal(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), c[0], c[1]); }
     else if (o.kind === 'mob') {
       if (o.m.type === 'trader') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), TRADER_APP, TRADER_EQUIP, null);
       else if (o.m.type === 'questgiver') drawNpc(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), FORESTER_APP, FORESTER_EQUIP, npcMarker(o.m));

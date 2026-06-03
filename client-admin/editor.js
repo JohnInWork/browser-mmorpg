@@ -19,7 +19,8 @@ let LOCS = {};                 // { name: {map,floor,teleports,W,H} }
 let curLoc = 'surface';        // редактируемая локация
 let MAP = null, FLOOR = null, mapW = 0, mapH = 0;  // ссылки на текущую локацию
 const GROUND = new Set([0, 1, 4, 15]);             // тайлы пола (+ пещера)
-const TELES = new Set([13, 14]);                   // лестницы-телепорты
+const TELES = new Set([13, 14, 16, 17, 18]);       // порталы-телепорты (вид отвязан от связи)
+const PORTAL_COLORS = { 16: ['#2f6aa8', '#5fa8e0'], 17: ['#6f2f9e', '#a86fd0'], 18: ['#1f9e63', '#5fe0a0'] };
 const isGround = (t) => GROUND.has(t);
 const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
 const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты' };
@@ -44,12 +45,12 @@ const CATEGORIES = [
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' } ] },
   { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' } ] },
-  { name: 'Лестницы', items: [ { id: 13, name: 'Вниз', color: '#5b8def' }, { id: 14, name: 'Вверх', color: '#8fd06a' } ] },
+  { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' } ] },
 ];
 let selected = 0; // выбранный id тайла
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46' };
+const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
@@ -335,6 +336,12 @@ function drawWell(cx, cy) {
   ctx.fillStyle = '#8a5a28'; ctx.beginPath(); ctx.moveTo(cx - 17 * z, cy - 23 * z); ctx.lineTo(cx, cy - 34 * z); ctx.lineTo(cx + 17 * z, cy - 23 * z); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#6e451e'; ctx.fillRect(cx - 17 * z, cy - 23 * z, 34 * z, 3 * z);
 }
+function drawPortal(cx, cy, outer, inner) {
+  const z = zoom;
+  ctx.fillStyle = outer; ctx.beginPath(); ctx.ellipse(cx, cy, 15 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = inner; ctx.beginPath(); ctx.ellipse(cx, cy, 11 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#15152a'; ctx.beginPath(); ctx.ellipse(cx, cy, 7 * z, 4 * z, 0, 0, Math.PI * 2); ctx.fill();
+}
 function drawStairs(cx, cy, down) {
   const z = zoom, n = 4, sh = 5 * z;
   ctx.fillStyle = down ? '#23232a' : '#7c828b';
@@ -381,6 +388,7 @@ function render() {
       else if (t === 12) obj.push({ d: x + y + 0.1, k: 12, x, y });
       else if (t === 13) obj.push({ d: x + y + 0.1, k: 13, x, y });
       else if (t === 14) obj.push({ d: x + y + 0.1, k: 14, x, y });
+      else if (t === 16 || t === 17 || t === 18) obj.push({ d: x + y + 0.1, k: t, x, y });
     }
   obj.sort((a, b) => a.d - b.d);
   for (const o of obj) {
@@ -392,10 +400,11 @@ function render() {
     else if (o.k === 10) drawChest(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 11) drawSandPile(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 12) drawWell(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
-    else if (o.k === 13 || o.k === 14) {
+    else if (o.k === 13 || o.k === 14 || o.k === 16 || o.k === 17 || o.k === 18) {
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
-      drawStairs(sx, sy, o.k === 13);
-      const te = teleAt(o.x, o.y);                 // показать ID связи на лестнице
+      if (o.k === 13 || o.k === 14) drawStairs(sx, sy, o.k === 13);
+      else { const c = PORTAL_COLORS[o.k]; drawPortal(sx, sy, c[0], c[1]); }
+      const te = teleAt(o.x, o.y);                 // показать ID связи на портале
       if (te) { ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(12 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText(te.sid, sx, sy - 16 * zoom); }
     }
     else drawRock(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.k === 6);

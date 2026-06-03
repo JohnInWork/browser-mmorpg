@@ -11,7 +11,7 @@ const MAP_FILE = path.join(MAPS_DIR, 'world.json');
 const TEST_MAP_FILE = path.join(__dirname, '..', 'client-test', 'map-data.js');
 const blockedSet = new Set(BLOCKED);
 
-const MAX_TILE = 15;
+const MAX_TILE = 18;
 const START = 'surface';
 const GROUND = new Set([0, 1, 4, 15]);          // тайлы пола (трава/вода/тропа/пещера)
 function isGround(t) { return GROUND.has(t); }
