@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: Килька — мелкая серебристая рыбка -->
+  <g transform="translate(256,256)">
+    <polygon points="150,0 200,-40 200,40" fill="#9aa4b0"/>
+    <ellipse cx="0" cy="0" rx="150" ry="62" fill="#b8c2cc"/>
+    <ellipse cx="0" cy="-10" rx="150" ry="40" fill="#cdd6e0"/>
+    <circle cx="-95" cy="-12" r="14" fill="#2a2f37"/>
+    <circle cx="-99" cy="-16" r="5" fill="#fff"/>
+    <path d="M40 -60 q30 -10 60 6 q-30 6 -60 -6" fill="#9aa4b0"/>
+  </g>
+</svg>

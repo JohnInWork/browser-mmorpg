@@ -104,7 +104,7 @@ function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; 
 
 // Трава: объёмные кустики-тафты (тёмная основа + светлые кончики, 4 оттенка), неровности земли,
 // редкие цветы — всё плоскими цветами (cel, без градиентов). Вариативно и стабильно по клетке.
-const GRASS_BASE = ['#5aa148', '#5fa84e', '#56a046', '#62ab51']; // 4 близких базовых зелёных
+const GRASS_BASE = ['#819A35', '#86a03a', '#7c9531', '#8aa440']; // 4 близких оттенка базовой травы (#819A35)
 // одно лезвие травы как залитый лист (база → кончик → база)
 function blade(ctx, bx, by, h, lean, w, color) {
   ctx.fillStyle = color;
@@ -117,13 +117,13 @@ function blade(ctx, bx, by, h, lean, w, color) {
 // кустик: тёмные задние лезвия + светлые передние кончики (объём)
 function drawTuft(ctx, bx, by, z, rnd) {
   const n = 3 + Math.floor(rnd() * 2); // 3–4 лезвия
-  for (let i = 0; i < n; i++) {        // тёмная основа (тень)
+  for (let i = 0; i < n; i++) {        // тёмная основа (тень) — оттенок базовой травы
     const lean = (i - (n - 1) / 2) * 2.6 * z + (rnd() - 0.5) * 1.2 * z;
-    blade(ctx, bx, by, (7 + rnd() * 4) * z, lean, 1.7 * z, '#3f8a39');
+    blade(ctx, bx, by, (7 + rnd() * 4) * z, lean, 1.7 * z, '#5f7a2a');
   }
   for (let i = 0; i < n; i++) {        // светлые кончики поверх (центральный — хайлайт)
     const lean = (i - (n - 1) / 2) * 2.3 * z + (rnd() - 0.5) * 1.1 * z;
-    blade(ctx, bx, by - 0.5 * z, (5 + rnd() * 3.5) * z, lean, 1.2 * z, i === (n >> 1) ? '#88d06a' : '#63b653');
+    blade(ctx, bx, by - 0.5 * z, (5 + rnd() * 3.5) * z, lean, 1.2 * z, i === (n >> 1) ? '#aec766' : '#93ad48');
   }
 }
 function drawGrass(cx, cy, x, y, base) {
@@ -366,6 +366,23 @@ function drawSandPile(cx, cy, depleted) {
 }
 // Колодец — спрайт из SVG (client/assets/well.svg)
 function drawWell(cx, cy) { objSprite(wellImg, cx, cy, 42); }
+// Рыбное место: анимированная рябь (расходящиеся кольца) + всплывающий поплавок-пузырёк на воде.
+function drawFishingSpot(cx, cy, x, y) {
+  const ctx = S.ctx, z = SCALE;
+  const ph = performance.now() / 600 + x * 0.7 + y * 1.3;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1.4 * z;
+  for (let i = 0; i < 2; i++) {                       // два расходящихся кольца ряби
+    const t = (ph + i * 0.5) % 1;
+    ctx.globalAlpha = 0.5 * (1 - t);
+    const rad = (3 + t * 9) * z;
+    ctx.beginPath(); ctx.ellipse(cx, cy, rad, rad * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  ctx.globalAlpha = 0.85; ctx.fillStyle = 'rgba(225,242,255,.9)';
+  const bx = cx + Math.sin(ph * 1.7) * 4 * z, by = cy - 1 * z + Math.cos(ph * 2.1) * 1.5 * z;
+  ctx.beginPath(); ctx.arc(bx, by, 1.5 * z, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+}
 // Портал-телепорт — спрайт из SVG по цвету тайла (16/17/18)
 function drawPortal(cx, cy, tile) { objSprite(portalImg[tile], cx, cy, 36); }
 // Лестница-телепорт — спрайт из SVG (вниз/вверх)
@@ -395,7 +412,7 @@ function drawChicken(cx, cy, m, s = 1) {
     ctx.drawImage(chickenImg, cx - 20 * z, cy - 27 * z, 38 * z, 31 * z);
     ctx.restore();
   }
-  if (m.hp < m.maxHp) drawHpBar(cx, cy - 34 * z, m.hp, m.maxHp);
+  // HP над головой не рисуем — здоровье показывается в интерфейсе
 }
 
 function drawWolf(cx, cy, m, s = 1) {
@@ -414,7 +431,7 @@ function drawWolf(cx, cy, m, s = 1) {
   // маркер агрессии + полоса HP (над картинкой)
   ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`; ctx.textAlign = 'center';
   ctx.fillText('!', cx, top + 4 * z);
-  if (m.hp < m.maxHp) drawHpBar(cx, top + 8 * z, m.hp, m.maxHp);
+  // HP над головой не рисуем — здоровье показывается в интерфейсе (своё слева, цель боя справа)
 }
 
 function drawBear(cx, cy, m, s = 1) {
@@ -433,7 +450,7 @@ function drawBear(cx, cy, m, s = 1) {
   // маркер агрессии + полоса HP (над картинкой)
   ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(15 * z)}px sans-serif`; ctx.textAlign = 'center';
   ctx.fillText('!', cx, top + 4 * z);
-  if (m.hp < m.maxHp) drawHpBar(cx, top + 8 * z, m.hp, m.maxHp);
+  // HP над головой не рисуем — здоровье показывается в интерфейсе (своё слева, цель боя справа)
 }
 
 // Общий рисовальщик моба из любой текстуры реестра (для новых существ)
@@ -445,7 +462,7 @@ function drawSpriteMob(cx, cy, m) {
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, sz * 0.4, sz * 0.16, 0, 0, Math.PI * 2); ctx.fill();
   if (img && img._ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; ctx.drawImage(img, cx - sz / 2, top, sz, sz); ctx.restore(); }
   if (m.aggressive) { ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('!', cx, top + 4 * z); }
-  if (m.hp < m.maxHp) drawHpBar(cx, top + 8 * z, m.hp, m.maxHp);
+  // HP над головой не рисуем — здоровье показывается в интерфейсе (своё слева, цель боя справа)
 }
 
 function drawMob(cx, cy, m) {
@@ -470,7 +487,7 @@ function drawMob(cx, cy, m) {
     ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`;
     ctx.textAlign = 'center'; ctx.fillText('!', cx, cy - 2 * r - 4 * z);
   }
-  if (m.hp < m.maxHp) drawHpBar(cx, cy - 2 * r - 12 * z, m.hp, m.maxHp);
+  // HP над головой не рисуем — здоровье показывается в интерфейсе
 }
 
 function roundRect(x, y, w, h, r) {
@@ -482,6 +499,18 @@ function roundRect(x, y, w, h, r) {
   ctx.arcTo(x, y + h, x, y, r);
   ctx.arcTo(x, y, x + w, y, r);
   ctx.closePath();
+}
+
+// Тёмный ореол-подложка по контуру фигуры: отделяет персонажа от фона, чтобы он не сливался
+// и не казался плоской картонкой. Силуэт следует за прозрачностью спрайта (рисуем картинку как «тень»).
+function drawCharRim(img, x, y, w, h) {
+  const ctx = S.ctx, z = SCALE / 1.6;
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,.3)';
+  ctx.shadowOffsetX = 0; ctx.shadowOffsetY = 1.5 * z;
+  ctx.shadowBlur = 9 * z; ctx.drawImage(img, x, y, w, h);   // мягкий растушёванный ореол (один проход — без жёсткого чёрного контура)
+  ctx.restore();
+  ctx.drawImage(img, x, y, w, h);                            // сама фигура поверх (без тени)
 }
 
 const CHAR_H = 59 * (SCALE / 1.6); // высота фигуры на экране (уменьшено в 2 раза)
@@ -496,11 +525,10 @@ function drawPlayer(cx, cy, p, isMe) {
   const ent = getCharImage(p.appearance || DEFAULT_APPEARANCE, p.equipment, p.held);
   const H = CHAR_H, W = H * CHAR_RATIO;
   const topY = cy + 5 - H * CHAR_FEET;
-  if (ent.ready) ctx.drawImage(ent.img, cx - W / 2, topY, W, H);
+  if (ent.ready) drawCharRim(ent.img, cx - W / 2, topY, W, H);
   if (p.held && HELD_ITEMS[p.held]) drawHeldItem(cx, topY, W, H, p.held);   // предмет в руке (слой поверх)
 
-  // HP-бар над головой (только при ранении). Имя НЕ рисуем — показывается по наведению сверху экрана.
-  if (p.hp != null && p.maxHp && p.hp < p.maxHp) drawHpBar(cx, topY - 4, p.hp, p.maxHp);
+  // HP над головой НЕ рисуем — здоровье показывается в интерфейсе (своя панель слева сверху).
 }
 
 // NPC-торговец — рисуется как персонаж с золотым именем
@@ -523,7 +551,7 @@ function drawNpc(cx, cy, appearance, equipment, marker) {
   ctx.beginPath(); ctx.ellipse(cx, cy + 2, 12 * (SCALE / 1.6), 5 * (SCALE / 1.6), 0, 0, Math.PI * 2); ctx.fill();
   const ent = getCharImage(appearance || DEFAULT_APPEARANCE, equipment);
   const H = CHAR_H, W = H * CHAR_RATIO, topY = cy + 5 - H * CHAR_FEET;
-  if (ent.ready) ctx.drawImage(ent.img, cx - W / 2, topY, W, H);
+  if (ent.ready) drawCharRim(ent.img, cx - W / 2, topY, W, H);
   // Имя НЕ рисуем (по наведению). Маркер квеста — рисуем.
   if (marker) {
     ctx.fillStyle = '#f1c40f';
@@ -629,6 +657,7 @@ export function render() {
   // Мобы и игроки — только из текущей локации
   for (const id in S.mobs) { const m = S.mobs[id]; if (m.alive && m.location === S.location) drawables.push({ d: m.x + m.y + 0.15, kind: 'mob', m }); }
   for (const n of (S.npcs || [])) drawables.push({ d: n.x + n.y + 0.16, kind: 'authNpc', n });   // авторские НПС
+  for (const s of (S.spots || [])) drawables.push({ d: s.x + s.y + 0.05, kind: 'fishspot', x: s.x, y: s.y }); // рыбные места (рябь на воде)
   for (const id in S.players) { const p = S.players[id]; if ((p.location || 'surface') === S.location) drawables.push({ d: p.rx + p.ry + 0.2, kind: 'player', p, isMe: id === S.myId }); }
   drawables.sort((a, b) => a.d - b.d);
 
@@ -656,6 +685,7 @@ export function render() {
     else if (o.kind === 'workbench') objSprite(workbenchImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'adminChest') objSprite(adminChestImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'silverOre') { if (S.depletedNodes.has(`${o.x},${o.y}`)) drawRock(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true, true); else objSprite(silverOreImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42); }
+    else if (o.kind === 'fishspot') drawFishingSpot(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
     else if (o.kind === 'mob') drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
     else if (o.kind === 'authNpc') drawAuthNpc(ox + isoX(o.n.x, o.n.y), oy + isoY(o.n.x, o.n.y), o.n);
     else drawPlayer(ox + isoX(o.p.rx, o.p.ry), oy + isoY(o.p.rx, o.p.ry), o.p, o.isMe);

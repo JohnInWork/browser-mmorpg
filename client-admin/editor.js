@@ -68,6 +68,13 @@ let savedMobs = [];
 try { savedMobs = JSON.parse(localStorage.getItem('mmorpg_savedMobs') || '[]'); } catch (e) { savedMobs = []; }
 function persistSavedMobs() { try { localStorage.setItem('mmorpg_savedMobs', JSON.stringify(savedMobs)); } catch (e) {} }
 function mobLabelFor(m) { return (m && m.name) || (m && SPRITE_INFO[m.sprite] && SPRITE_INFO[m.sprite].name) || 'Моб'; }
+// Библиотека сохранённых рыбных мест: настроил таблицу рыбы один раз → штампуешь его в любом месте.
+let savedSpots = [];
+try { savedSpots = JSON.parse(localStorage.getItem('mmorpg_savedSpots') || '[]'); } catch (e) { savedSpots = []; }
+function persistSavedSpots() { try { localStorage.setItem('mmorpg_savedSpots', JSON.stringify(savedSpots)); } catch (e) {} }
+function spotLabelFor(s) { return (s && s.name) || 'Рыбное место'; }
+// Рыба, доступная для таблицы рыбного места (id → подпись)
+const FISH_ITEMS = [['sprat', 'Килька'], ['perch', 'Окунь'], ['trout', 'Форель'], ['salmon', 'Лосось']];
 // Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
 const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg') };
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
@@ -108,7 +115,7 @@ let panX = 0, panY = 0; // экранное смещение начала коо
 
 // --- Палитра тайлов по категориям ---
 const CATEGORIES = [
-  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#5fa84e' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 31, name: 'Песок (пустыня)', color: '#dcc878' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
+  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#819A35' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 31, name: 'Песок (пустыня)', color: '#dcc878' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
   { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' }, { id: 24, name: 'Горы', color: '#7c8088' }, { id: 32, name: 'Скала (пещера)', color: '#4a4f59' }, { id: 27, name: 'Забор', color: '#9a6b3a' } ] },
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 35, name: 'Серебро', color: '#c0c0c0' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Природа',  items: [ { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
@@ -118,12 +125,13 @@ const CATEGORIES = [
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
   { name: 'НПС', items: [ { id: 'npc', name: 'Создать НПС', color: '#e0a93b' } ] },
   { name: 'Существа', items: [ { id: 'mob', name: 'Создать моба', color: '#c0392b' } ] },
+  { name: 'Рыбалка', items: [ { id: 'fishspot', name: 'Рыбное место', color: '#3a86c8' } ] },
   { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' }, { id: -2, name: 'Изменить (текст/связь)', color: '#3aa' } ] },
 ];
 let selected = 0; // выбранный id тайла
 let iconCanvases = [];                          // {c: canvas, id} — мини-иконки палитры (перерисовка после загрузки SVG)
 
-const TOP = { 0:'#5fa84e', 1:'#3a86c8', 2:'#9aa0ac', 3:'#5fa84e', 4:'#c6a96a', 5:'#5fa84e', 6:'#5fa84e', 7:'#5fa84e', 8:'#5fa84e', 9:'#5fa84e', 10:'#5fa84e', 11:'#5fa84e', 12:'#5fa84e', 13:'#5fa84e', 14:'#5fa84e', 15:'#3b3b46', 16:'#5fa84e', 17:'#5fa84e', 18:'#5fa84e', 19:'#5fa84e', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#5fa84e', 25:'#5fa84e', 26:'#5fa84e', 27:'#5fa84e', 28:'#5fa84e', 29:'#3a86c8', 30:'#5fa84e', 31:'#dcc878', 33:'#5fa84e', 34:'#5fa84e', 35:'#5fa84e' };
+const TOP = { 0:'#819A35', 1:'#3a86c8', 2:'#9aa0ac', 3:'#819A35', 4:'#c6a96a', 5:'#819A35', 6:'#819A35', 7:'#819A35', 8:'#819A35', 9:'#819A35', 10:'#819A35', 11:'#819A35', 12:'#819A35', 13:'#819A35', 14:'#819A35', 15:'#3b3b46', 16:'#819A35', 17:'#819A35', 18:'#819A35', 19:'#819A35', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#819A35', 25:'#819A35', 26:'#819A35', 27:'#819A35', 28:'#819A35', 29:'#3a86c8', 30:'#819A35', 31:'#dcc878', 33:'#819A35', 34:'#819A35', 35:'#819A35' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
@@ -137,7 +145,8 @@ socket.on('mapData', (data) => {
     const L = data.locations[k];
     LOCS[k] = { map: L.map.map(r => r.slice()), floor: (L.floor || deriveFloor(L.map)).map(r => r.slice()),
                 teleports: (L.teleports || []).map(e => ({ ...e })), mobs: (L.mobs || []).map(m => ({ ...m })),
-                signs: (L.signs || []).map(s => ({ ...s })), npcs: (L.npcs || []).map(n => JSON.parse(JSON.stringify(n))), W: L.width, H: L.height };
+                signs: (L.signs || []).map(s => ({ ...s })), npcs: (L.npcs || []).map(n => JSON.parse(JSON.stringify(n))),
+                spots: (L.spots || []).map(s => JSON.parse(JSON.stringify(s))), W: L.width, H: L.height };
   }
   switchLoc(LOCS.surface ? 'surface' : Object.keys(LOCS)[0]);
 });
@@ -170,7 +179,7 @@ function blankLocation() {
     for (let x = 0; x < W; x++) { const b = (x === 0 || y === 0 || x === W - 1 || y === H - 1); mr.push(b ? 2 : 0); fr.push(0); }
     map.push(mr); floor.push(fr);
   }
-  return { map, floor, teleports: [], mobs: [], signs: [], npcs: [], W, H };
+  return { map, floor, teleports: [], mobs: [], signs: [], npcs: [], spots: [], W, H };
 }
 function addLocation() {
   const name = (prompt('Название новой локации:', '') || '').trim();
@@ -214,7 +223,8 @@ function applyResize() {
   const mobs = LOCS[curLoc].mobs.filter(m => m.x < w && m.y < h);
   const signs = LOCS[curLoc].signs.filter(s => s.x < w && s.y < h);
   const npcs = LOCS[curLoc].npcs.filter(n => n.x < w && n.y < h);
-  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, signs, npcs, W: w, H: h };
+  const spots = (LOCS[curLoc].spots || []).filter(s => s.x < w && s.y < h);
+  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, signs, npcs, spots, W: w, H: h };
   switchLoc(curLoc);
 }
 mapWInput.addEventListener('change', applyResize);
@@ -231,6 +241,10 @@ function mobAt(x, y) { return LOCS[curLoc].mobs.find(m => m.x === x && m.y === y
 function removeSign(x, y) { LOCS[curLoc].signs = LOCS[curLoc].signs.filter(s => !(s.x === x && s.y === y)); }
 function setSign(x, y, text) { removeSign(x, y); LOCS[curLoc].signs.push({ x, y, text: String(text || '') }); }
 function signAt(x, y) { return LOCS[curLoc].signs.find(s => s.x === x && s.y === y); }
+// Рыбные места текущей локации
+function removeSpot(x, y) { LOCS[curLoc].spots = (LOCS[curLoc].spots || []).filter(s => !(s.x === x && s.y === y)); }
+function setSpot(x, y, data) { if (!LOCS[curLoc].spots) LOCS[curLoc].spots = []; removeSpot(x, y); LOCS[curLoc].spots.push({ ...data, x, y }); }
+function spotAtEd(x, y) { return (LOCS[curLoc].spots || []).find(s => s.x === x && s.y === y); }
 // НПС текущей локации
 function removeNpc(x, y) { LOCS[curLoc].npcs = LOCS[curLoc].npcs.filter(n => !(n.x === x && n.y === y)); }
 function setNpc(x, y, data) { removeNpc(x, y); LOCS[curLoc].npcs.push({ ...data, x, y }); }
@@ -260,6 +274,12 @@ function drawIcon(c, id) {
     if (mi && mi._ready) return void c.drawImage(mi, 3, 2, 24, 24);
     c.fillStyle = '#888c94'; c.beginPath(); c.arc(15, 14, 8, 0, TAU); c.fill();
     c.fillStyle = '#1a1a1a'; c.beginPath(); c.arc(12, 13, 1.3, 0, TAU); c.arc(18, 13, 1.3, 0, TAU); c.fill(); return;
+  }
+  if (id === 'fishspot' || (typeof id === 'string' && id.startsWith('spotstamp:'))) { // рыбное место: рыбка в кругах ряби
+    c.strokeStyle = '#5fa8e0'; c.lineWidth = 1.5; c.beginPath(); c.ellipse(15, 16, 11, 6, 0, 0, TAU); c.stroke();
+    c.fillStyle = '#b8c2cc'; c.beginPath(); c.ellipse(14, 15, 7, 3.4, 0, 0, TAU); c.fill();
+    c.fillStyle = '#b8c2cc'; c.beginPath(); c.moveTo(20, 15); c.lineTo(25, 11); c.lineTo(25, 19); c.closePath(); c.fill();
+    c.fillStyle = '#2a2f37'; c.beginPath(); c.arc(10, 14, 1.3, 0, TAU); c.fill(); return;
   }
   if (id === 'npc') {   // человечек (создать НПС)
     c.fillStyle = '#f3cfa6'; c.beginPath(); c.arc(15, 9, 4.5, 0, TAU); c.fill();           // голова
@@ -328,13 +348,36 @@ function buildPalette() {
         group.appendChild(el);
       });
     }
+    // В группу «Рыбалка» — кнопка на каждое сохранённое рыбное место (выбрал — штампуешь его таблицу рыбы)
+    if (cat.name === 'Рыбалка') {
+      savedSpots.forEach((s, i) => {
+        const sid = 'spotstamp:' + i;
+        const el = document.createElement('div');
+        el.className = 'swatch' + (sid === selected ? ' active' : '');
+        el.title = 'ЛКМ — выбрать и ставить · ПКМ — удалить из библиотеки';
+        const ic = document.createElement('canvas'); ic.width = 30; ic.height = 30; ic.className = 'dot-ic';
+        drawIcon(ic.getContext('2d'), sid);
+        iconCanvases.push({ c: ic, id: sid });
+        el.appendChild(ic);
+        el.appendChild(document.createTextNode(' ' + spotLabelFor(s)));
+        el.addEventListener('click', () => {
+          selected = sid;
+          document.querySelectorAll('.swatch').forEach(w => w.classList.remove('active')); el.classList.add('active');
+        });
+        el.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          if (confirm(`Удалить «${spotLabelFor(s)}» из библиотеки рыбных мест?`)) { savedSpots.splice(i, 1); persistSavedSpots(); if (selected === sid) selected = 'fishspot'; buildPalette(); }
+        });
+        group.appendChild(el);
+      });
+    }
     paletteEl.appendChild(group);
   });
 }
 
 saveBtn.addEventListener('click', () => {
   const out = {};
-  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs, signs: LOCS[k].signs, npcs: LOCS[k].npcs };
+  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs, signs: LOCS[k].signs, npcs: LOCS[k].npcs, spots: LOCS[k].spots || [] };
   socket.emit('saveMap', { locations: out });
 });
 
@@ -369,7 +412,7 @@ canvas.addEventListener('mousedown', (e) => {
   else if (e.button === 0) {
     // Инструменты с диалогом (табличка/изменить) — только одиночный клик, БЕЗ протяжки:
     // prompt() блокирует поток и «съедает» mouseup, иначе курсор продолжал бы рисовать.
-    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc' || selected === 'mob');
+    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc' || selected === 'mob' || selected === 'fishspot');
     if (!dialogTool) painting = true;
     paintAt(e, true);   // true = одиночный клик (можно спросить текст/правку)
   }
@@ -406,11 +449,15 @@ function paintAt(e, isClick) {
   if (selected === EDIT) { if (isClick) editParams(t.x, t.y); return; }  // «Изменить»: правка параметров поставленного объекта
   if (selected === 'npc') { if (isClick) openNpcEditor(t.x, t.y, npcAt(t.x, t.y) || null); return; } // создать/править НПС
   if (selected === 'mob') { if (isClick) openMobEditor(t.x, t.y, null, true); return; }                 // конструктор НОВОГО моба (в библиотеку)
+  if (selected === 'fishspot') { if (isClick) openSpotEditor(t.x, t.y, spotAtEd(t.x, t.y) || null, true); return; } // настроить рыбное место (в библиотеку)
   if (typeof selected === 'string' && selected.startsWith('mobstamp:')) {                              // штамп выбранного из библиотеки (можно протяжкой)
     const m = savedMobs[+selected.slice(9)]; if (m) setMob(t.x, t.y, JSON.parse(JSON.stringify(m))); return;
   }
-  if (selected === ERASE) {                          // ластик: убрать объект/моба/НПС, оставить пол
-    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y); removeNpc(t.x, t.y);
+  if (typeof selected === 'string' && selected.startsWith('spotstamp:')) {                             // штамп сохранённого рыбного места
+    const s = savedSpots[+selected.slice(10)]; if (s) setSpot(t.x, t.y, JSON.parse(JSON.stringify(s))); return;
+  }
+  if (selected === ERASE) {                          // ластик: убрать объект/моба/НПС/рыбное место, оставить пол
+    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y); removeNpc(t.x, t.y); removeSpot(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
     FLOOR[t.y][t.x] = selected;
     if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
@@ -434,6 +481,8 @@ function editParams(x, y) {
   if (npc) { openNpcEditor(x, y, npc); return; }      // НПС — открыть его конструктор
   const mob = mobAt(x, y);
   if (mob) { openMobEditor(x, y, mob); return; }      // моб — открыть его конструктор
+  const spot = spotAtEd(x, y);
+  if (spot) { openSpotEditor(x, y, spot, false); return; } // рыбное место — правка таблицы рыбы
   const t = MAP[y][x];
   if (t === SIGN) {
     const cur = signAt(x, y);
@@ -596,6 +645,9 @@ function render() {
   // Авторские НПС (поверх объектов)
   const ns = (LOCS[curLoc] && LOCS[curLoc].npcs) || [];
   for (const n of ns) drawNpcMarker(panX + isoX(n.x, n.y), panY + isoY(n.x, n.y), n);
+  // Рыбные места (поверх воды)
+  const sp = (LOCS[curLoc] && LOCS[curLoc].spots) || [];
+  for (const s of sp) drawSpotMarker(panX + isoX(s.x, s.y), panY + isoY(s.x, s.y), s);
 
   requestAnimationFrame(render);
 }
@@ -865,5 +917,84 @@ function drawNpcMarker(cx, cy, n) {
   if (n.sells && n.sells.length) badge += '+';    // продаёт товары
   if (n.talkText) badge += '?';
   if (badge) { ctx.fillStyle = '#f1c40f'; ctx.font = `bold ${Math.round(12 * z)}px sans-serif`; ctx.fillText(badge, cx, topY - 16 * z); }
+}
+
+// Рыбное место в редакторе: рябь + рыбка + название
+function drawSpotMarker(cx, cy, s) {
+  const z = zoom;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(120,200,255,.85)'; ctx.lineWidth = 1.6 * z;
+  for (let i = 1; i <= 2; i++) { ctx.beginPath(); ctx.ellipse(cx, cy, 6 * i * z, 3 * i * z, 0, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.fillStyle = '#b8c2cc'; ctx.beginPath(); ctx.ellipse(cx - 1 * z, cy - 1 * z, 6 * z, 3 * z, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx + 4 * z, cy - 1 * z); ctx.lineTo(cx + 9 * z, cy - 4 * z); ctx.lineTo(cx + 9 * z, cy + 2 * z); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#2a2f37'; ctx.beginPath(); ctx.arc(cx - 5 * z, cy - 2 * z, 1.2 * z, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  const label = s.name || 'Рыбное место';
+  ctx.font = `bold ${Math.round(10 * z)}px sans-serif`; ctx.textAlign = 'center';
+  ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 3 * z; ctx.strokeText(label, cx, cy - 14 * z);
+  ctx.fillStyle = '#bfe3ff'; ctx.fillText(label, cx, cy - 14 * z);
+}
+
+// --- Конструктор рыбного места (модальное окно) ---
+function spotDefaults() { return { name: 'Рыбное место', fish: [{ id: 'sprat', chance: 70, minLevel: 1, xp: 8 }] }; }
+// Одна строка таблицы рыбы: рыба · шанс(%) · мин.уровень · опыт
+function makeFishRow(f) {
+  f = { id: 'sprat', chance: 50, minLevel: 1, xp: 10, ...f };
+  const el = document.createElement('div');
+  el.className = 'mob-loot-row fish-row';
+  el.innerHTML = `
+    <select class="f-item">${optHtml(FISH_ITEMS, f.id)}</select>
+    <span class="npc-inline">шанс<input class="f-chance" type="number" min="1" max="100" value="${Math.round((f.chance <= 1 ? f.chance * 100 : f.chance))}">%</span>
+    <span class="npc-inline">ур.<input class="f-min" type="number" min="1" max="99" value="${f.minLevel || 1}"></span>
+    <span class="npc-inline">опыт<input class="f-xp" type="number" min="1" value="${f.xp || 10}"></span>
+    <button class="l-remove" title="Удалить">✕</button>`;
+  el.querySelector('.l-remove').addEventListener('click', () => el.remove());
+  return el;
+}
+function readFishRow(el) {
+  return {
+    id: el.querySelector('.f-item').value,
+    chance: Math.max(1, Math.min(100, parseInt(el.querySelector('.f-chance').value, 10) || 50)) / 100,
+    minLevel: Math.max(1, Math.min(99, parseInt(el.querySelector('.f-min').value, 10) || 1)),
+    xp: Math.max(1, parseInt(el.querySelector('.f-xp').value, 10) || 10),
+  };
+}
+function openSpotEditor(x, y, existing, toLibrary) {
+  const data = existing ? JSON.parse(JSON.stringify(existing)) : spotDefaults();
+  if (!Array.isArray(data.fish)) data.fish = [];
+  const ov = document.getElementById('npcOverlay');
+  ov.innerHTML = `
+    <div class="npc-modal">
+      <div class="npc-right" style="width:100%">
+        <h3>${existing ? 'Рыбное место' : 'Новое рыбное место'}</h3>
+        <p class="npc-hint">Ставится на воду. Какая рыба попадётся — зависит от этой таблицы (место) и от уровня рыбалки игрока (мин. уровень). Шанс — это вес рыбы среди доступной по уровню.</p>
+        <label class="npc-f">Название<input id="spName" type="text" maxlength="24" value="${escAttr(data.name)}" placeholder="напр. Пруд / Море"></label>
+        <div class="npc-f">Рыба (рыба · шанс · мин. уровень · опыт)<div id="spFish"></div><button id="spAddFish" class="npc-addq">+ Добавить рыбу</button></div>
+        <div class="npc-btns">
+          ${existing ? '<button id="spDelete" class="m-danger">Удалить</button>' : ''}
+          <button id="spCancel" class="m-cancel">Отмена</button>
+          <button id="spSave" class="m-ok">Сохранить</button>
+        </div>
+      </div>
+    </div>`;
+  ov.classList.remove('hidden');
+  const $ = (id) => ov.querySelector('#' + id);
+  const fishBox = $('spFish');
+  data.fish.forEach(f => fishBox.appendChild(makeFishRow(f)));
+  $('spAddFish').addEventListener('click', () => fishBox.appendChild(makeFishRow()));
+  const close = () => { ov.classList.add('hidden'); ov.innerHTML = ''; };
+  $('spCancel').addEventListener('click', close);
+  if (existing) $('spDelete').addEventListener('click', () => { removeSpot(x, y); close(); });
+  $('spSave').addEventListener('click', () => {
+    data.name = ($('spName').value || '').trim().slice(0, 24) || 'Рыбное место';
+    data.fish = [...fishBox.querySelectorAll('.fish-row')].map(readFishRow);
+    if (!data.fish.length) { alert('Добавь хотя бы одну рыбу в таблицу.'); return; }
+    setSpot(x, y, data);
+    if (toLibrary) {   // новое место → в библиотеку + сразу выбрано для штамповки
+      savedSpots.push(JSON.parse(JSON.stringify(data))); persistSavedSpots();
+      selected = 'spotstamp:' + (savedSpots.length - 1); buildPalette();
+    }
+    close();
+  });
 }
 requestAnimationFrame(render);

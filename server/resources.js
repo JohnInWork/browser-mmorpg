@@ -17,15 +17,17 @@ const KINDS = {
   [cfg.TILES.SILVER_ORE]: { kind: 'silver', tool: 'pickaxe', gives: 'silverOre', amount: cfg.NODE_AMOUNT.silver, skill: 'mining', reqLevel: 1, xp: 22 },
 };
 
-const nodes = {};   // id -> { id, x, y, kind, tool, gives, amount, maxAmount, alive }
-const nodeAt = {};  // "x,y" -> node
+const nodes = {};   // id -> { id, x, y, location, kind, tool, gives, amount, maxAmount, alive } | рыбная нода {kind:'fish', fish:[...]}
+const nodeAt = {};  // "loc:x,y" -> node (ключ включает локацию — на разных картах координаты совпадают)
 let seq = 0;
 
-const RES_LOCATION = 'surface';     // ресурсы пока только на Поверхности
+const RES_LOCATION = 'surface';     // тайловые ресурсы (деревья/камень/руда) пока только на Поверхности
+const key = (loc, x, y) => loc + ':' + x + ',' + y;
 
 function build() {
   for (const k in nodes) delete nodes[k];
   for (const k in nodeAt) delete nodeAt[k];
+  // 1) Тайловые ноды (дерево/камень/руда/песок/серебро) — с карты Поверхности
   const { map, width, height } = world.locState(RES_LOCATION);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -34,12 +36,19 @@ function build() {
       const id = 'n' + (seq++);
       nodes[id] = { id, x, y, location: RES_LOCATION, kind: def.kind, tool: def.tool, gives: def.gives, amount: def.amount, maxAmount: def.amount,
                     skill: def.skill, reqLevel: def.reqLevel, xp: def.xp, alive: true };
-      nodeAt[x + ',' + y] = nodes[id];
+      nodeAt[key(RES_LOCATION, x, y)] = nodes[id];
     }
+  }
+  // 2) Рыбные ноды — из расставленных в редакторе рыбных мест (любая локация). Не истощаются.
+  for (const s of world.allSpots()) {
+    const id = 'n' + (seq++);
+    nodes[id] = { id, x: s.x, y: s.y, location: s.location, kind: 'fish', tool: 'fishingRod',
+                  skill: 'fishing', reqLevel: 1, fish: s.fish || [], alive: true };
+    nodeAt[key(s.location, s.x, s.y)] = nodes[id];
   }
 }
 
-function getNodeAt(loc, x, y) { const n = nodeAt[x + ',' + y]; return (n && n.location === loc) ? n : null; }
+function getNodeAt(loc, x, y) { return nodeAt[key(loc, x, y)] || null; }
 function depletedList() { return Object.values(nodes).filter(n => !n.alive).map(n => `${n.x},${n.y}`); }
 // Подходит ли инструмент (id) для ноды
 function canGather(tool, node) { return !!(node && tool && tool === node.tool); }
@@ -58,7 +67,29 @@ function start(io) {
       const lvl = skills.level(p, n.skill);
       const chance = Math.max(cfg.GATHER_MIN_CHANCE, Math.min(cfg.GATHER_MAX_CHANCE,
         cfg.GATHER_BASE_CHANCE + (lvl - n.reqLevel) * cfg.GATHER_PER_LEVEL));
-      if (Math.random() >= chance) { io.emit('gatherMiss', { x: n.x, y: n.y, kind: n.kind }); continue; } // промах — ресурс не получен
+      if (Math.random() >= chance) { io.emit('gatherMiss', { x: n.x, y: n.y, kind: n.kind }); continue; } // промах — клёва/удара нет
+
+      // --- Рыбалка: какая рыба попалась — зависит от УРОВНЯ (фильтр minLevel) и МЕСТА (своя таблица) ---
+      if (n.kind === 'fish') {
+        const pool = (n.fish || []).filter(f => lvl >= (f.minLevel || 1));   // доступная по уровню рыба этого места
+        if (!pool.length) { io.emit('gatherMiss', { x: n.x, y: n.y, kind: 'fish' }); continue; }
+        const total = pool.reduce((a, f) => a + f.chance, 0);                 // взвешенный выбор по шансу
+        let r = Math.random() * total, pick = pool[pool.length - 1];
+        for (const f of pool) { r -= f.chance; if (r <= 0) { pick = f; break; } }
+        addItem(p, pick.id, 1);
+        const fup = skills.addXp(p, 'fishing', pick.xp || 12);
+        io.to(pid).emit('skillUpdate', { skill: 'fishing', ...skills.one(p, 'fishing'), leveledUp: fup.leveledUp });
+        const fq = quests.recordGather(p, pick.id);                          // рыба тоже двигает квесты на сбор
+        if (fq && fq.done && fq.rewardItem) addItem(p, fq.rewardItem.id, fq.rewardItem.qty);
+        io.to(pid).emit('inventoryUpdate', invState(p));
+        io.to(pid).emit('loot', { id: pick.id, qty: 1 });
+        if (fq) {
+          io.to(pid).emit('questUpdate', quests.clientState(p));
+          if (fq.done) io.to(pid).emit('questDone', { title: fq.quest.title, reward: fq.reward });
+        }
+        io.emit('gatherHit', { x: n.x, y: n.y, kind: 'fish' });
+        continue;                                                            // рыбное место не истощается — ловим дальше
+      }
 
       n.amount -= 1;
       addItem(p, n.gives, 1);

@@ -7,9 +7,20 @@ export const ITEM_TEX = {
   pickaxe: '/assets/pickaxe.svg',
   axe: '/assets/axe.svg',
   shovel: '/assets/shovel.svg',
+  fishingRod: '/assets/fishing-rod.svg',
   leather: '/assets/leather.svg',
   silverOre: '/assets/silver-ore.svg',
   silverIngot: '/assets/silver-ingot.svg',
+  // Рыба сырая (заглушки — заменишь своими svg)
+  sprat: '/assets/fish-sprat.svg',
+  perch: '/assets/fish-perch.svg',
+  trout: '/assets/fish-trout.svg',
+  salmon: '/assets/fish-salmon.svg',
+  // Рыба жареная (заглушки)
+  cookedSprat: '/assets/fish-cooked-sprat.svg',
+  cookedPerch: '/assets/fish-cooked-perch.svg',
+  cookedTrout: '/assets/fish-cooked-trout.svg',
+  cookedSalmon: '/assets/fish-cooked-salmon.svg',
 };
 
 // БРОНЯ: рисуется на теле и даёт иконку (обрезается по слоту). Один файл = и на персонаже, и в инвентаре.
@@ -27,4 +38,5 @@ export const SKILL_TEX = {
   mining: ITEM_TEX.pickaxe,
   smithing: '/assets/anvil.svg',
   cooking: '/assets/campfire.svg',
+  fishing: ITEM_TEX.fishingRod,
 };

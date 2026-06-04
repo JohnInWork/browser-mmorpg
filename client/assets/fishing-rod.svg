@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА удочки (плоские цвета). Ручка снизу-слева, удилище к верх-правому углу. -->
+  <!-- удилище -->
+  <polygon points="150,452 178,430 412,96 396,84" fill="#a9743f"/>
+  <polygon points="412,96 396,84 404,78 418,90" fill="#caa46b"/>
+  <!-- рукоять -->
+  <rect x="120" y="430" width="70" height="26" rx="13" transform="rotate(-38 155 443)" fill="#5e3a1c"/>
+  <!-- катушка -->
+  <circle cx="205" cy="404" r="20" fill="#3a3f47"/>
+  <circle cx="205" cy="404" r="8" fill="#8a929c"/>
+  <!-- леска -->
+  <path d="M410 92 L410 150 Q418 210 360 250" fill="none" stroke="#cfd6dd" stroke-width="3"/>
+  <!-- поплавок -->
+  <circle cx="358" cy="262" r="14" fill="#e8556b"/>
+  <path d="M358 262 l0 26" stroke="#cfd6dd" stroke-width="3"/>
+  <!-- крючок -->
+  <path d="M358 288 q-14 16 0 26 q12 8 18 -4" fill="none" stroke="#8a929c" stroke-width="4" stroke-linecap="round"/>
+</svg>

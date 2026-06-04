@@ -6,7 +6,11 @@
     { "out": "emptyFlask", "outQty": 1, "in": [{ "id": "sand", "qty": 2 }] }
   ],
   "campfire": [
-    { "out": "cookedChicken", "outQty": 1, "in": [{ "id": "rawChicken", "qty": 1 }] }
+    { "out": "cookedChicken", "outQty": 1, "in": [{ "id": "rawChicken", "qty": 1 }] },
+    { "out": "cookedSprat",  "outQty": 1, "in": [{ "id": "sprat",  "qty": 1 }] },
+    { "out": "cookedPerch",  "outQty": 1, "in": [{ "id": "perch",  "qty": 1 }] },
+    { "out": "cookedTrout",  "outQty": 1, "in": [{ "id": "trout",  "qty": 1 }] },
+    { "out": "cookedSalmon", "outQty": 1, "in": [{ "id": "salmon", "qty": 1 }] }
   ],
   "anvil": [
     { "out": "helmet", "in": [{ "id": "ingot", "qty": 2 }] },
@@ -24,6 +28,7 @@
     { "out": "silverBoots",  "in": [{ "id": "silverIngot", "qty": 2 }] }
   ],
   "workbench": [
+    { "out": "fishingRod",   "in": [{ "id": "wood", "qty": 3 }] },
     { "out": "leatherHat",   "in": [{ "id": "leather", "qty": 3 }] },
     { "out": "leatherTunic", "in": [{ "id": "leather", "qty": 5 }] },
     { "out": "leatherMitts", "in": [{ "id": "leather", "qty": 2 }] },

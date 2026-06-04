@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: Лосось — крупный, сине-стальная спина и оранжевое брюхо -->
+  <g transform="translate(256,256)">
+    <polygon points="160,0 218,-54 218,54" fill="#4a6a8a"/>
+    <ellipse cx="0" cy="0" rx="168" ry="92" fill="#5c86ad"/>
+    <ellipse cx="0" cy="20" rx="168" ry="62" fill="#e08a4a"/>
+    <ellipse cx="0" cy="40" rx="150" ry="30" fill="#f0b07a"/>
+    <polygon points="-10,-92 70,-92 30,-48" fill="#4a6a8a"/>
+    <g fill="#36506a" opacity="0.6">
+      <circle cx="-60" cy="-40" r="5"/><circle cx="-10" cy="-50" r="5"/><circle cx="40" cy="-42" r="5"/>
+    </g>
+    <circle cx="-112" cy="-8" r="18" fill="#2a2f37"/>
+    <circle cx="-118" cy="-14" r="7" fill="#fff"/>
+    <path d="M50 -86 q34 -8 64 8 q-34 8 -64 -8" fill="#4a6a8a"/>
+  </g>
+</svg>

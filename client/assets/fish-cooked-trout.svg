@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: Жареная форель — поджаренная, золотистая с тёмной корочкой -->
+  <g transform="translate(256,256)">
+    <polygon points="150,0 205,-46 205,46" fill="#8f5828"/>
+    <ellipse cx="0" cy="0" rx="160" ry="78" fill="#bb7d3e"/>
+    <ellipse cx="0" cy="8" rx="160" ry="54" fill="#dba258"/>
+    <path d="M-150 4 Q0 -6 150 4 Q0 22 -150 4 Z" fill="#c97f4a" opacity="0.7"/>
+    <polygon points="-10,-78 60,-78 25,-40" fill="#8f5828"/>
+    <g stroke="#653c1b" stroke-width="7" stroke-linecap="round" opacity="0.7">
+      <line x1="-60" y1="-58" x2="-36" y2="58"/>
+      <line x1="-5" y1="-62" x2="18" y2="62"/>
+      <line x1="50" y1="-54" x2="70" y2="52"/>
+    </g>
+    <circle cx="-104" cy="-4" r="14" fill="#2a1f17"/>
+  </g>
+</svg>

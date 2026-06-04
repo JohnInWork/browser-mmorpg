@@ -80,6 +80,21 @@ function normMob(m) {
   };
 }
 
+// Нормализовать одно рыбное место: координаты + таблица рыбы [{id, chance, minLevel, xp}].
+// Какая рыба попадётся — зависит от МЕСТА (своя таблица) и от УРОВНЯ игрока (фильтр по minLevel).
+function normSpot(s) {
+  const x = s.x | 0, y = s.y | 0;
+  const fish = Array.isArray(s.fish)
+    ? s.fish.filter(f => f && f.id).map(f => ({
+        id: String(f.id).slice(0, 24),
+        chance: Math.max(0.01, Math.min(1, Number(f.chance) || 1)),  // вес в этом месте (доля)
+        minLevel: clampN(f.minLevel, 1, 99, 1),                       // минимальный уровень рыбалки
+        xp: clampN(f.xp, 1, 9999, 12),                                // опыт за эту рыбу
+      }))
+    : [];
+  return { x, y, name: String(s.name || 'Рыбное место').slice(0, 24), fish };
+}
+
 // Нормализовать один квест НПС (стабильный id с индексом)
 function normQuest(q, loc, x, y, i) {
   if (!q || typeof q !== 'object' || !QUEST_TYPES.has(q.type)) return null;
@@ -130,13 +145,14 @@ function normLoc(L, locName) {
   const mobs = Array.isArray(L.mobs) ? L.mobs.map(normMob) : undefined;
   const signs = Array.isArray(L.signs) ? L.signs.map(s => ({ x: s.x, y: s.y, text: String(s.text || '') })) : [];
   const npcs = Array.isArray(L.npcs) ? L.npcs.map((n, i) => normNpc(n, locName || 'loc', i)) : [];
-  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, signs, npcs, H: map.length, W: map[0].length };
+  const spots = Array.isArray(L.spots) ? L.spots.map(normSpot) : [];
+  return { map, floor, teleports: Array.isArray(L.teleports) ? L.teleports : [], mobs, signs, npcs, spots, H: map.length, W: map[0].length };
 }
 
 function saveToDisk() {
   if (!fs.existsSync(MAPS_DIR)) fs.mkdirSync(MAPS_DIR, { recursive: true });
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], npcs: locations[k].npcs || [] };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], npcs: locations[k].npcs || [], spots: locations[k].spots || [] };
   fs.writeFileSync(MAP_FILE, JSON.stringify({ locations: out }));
 }
 
@@ -227,6 +243,15 @@ function teleportTarget(loc, x, y) {
 function publicNpc(n) {
   return { id: n.id, x: n.x, y: n.y, name: n.name, link: n.link, description: n.description, appearance: n.appearance, equipment: n.equipment, trader: n.trader, sells: n.sells || [], dialogue: n.dialogue, quests: n.quests || [] };
 }
+// Публичный вид рыбного места (таблицу рыбы НЕ отдаём — улов считает сервер)
+function publicSpot(s) { return { x: s.x, y: s.y, name: s.name }; }
+function spotsOf(loc) { const L = locations[loc]; return L ? (L.spots || []) : []; }
+// Все рыбные места всех локаций (для регистрации ловильных нод в resources.js)
+function allSpots() {
+  const out = [];
+  for (const ln in locations) for (const s of (locations[ln].spots || [])) out.push({ location: ln, ...s });
+  return out;
+}
 function npcsOf(loc) { const L = locations[loc]; return L ? (L.npcs || []).map(publicNpc) : []; }
 function npcAt(loc, x, y) { const L = locations[loc]; if (!L) return null; return (L.npcs || []).find(n => n.x === x && n.y === y) || null; }
 // Найти НПС по метке связи (или имени) в указанной локации (для talk-квестов)
@@ -240,13 +265,13 @@ function npcByLink(loc, label) {
 function locState(loc) {
   const L = locations[loc] || locations[START];
   const name = locations[loc] ? loc : START;
-  return { location: name, map: L.map, floor: L.floor, signs: L.signs || [], npcs: (L.npcs || []).map(publicNpc), width: L.W, height: L.H };
+  return { location: name, map: L.map, floor: L.floor, signs: L.signs || [], npcs: (L.npcs || []).map(publicNpc), spots: (L.spots || []).map(publicSpot), width: L.W, height: L.H };
 }
 
 // Все локации для редактора
 function editorState() {
   const out = {};
-  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], npcs: locations[k].npcs || [], width: locations[k].W, height: locations[k].H };
+  for (const k in locations) out[k] = { map: locations[k].map, floor: locations[k].floor, teleports: locations[k].teleports, mobs: locations[k].mobs || [], signs: locations[k].signs || [], npcs: locations[k].npcs || [], spots: locations[k].spots || [], width: locations[k].W, height: locations[k].H };
   return { locations: out };
 }
 
@@ -283,7 +308,10 @@ function setLocations(payload) {
     const npcs = Array.isArray(L.npcs)
       ? L.npcs.filter(n => Number.isInteger(n.x) && Number.isInteger(n.y)).map(n => normNpc(n, k))
       : [];
-    next[k] = { map, floor, teleports, mobs, signs, npcs, H: map.length, W: map[0].length };
+    const spots = Array.isArray(L.spots)
+      ? L.spots.filter(s => Number.isInteger(s.x) && Number.isInteger(s.y)).map(normSpot)
+      : [];
+    next[k] = { map, floor, teleports, mobs, signs, npcs, spots, H: map.length, W: map[0].length };
   }
   if (!next[START]) return false;                 // Поверхность обязательна (стартовая локация)
   locations = next;
@@ -293,4 +321,4 @@ function setLocations(payload) {
   return true;
 }
 
-module.exports = { load, isWalkable, randomSpawn, pickSpawn, spawnPoints, mobSpawns, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap, npcsOf, npcAt, npcByLink };
+module.exports = { load, isWalkable, randomSpawn, pickSpawn, spawnPoints, mobSpawns, tileAt, teleportTarget, locState, editorState, setLocations, hasLoc, startLocation, isValidMap, npcsOf, npcAt, npcByLink, spotsOf, allSpots };

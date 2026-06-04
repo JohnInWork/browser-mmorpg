@@ -112,6 +112,8 @@ function nodeAt(x, y) {
   return null;
 }
 function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }
+// Рыбное место на клетке (текущая локация) или null
+function spotAt(x, y) { return (S.spots || []).find(s => s.x === x && s.y === y) || null; }
 // Табличка на клетке (тайл 30): возвращает {x,y,text} или null
 function signAt(x, y) {
   if (!(S.MAP && S.MAP[y] && S.MAP[y][x] === 30)) return null;
@@ -145,10 +147,12 @@ export function setupInput() {
     const npc = npcAt(t.x, t.y);
     const node = nodeAt(t.x, t.y);
     const st = stationAt(t.x, t.y);
+    const spot = spotAt(t.x, t.y);
     if (m) { showTip(mobLabel(m)); canvas.style.cursor = 'pointer'; }
     else if (npc) { showTip(npc.name); canvas.style.cursor = 'pointer'; }
     else if (pl) { showTip(pl.name); canvas.style.cursor = 'pointer'; }
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
+    else if (spot) { showTip(spot.name || 'Рыбное место'); canvas.style.cursor = 'pointer'; }
     else if (adminChestAt(t.x, t.y)) { showTip('Админ-сундук'); canvas.style.cursor = 'pointer'; }
     else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
     else if (wellAt(t.x, t.y)) { showTip('Колодец'); canvas.style.cursor = 'pointer'; }
@@ -238,6 +242,16 @@ export function setupInput() {
       if (!ap) return;
       // нет нужного инструмента — подойти, затем сообщить; иначе подойти и добывать
       if (activeTool() !== node.tool) S.pendingAction = { kind: 'notice', text: node.need, color: '#fff' };
+      else S.pendingAction = { kind: 'gather', x: t.x, y: t.y };
+      S.path = ap.path; S.targetTile = null;
+      return;
+    }
+    // Клик по рыбному месту — подойти и рыбачить (нужна удочка «в руке»). Ловля идёт по тому же gather.
+    const spot = spotAt(t.x, t.y);
+    if (spot) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      if (activeTool() !== 'fishingRod') S.pendingAction = { kind: 'notice', text: 'Нужна удочка', color: '#fff' };
       else S.pendingAction = { kind: 'gather', x: t.x, y: t.y };
       S.path = ap.path; S.targetTile = null;
       return;

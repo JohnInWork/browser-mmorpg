@@ -17,6 +17,7 @@ export function setupNet() {
     S.location = data.location || 'surface';
     S.signs = data.signs || [];
     S.npcs = data.npcs || [];
+    S.spots = data.spots || [];
     for (const id in data.players) {
       const p = data.players[id];
       S.players[id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null };
@@ -43,6 +44,7 @@ export function setupNet() {
     if (data.location) S.location = data.location;
     S.signs = data.signs || [];
     S.npcs = data.npcs || [];
+    S.spots = data.spots || [];
     S.depletedNodes.clear(); // деревья пересозданы редактором
   });
 
@@ -54,6 +56,7 @@ export function setupNet() {
     S.location = data.location; S.MAP = data.map; S.FLOOR = data.floor || floorFrom(data.map); S.mapW = data.width; S.mapH = data.height;
     S.signs = data.signs || [];
     S.npcs = data.npcs || [];
+    S.spots = data.spots || [];
     const me = S.players[S.myId];
     if (me) { me.x = data.x; me.y = data.y; me.rx = data.x; me.ry = data.y; me.location = data.location; }
     S.path = []; S.targetTile = null; S.pendingAction = null;

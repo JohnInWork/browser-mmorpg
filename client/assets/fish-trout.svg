@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: Форель — оливковая с розовой полосой и крапинками -->
+  <g transform="translate(256,256)">
+    <polygon points="155,0 210,-48 210,48" fill="#5d6e4e"/>
+    <ellipse cx="0" cy="0" rx="160" ry="80" fill="#7d8a63"/>
+    <ellipse cx="0" cy="6" rx="160" ry="56" fill="#d7c0a0"/>
+    <path d="M-150 6 Q0 -8 150 6 Q0 28 -150 6 Z" fill="#d98aa0" opacity="0.8"/>
+    <g fill="#3c4636" opacity="0.8">
+      <circle cx="-70" cy="-32" r="6"/><circle cx="-30" cy="-44" r="6"/><circle cx="20" cy="-34" r="6"/>
+      <circle cx="-50" cy="-10" r="5"/><circle cx="10" cy="-12" r="5"/><circle cx="60" cy="-22" r="5"/>
+    </g>
+    <polygon points="-10,-80 60,-80 25,-42" fill="#5d6e4e"/>
+    <circle cx="-104" cy="-6" r="16" fill="#2a2f37"/>
+    <circle cx="-109" cy="-11" r="6" fill="#fff"/>
+  </g>
+</svg>

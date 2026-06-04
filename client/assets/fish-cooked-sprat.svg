@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: Жареная килька — мелкая, золотисто-коричневая, с полосками гриля -->
+  <g transform="translate(256,256)">
+    <polygon points="120,0 165,-34 165,34" fill="#a86a32"/>
+    <ellipse cx="0" cy="0" rx="125" ry="54" fill="#c98a4b"/>
+    <ellipse cx="0" cy="-8" rx="125" ry="34" fill="#e0a463"/>
+    <g stroke="#7a4a22" stroke-width="6" stroke-linecap="round" opacity="0.7">
+      <line x1="-50" y1="-40" x2="-30" y2="40"/>
+      <line x1="0" y1="-44" x2="20" y2="44"/>
+    </g>
+    <circle cx="-82" cy="-10" r="11" fill="#2a1f17"/>
+  </g>
+</svg>
