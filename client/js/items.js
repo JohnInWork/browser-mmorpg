@@ -66,6 +66,16 @@ const ICONS = {
     <circle cx="5.6" cy="18.2" r="2.1" fill="#efe7d6"/><circle cx="7.9" cy="19.4" r="1.9" fill="#efe7d6"/>
     <circle cx="15" cy="9" r="6" fill="#bd7f3e" stroke="#7d4f22" stroke-width="1.1"/>
     <path d="M11.2 7 l6 3 M12.6 5.4 l5 4.2" stroke="#6e451e" stroke-width="1" stroke-linecap="round" opacity="0.7"/></svg>`,
+  rawWildMeat: `<svg viewBox="0 0 24 24" width="30" height="30">
+    <line x1="5" y1="19" x2="12" y2="12" stroke="#efe7d6" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="4.7" cy="19.2" r="2.2" fill="#efe7d6"/><circle cx="7.1" cy="20.3" r="2" fill="#efe7d6"/>
+    <circle cx="15" cy="9" r="7" fill="#b23b3b" stroke="#7e2626" stroke-width="1.2"/>
+    <circle cx="12.8" cy="6.9" r="1.7" fill="#d57c7c"/></svg>`,
+  cookedWildMeat: `<svg viewBox="0 0 24 24" width="30" height="30">
+    <line x1="5" y1="19" x2="12" y2="12" stroke="#efe7d6" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="4.7" cy="19.2" r="2.2" fill="#efe7d6"/><circle cx="7.1" cy="20.3" r="2" fill="#efe7d6"/>
+    <circle cx="15" cy="9" r="7" fill="#8b5a2b" stroke="#5a3a18" stroke-width="1.2"/>
+    <path d="M10.5 7 l7 3.4 M12 5.2 l6 4.6" stroke="#4e3216" stroke-width="1.1" stroke-linecap="round" opacity="0.7"/></svg>`,
   helmet: `<svg viewBox="0 0 24 24" width="28" height="28">
     <path d="M4 14 a8 8 0 0 1 16 0 v2 h-16 z" fill="${ST}" stroke="${STD}" stroke-width="1"/>
     <rect x="11" y="9" width="2" height="7" fill="${STD}"/></svg>`,

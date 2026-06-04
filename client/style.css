@@ -299,7 +299,7 @@ body {
 .sign-empty { color: #5a3f1e; }
 
 /* Окно смерти */
-.death-modal { text-align: center; min-width: 280px; }
+.death-modal { text-align: center; }
 .death-title { color: #e74c3c; font-size: 26px; margin-bottom: 14px; letter-spacing: .5px; }
 .death-body { font-size: 15px; line-height: 1.55; margin-bottom: 18px; }
 .death-bag { color: #e0a0a0; font-weight: 600; margin-bottom: 8px; }
@@ -312,9 +312,9 @@ body {
 .cd { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.5); border-radius: 8px; font-size: 13px; font-weight: 700; color: #ffd24a; pointer-events: none; }
 
 /* Окна камня возвращения (привязка / телепорт) */
-.stone-modal { text-align: center; min-width: 300px; max-width: 380px; }
+.stone-modal { text-align: center; }
 .stone-title { font-size: 20px; margin-bottom: 12px; color: #cfa14a; }
-.stone-body { font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
+.stone-body { font-size: 14px; line-height: 1.5; margin-bottom: 16px; word-break: break-word; overflow-wrap: anywhere; }
 .stone-body b { color: #fff; }
 .stone-warn { color: #e0a0a0; font-size: 13px; }
 .stone-cd { color: #ffd24a; font-weight: 600; margin-bottom: 12px; }

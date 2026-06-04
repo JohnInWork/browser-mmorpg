@@ -6,9 +6,9 @@ const mobsMod = require('./mobs');
 const quests = require('./quests');
 const skills = require('./skills');
 
-// Продвинуть квесты игрока по убийству моба типа mobType
-function questProgress(io, pid, p, mobType) {
-  const results = quests.recordKill(p, mobType);
+// Продвинуть квесты игрока по убийству моба (kind = спрайт/тип, name = имя конкретного моба)
+function questProgress(io, pid, p, kind, name) {
+  const results = quests.recordKill(p, kind, name);
   if (!results.length) return;
   let changed = false;
   for (const r of results) {
@@ -30,6 +30,8 @@ function grantMobLoot(io, pid, p, m) {
     if (Math.random() > (d.chance != null ? d.chance : 1)) continue;   // не выпал по шансу
     addItem(p, d.id, d.qty || 1);
     io.to(pid).emit('loot', { id: d.id, qty: d.qty || 1 });
+    const q = quests.recordGather(p, d.id, d.qty || 1);                // лут двигает квесты на «принеси предмет»
+    quests.applyGatherResult(io, pid, p, q, addItem);
     any = true;
   }
   if (any) io.to(pid).emit('inventoryUpdate', invState(p));
@@ -60,7 +62,10 @@ function start(io) {
 
       if (p.turn === 'player') {
         const mobArmor = m.armor || 0;                           // броня моба снижает урон (мин 1)
-        const dmg = Math.max(1, rnd(cfg.PLAYER_DMG_MIN, cfg.PLAYER_DMG_MAX) + weaponDamage(p) - mobArmor);
+        // Артефакт: волчий шлем — +урон по пассивным (мирным) мобам
+        const helmId = p.equipment.helmet;
+        const vsPassive = (!m.aggressive && helmId && ITEMS[helmId] && ITEMS[helmId].bonusVsPassive) ? ITEMS[helmId].bonusVsPassive : 0;
+        const dmg = Math.max(1, rnd(cfg.PLAYER_DMG_MIN, cfg.PLAYER_DMG_MAX) + weaponDamage(p) - mobArmor + vsPassive);
         m.hp = Math.max(0, m.hp - dmg);
         io.emit('combatHit', { target: 'mob', id: m.id, hp: m.hp, dmg });
         // Опыт боя: за удар + бонус за добивание
@@ -71,7 +76,7 @@ function start(io) {
         if (m.hp <= 0) {
           const kb = skills.addXp(p, 'combat', Math.round(m.maxHp / 2)); if (kb.leveledUp) cup = kb; // бонус-опыт за добивание
           io.to(pid).emit('skillUpdate', { skill: 'combat', ...skills.one(p, 'combat'), leveledUp: cup.leveledUp });
-          grantMobLoot(io, pid, p, m); questProgress(io, pid, p, m.kind); mobsMod.kill(io, m); continue;
+          grantMobLoot(io, pid, p, m); questProgress(io, pid, p, m.kind, m.name); mobsMod.kill(io, m); continue;
         }
         io.to(pid).emit('skillUpdate', { skill: 'combat', ...skills.one(p, 'combat'), leveledUp: cup.leveledUp });
         p.turn = 'mob';

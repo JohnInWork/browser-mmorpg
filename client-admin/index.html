@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MMORPG — Редактор карт (админ)</title>
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
   <!-- Редактор (открывается сразу, без логина) -->
@@ -12,9 +12,10 @@
     <div id="toolbar">
       <span class="title">Редактор</span>
       <span id="locTabs"></span>
-      <label class="sid-lbl">Размер <input id="mapWInput" type="number" min="5" max="60" style="width:48px">×<input id="mapHInput" type="number" min="5" max="60" style="width:48px"></label>
+      <label class="sid-lbl">Размер <input id="mapWInput" type="number" min="5" max="400" style="width:48px">×<input id="mapHInput" type="number" min="5" max="400" style="width:48px"></label>
       <label class="sid-lbl">Связь <input id="sidInput" type="text" value="1" style="width:80px" placeholder="напр. Лес"></label>
       <button id="saveBtn">Сохранить</button>
+      <button id="contentBtn" title="Редактор предметов, цен и крафта">⚙ Предметы и крафт</button>
       <span id="status"></span>
       <span class="hint">ЛКМ — рисовать · ПКМ — двигать · колесо — зум · лестницы связываются по «ID связи»</span>
     </div>
@@ -33,8 +34,10 @@
 
   <!-- Оверлей конструктора НПС (наполняется из editor.js) -->
   <div id="npcOverlay" class="npc-overlay hidden"></div>
+  <!-- Оверлей редактора предметов и крафта -->
+  <div id="contentOverlay" class="npc-overlay hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="editor.js?v=21"></script>
+  <script type="module" src="editor.js?v=50"></script>
 </body>
 </html>

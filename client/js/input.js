@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { BLOCKED, MOVE_SPEED } from './config.js';
 import { screenToTile } from './iso.js';
-import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, openCreative, openStoneBind, closeInteractions } from './ui.js';
+import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, openCreative, openStoneBind, pressHotbar, closeInteractions } from './ui.js';
 
 // Имя моба: пришло с сервера (label), иначе запасное
 function mobLabel(m) { return (m && m.label) || 'Существо'; }
@@ -105,10 +105,10 @@ function nodeAt(x, y) {
   if (!S.MAP || !S.MAP[y] || S.depletedNodes.has(`${x},${y}`)) return null;
   const t = S.MAP[y][x];
   if (t === 3) return { tool: 'axe', name: 'Дерево', need: 'Нужен топор' };
-  if (t === 5) return { tool: 'pickaxe', name: 'Камень', need: 'Нужна кирка' };
   if (t === 6) return { tool: 'pickaxe', name: 'Железная руда', need: 'Нужна кирка' };
   if (t === 11) return { tool: 'shovel', name: 'Песочная куча', need: 'Нужна лопата' };
   if (t === 35) return { tool: 'pickaxe', name: 'Серебряная жила', need: 'Нужна кирка' };
+  if (t === 54) return { tool: 'pickaxe', name: 'Золотая жила', need: 'Нужна кирка' };
   return null;
 }
 function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }
@@ -135,7 +135,7 @@ export function setupInput() {
     if (e.key === 'Enter') { const ci = document.getElementById('chatInput'); if (ci) ci.focus(); return; } // Enter — открыть чат
     S.keys[e.key.toLowerCase()] = true;
     // Клавиши 1–6 — активировать слот хотбара (как клик по слоту)
-    if (e.key >= '1' && e.key <= '6') S.socket.emit('activateSlot', +e.key - 1);
+    if (e.key >= '1' && e.key <= '6') pressHotbar(+e.key - 1);   // еда — съесть, камень — телепорт, инструмент — в руку
   });
   window.addEventListener('keyup',   (e) => { S.keys[e.key.toLowerCase()] = false; });
   window.setMoveDir = (dx, dy) => { S.touchDir.dx = dx; S.touchDir.dy = dy; }; // API для будущего тач-UI

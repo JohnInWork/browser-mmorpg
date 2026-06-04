@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: бочка -->
+  <path d="M170 190 Q150 300 256 345 Q362 300 342 190 Z" fill="#9c6a34"/>
+  <ellipse cx="256" cy="190" rx="86" ry="36" fill="#7a4f24"/>
+  <ellipse cx="256" cy="190" rx="72" ry="28" fill="#5e3e1e"/>
+  <path d="M166 235 Q256 268 346 235" fill="none" stroke="#5e3e1e" stroke-width="12"/>
+  <path d="M172 295 Q256 326 340 295" fill="none" stroke="#5e3e1e" stroke-width="12"/>
+</svg>

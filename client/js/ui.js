@@ -178,8 +178,8 @@ export function openStoneBind(stone) {
   }));
 }
 
-// Окно использования камня возвращения (телепорт к привязанной точке)
-export function openReturnTeleport(invIndex) {
+// Окно использования камня возвращения. onConfirm() вызывается при подтверждении (источник — рюкзак или хотбар).
+export function openReturnTeleport(onConfirm) {
   const rp = S.returnPoint;
   if (!rp) {
     openModal(`<div class="stone-modal"><div class="stone-body">Камень ни к чему не привязан. Активируй его у камня возвращения в мире, чтобы задать точку.</div><div class="modal-btns"><button class="m-ok" data-act="cancel">Закрыть</button></div></div>`);
@@ -200,9 +200,20 @@ export function openReturnTeleport(invIndex) {
       </div>
     </div>`);
   document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
-    if (b.dataset.act === 'tp' && !onCd) S.socket.emit('useReturnStone', { invIndex });
+    if (b.dataset.act === 'tp' && !onCd && onConfirm) onConfirm();
     closeModal();
   }));
+}
+
+// «Горячее» использование слота хотбара: еда — съесть, камень — окно телепорта, иначе — взять в руку.
+export function pressHotbar(i) {
+  const it = S.hotbar[i];
+  if (!it) { S.socket.emit('activateSlot', i); return; }
+  const def = ITEMS[it.id];
+  if (it.id === 'returnStone') { openReturnTeleport(() => S.socket.emit('useHotbar', i)); return; }
+  if (def && def.type === 'food' && def.heal) { S.socket.emit('useHotbar', i); return; }
+  if (def && def.slot && (def.type === 'armor' || def.type === 'weapon' || def.type === 'shield')) { S.socket.emit('equipHotbar', i); return; } // надеть
+  S.socket.emit('activateSlot', i);   // инструмент/прочее — взять «в руку»
 }
 
 function openSplitDialog(invIndex) {
@@ -640,6 +651,7 @@ function guideItemHtml(id) {
   if (it.armor) stats.push(`${UI_SVG.shield} Защита: <b>${it.armor}</b>`);
   if (it.slot && SLOT_NAMES[it.slot]) stats.push(`Слот: <b>${SLOT_NAMES[it.slot]}</b>`);
   if (it.onHitHeal) stats.push(`${UI_SVG.star} За удар по врагу: <b>+${it.onHitHeal} HP</b>`);
+  if (it.bonusVsPassive) stats.push(`${UI_SVG.sword} Урон по мирным существам: <b>+${it.bonusVsPassive}</b>`);
   if (it.heal) stats.push(`${UI_SVG.heart} Лечит: <b>+${it.heal}</b>`);
   if (it.gathers) stats.push(`Добывает: <b>${({ tree: 'древесину', rock: 'камень/руду', sand: 'песок' })[it.gathers] || it.gathers}</b>`);
   if (it.price) stats.push(`${UI_SVG.coin} Цена продажи: <b>${it.price}</b> зол.`);

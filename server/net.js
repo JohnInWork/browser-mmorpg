@@ -1,4 +1,6 @@
 // Сетевой слой: обработка подключений и событий сокетов (игрок + админ-редактор).
+const fs = require('fs');
+const path = require('path');
 const cfg = require('./config');
 const { adjOrtho } = require('./util');
 const world = require('./world');
@@ -20,6 +22,37 @@ function setup(io) {
     if (isAdminClient) {
       socket.isAdmin = true;                 // вход в редактор пока без пароля (локальная разработка)
       socket.emit('mapData', world.editorState());
+      socket.emit('itemsData', { items: playersMod.ITEMS, recipes: RECIPES });  // данные для редактора предметов/крафта
+
+      // Редактор предметов и крафта: записываем на диск + обновляем живую игру без перезапуска
+      socket.on('saveItemsData', (payload) => {
+        if (!socket.isAdmin || !payload || typeof payload !== 'object') { socket.emit('itemsSaveResult', { ok: false }); return; }
+        const items = payload.items, recipes = payload.recipes;
+        if (!items || typeof items !== 'object' || !recipes || typeof recipes !== 'object') { socket.emit('itemsSaveResult', { ok: false }); return; }
+        try {
+          // 1) items.json (сохраняем служебный _note)
+          const itemsFile = path.join(__dirname, 'data', 'items.json');
+          const itemsDoc = JSON.parse(fs.readFileSync(itemsFile, 'utf8'));
+          itemsDoc.items = items;
+          fs.writeFileSync(itemsFile, JSON.stringify(itemsDoc, null, 2));
+          // 2) recipes.json (сохраняем _note, перезаписываем только известные станции)
+          const recFile = path.join(__dirname, 'data', 'recipes.json');
+          const recDoc = JSON.parse(fs.readFileSync(recFile, 'utf8'));
+          for (const st of ['smelter', 'anvil', 'campfire', 'workbench']) if (Array.isArray(recipes[st])) recDoc[st] = recipes[st];
+          fs.writeFileSync(recFile, JSON.stringify(recDoc, null, 2));
+          // 3) Обновить состояние в памяти (ITEMS — общий объект; мутируем на месте, ссылку держат все модули)
+          for (const k in playersMod.ITEMS) if (!(k in items)) delete playersMod.ITEMS[k];   // удалённые
+          for (const k in items) playersMod.ITEMS[k] = items[k];                              // изменённые/новые
+          for (const st of ['smelter', 'anvil', 'campfire', 'workbench']) if (Array.isArray(recipes[st])) RECIPES[st] = recipes[st];
+          // 4) Разослать живым игрокам (цены/крафт/характеристики обновятся на лету)
+          io.emit('contentUpdate', { items: playersMod.ITEMS, recipes: RECIPES });
+          socket.emit('itemsSaveResult', { ok: true });
+          console.log('  💾 Предметы и крафт сохранены админом');
+        } catch (e) {
+          console.error('  ⚠ Ошибка сохранения предметов:', e.message);
+          socket.emit('itemsSaveResult', { ok: false });
+        }
+      });
 
       socket.on('adminAuth', () => {         // совместимость: подтверждаем вход
         socket.isAdmin = true;
@@ -197,8 +230,10 @@ function setup(io) {
       const r = list[recipe];
       if (!r) return;
       if (playersMod.craft(player, r)) {
-        socket.emit('inventoryUpdate', playersMod.invState(player));
         socket.emit('loot', { id: r.out, qty: r.outQty || 1 });
+        const q = quests.recordGather(player, r.out, r.outQty || 1);   // крафт двигает квесты на «принеси предмет»
+        quests.applyGatherResult(io, socket.id, player, q, playersMod.addItem);
+        socket.emit('inventoryUpdate', playersMod.invState(player));   // после возможной награды
         // Опыт навыка за крафт: костёр → кулинария, плавильня/наковальня → кузнечное дело
         const skill = station === 'campfire' ? 'cooking' : 'smithing';
         const xp = station === 'smelter' ? 15 : station === 'campfire' ? 12 : 25;
@@ -229,10 +264,8 @@ function setup(io) {
       socket.emit('chatMessage', { cat: 'system', text: `Точка возврата привязана: «${st.name}». Используй камень в рюкзаке, чтобы вернуться.` });
     });
 
-    // Использовать камень возвращения из рюкзака → телепорт к точке (с кулдауном)
-    socket.on('useReturnStone', ({ invIndex } = {}) => {
-      const it = player.inventory[invIndex];
-      if (!it || it.id !== playersMod.RETURN_STONE_ID) return;
+    // Телепорт к точке возврата (общая логика для камня из рюкзака и из хотбара)
+    const returnTeleport = () => {
       if (!player.returnPoint) { socket.emit('chatMessage', { cat: 'system', text: 'Камень ни к чему не привязан.' }); return; }
       const now = Date.now();
       if (now < player.returnCdUntil) {
@@ -250,6 +283,28 @@ function setup(io) {
       teleport({ location: rp.location, x: tx, y: ty });
       socket.emit('inventoryUpdate', playersMod.invState(player));   // обновить кулдаун на предмете
       socket.emit('chatMessage', { cat: 'system', text: `Возвращение к «${rp.name}».` });
+    };
+    // Использовать камень возвращения из рюкзака
+    socket.on('useReturnStone', ({ invIndex } = {}) => {
+      const it = player.inventory[invIndex];
+      if (!it || it.id !== playersMod.RETURN_STONE_ID) return;
+      returnTeleport();
+    });
+
+    // Использовать предмет из слота хотбара по «горячему» использованию (еда — съесть, камень — телепорт)
+    socket.on('useHotbar', (slot) => {
+      if (!Number.isInteger(slot) || slot < 0 || slot >= player.hotbar.length) return;
+      const it = player.hotbar[slot];
+      if (!it) return;
+      if (it.id === playersMod.RETURN_STONE_ID) { returnTeleport(); return; }
+      const def = playersMod.ITEMS[it.id];
+      if (def && def.type === 'food' && def.heal) {
+        const healed = playersMod.eatHotbar(player, slot);
+        if (healed > 0) {
+          socket.emit('inventoryUpdate', playersMod.invState(player));
+          io.emit('playerHp', { id: socket.id, hp: player.hp, heal: healed });
+        }
+      }
     });
 
     // Предмет «в руке» (для отрисовки на персонаже у всех игроков)
@@ -267,6 +322,23 @@ function setup(io) {
     socket.on('hotbarToInv', ({ slot, invIndex } = {}) => {
       if (playersMod.hotbarToInv(player, slot, invIndex)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
+        sendHeld();
+      }
+    });
+
+    // Перемещение/обмен предметов между слотами хотбара
+    socket.on('moveHotbar', ({ from, to } = {}) => {
+      if (playersMod.moveHotbar(player, from, to)) {
+        socket.emit('inventoryUpdate', playersMod.invState(player));
+        sendHeld();
+      }
+    });
+
+    // Надеть броню/оружие/щит прямо из слота хотбара
+    socket.on('equipHotbar', (slot) => {
+      if (playersMod.equipHotbar(player, slot)) {
+        socket.emit('inventoryUpdate', playersMod.invState(player));
+        io.emit('playerEquipment', { id: socket.id, equipment: player.equipment });
         sendHeld();
       }
     });

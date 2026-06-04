@@ -4,7 +4,7 @@ import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, 
 import { itemName } from './items.js';
 
 // Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
-const GROUND_TILES = new Set([0, 1, 4, 15, 20, 21, 22, 23, 31]);
+const GROUND_TILES = new Set([0, 1, 4, 15, 20, 21, 22, 23, 29, 31, 38, 39, 40, 41]);
 function floorFrom(map) { return map.map(row => row.map(t => (GROUND_TILES.has(t) ? t : 0))); }
 
 export function setupNet() {
@@ -40,6 +40,18 @@ export function setupNet() {
     if (data.questDefs) S.questDefs = data.questDefs;
     if (data.you.quests) S.quests = data.you.quests;
     updateHpHud(); updateGold(); renderInventory(); renderHotbar(); renderEquipment(); updateStats(); renderSkills();
+  });
+
+  // Админ изменил предметы/крафт в редакторе — обновляем на лету (цены, рецепты, характеристики)
+  socket.on('contentUpdate', (data) => {
+    if (data.items) {
+      for (const k in S.items) if (!(k in data.items)) delete S.items[k];   // S.items — общий реестр (ссылку держит items.js): мутируем, не переприсваиваем
+      for (const k in data.items) S.items[k] = data.items[k];
+    }
+    if (data.recipes) S.recipes = data.recipes;
+    updateGold(); renderInventory(); renderHotbar(); renderEquipment(); updateStats();
+    renderCraft(); renderTrade();                                            // если открыты крафт/торговля — пересоберутся
+    chatSystem('Мир обновлён: характеристики предметов и рецепты изменены.');
   });
 
   socket.on('mapUpdated', (data) => {

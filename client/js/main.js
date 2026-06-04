@@ -3,7 +3,7 @@ import { S } from './state.js';
 import { setupNet } from './net.js';
 import { setupInput, update } from './input.js';
 import { render } from './render.js';
-import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, closeBank, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu, openReturnTeleport, renderInventory, renderHotbar } from './ui.js';
+import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, closeBank, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu, openReturnTeleport, pressHotbar, renderInventory, renderHotbar } from './ui.js';
 import { buildCharacterSVG, PALETTES, HAIR_STYLES } from './character.js';
 import { itemType } from './items.js';
 
@@ -105,8 +105,9 @@ function setupUi() {
       e.preventDefault();
       const src = parseDrag(e);
       if (src && src.from === 'inv') S.socket.emit('invToHotbar', { invIndex: src.index, slot: i });
+      else if (src && src.from === 'hot' && src.index !== i) S.socket.emit('moveHotbar', { from: src.index, to: i }); // перенос внутри хотбара
     });
-    slot.addEventListener('click', () => S.socket.emit('activateSlot', i));
+    slot.addEventListener('click', () => pressHotbar(i));
     hotbar.appendChild(slot);
   }
 
@@ -130,7 +131,7 @@ function setupUi() {
     slot.addEventListener('click', () => {
       const stack = S.inventory[i];
       if (!stack) return;
-      if (stack.id === 'returnStone') { openReturnTeleport(i); return; }   // камень возвращения → окно телепорта
+      if (stack.id === 'returnStone') { openReturnTeleport(() => S.socket.emit('useReturnStone', { invIndex: i })); return; }   // камень → окно телепорта
       const t = itemType(stack.id);
       if (t === 'armor' || t === 'weapon' || t === 'shield') S.socket.emit('equip', i);
       else if (t === 'tool') S.socket.emit('activateInv', i);

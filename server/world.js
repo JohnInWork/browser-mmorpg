@@ -22,11 +22,11 @@ const MAP_FILE = path.join(MAPS_DIR, 'world.json');
 const TEST_MAP_FILE = path.join(__dirname, '..', 'client-test', 'map-data.js');
 const blockedSet = new Set(BLOCKED);
 
-const MAX_TILE = 36;
+const MAX_TILE = 54;
 const SPAWN_TILE = 19;
 const RETURN_STONE_TILE = 36;
 const START = 'surface';
-const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23, 31]); // полы: трава/вода/тропа/пещера/земля/тёмн.трава/цветы/брусчатка/песок
+const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23, 29, 31, 38, 39, 40, 41]); // полы (+мост 29 теперь пол, +деревянные полы 38-41)
 function isGround(t) { return GROUND.has(t); }
 function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
 function clone(m) { return m.map(r => r.slice()); }
@@ -130,6 +130,8 @@ function normNpc(n, loc, idx) {
   const rawQuests = Array.isArray(n.quests) ? n.quests : (n.quest ? [n.quest] : []);
   const quests = rawQuests.map((q, i) => normQuest(q, loc, x, y, i)).filter(Boolean);
   const sells = Array.isArray(n.sells) ? [...new Set(n.sells.map(String))] : [];   // товары (игрок покупает)
+  const enemy = !!n.enemy;                       // враг: гуманоид, живёт в боевой системе мобов
+  const loot = Array.isArray(n.loot) ? n.loot.filter(l => l && l.id).map(l => ({ id: String(l.id), qty: clampN(l.qty, 1, 999, 1), chance: Math.max(0.01, Math.min(1, Number(l.chance) || 1)) })) : [];
   return {
     id: `n_${loc}_${x}_${y}`,
     x, y,
@@ -142,6 +144,10 @@ function normNpc(n, loc, idx) {
     dialogue: String(n.dialogue || '').slice(0, 300),
     talkText: String(n.talkText || '').slice(0, 300), // финальный диалог, если этот НПС завершает talk-квест
     quests,
+    // боевые поля (актуальны при enemy=true)
+    enemy, hp: clampN(n.hp, 1, 9999, 24), armor: clampN(n.armor, 0, 999, 0),
+    dmgMin: clampN(n.dmgMin, 0, 9999, 0), dmgMax: clampN(n.dmgMax, 0, 9999, 0),
+    respawn: clampN(n.respawn, 1, 99999, 10), loot,
   };
 }
 
@@ -232,6 +238,9 @@ function pickSpawn(loc) {
 function mobSpawns() {
   const out = [];
   for (const ln in locations) for (const m of (locations[ln].mobs || [])) out.push({ location: ln, ...m });
+  // Вражеские НПС — спавним как гуманоидных мобов (sprite='character' + внешность)
+  for (const ln in locations) for (const n of (locations[ln].npcs || [])) if (n.enemy)
+    out.push({ location: ln, x: n.x, y: n.y, sprite: 'character', appearance: n.appearance, equipment: n.equipment, name: n.name, aggro: 'aggressive', hp: n.hp, armor: n.armor, dmgMin: n.dmgMin, dmgMax: n.dmgMax, respawn: n.respawn, size: 0, loot: n.loot });
   return out;
 }
 
@@ -262,20 +271,20 @@ function allSpots() {
   for (const ln in locations) for (const s of (locations[ln].spots || [])) out.push({ location: ln, ...s });
   return out;
 }
-function npcsOf(loc) { const L = locations[loc]; return L ? (L.npcs || []).map(publicNpc) : []; }
-function npcAt(loc, x, y) { const L = locations[loc]; if (!L) return null; return (L.npcs || []).find(n => n.x === x && n.y === y) || null; }
+function npcsOf(loc) { const L = locations[loc]; return L ? (L.npcs || []).filter(n => !n.enemy).map(publicNpc) : []; }
+function npcAt(loc, x, y) { const L = locations[loc]; if (!L) return null; return (L.npcs || []).find(n => n.x === x && n.y === y && !n.enemy) || null; } // враги — не «говорящие»
 // Найти НПС по метке связи (или имени) в указанной локации (для talk-квестов)
 function npcByLink(loc, label) {
   const L = locations[loc]; if (!L || !label) return null;
   const t = String(label).trim();
-  return (L.npcs || []).find(n => String(n.link || '').trim() === t || String(n.name || '').trim() === t) || null;
+  return (L.npcs || []).find(n => !n.enemy && (String(n.link || '').trim() === t || String(n.name || '').trim() === t)) || null;
 }
 
 // Снимок одной локации для игрового клиента
 function locState(loc) {
   const L = locations[loc] || locations[START];
   const name = locations[loc] ? loc : START;
-  return { location: name, map: L.map, floor: L.floor, signs: L.signs || [], npcs: (L.npcs || []).map(publicNpc), spots: (L.spots || []).map(publicSpot), stones: L.stones || [], width: L.W, height: L.H };
+  return { location: name, map: L.map, floor: L.floor, signs: L.signs || [], npcs: (L.npcs || []).filter(n => !n.enemy).map(publicNpc), spots: (L.spots || []).map(publicSpot), stones: L.stones || [], width: L.W, height: L.H };
 }
 
 // Все локации для редактора

@@ -9,8 +9,8 @@ const TYPES = data.types;
 const mobs = {}; // id -> резолвнутый рантайм-моб (свои hp/урон/лут/...)
 let seq = 0;
 
-const SPRITE_NAMES = { chicken: 'Курица', wolf: 'Волк', bear: 'Медведь' };
-const SPRITE_COLOR = { chicken: '#f1c40f', wolf: '#888c94', bear: '#6b4a2b' };
+const SPRITE_NAMES = { chicken: 'Курица', wolf: 'Волк', bear: 'Медведь', ghost: 'Призрак', deer: 'Олень', camel: 'Верблюд' };
+const SPRITE_COLOR = { chicken: '#f1c40f', wolf: '#888c94', bear: '#6b4a2b', ghost: '#cdd6e6', deer: '#b5793f', camel: '#d3a86a' };
 
 // Резолвнуть спавн (s = location + поля) в рантайм-моба с готовыми параметрами боя
 function resolveMob(s) {
@@ -19,10 +19,11 @@ function resolveMob(s) {
     const loot = Array.isArray(s.loot) ? s.loot.map(l => ({ id: l.id, qty: l.qty || 1, chance: l.chance != null ? l.chance : 1 })) : [];
     return {
       name: s.name || '', sprite: s.sprite || 'wolf', kind: s.sprite || 'wolf',
+      appearance: s.appearance || null, equipment: s.equipment || null,   // гуманоидный враг (sprite='character')
       canAttack: aggro !== 'friendly', aggressive: aggro === 'aggressive',
       maxHp: s.hp || 20, armor: s.armor || 0, dmgMin: s.dmgMin || 0, dmgMax: s.dmgMax || 0,
       respawnMs: (s.respawn || 10) * 1000, size: s.size || 0, loot,
-      color: SPRITE_COLOR[s.sprite] || '#888', label: s.name || SPRITE_NAMES[s.sprite] || 'Существо',
+      color: s.sprite === 'character' ? '#ff5b5b' : (SPRITE_COLOR[s.sprite] || '#888'), label: s.name || SPRITE_NAMES[s.sprite] || 'Существо',
     };
   }
   const t = TYPES[s.type] || {};                               // легаси-пресет из data/mobs.json
@@ -72,7 +73,7 @@ function publicMobs() {
   const out = {};
   for (const id in mobs) {
     const m = mobs[id];
-    out[id] = { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, size: m.size, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: m.alive, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label };
+    out[id] = { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, appearance: m.appearance || null, equipment: m.equipment || null, size: m.size, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: m.alive, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label };
   }
   return out;
 }
@@ -85,7 +86,7 @@ function kill(io, m) {
   }
   m._respawn = setTimeout(() => {
     m._respawn = null; m.alive = true; m.hp = m.maxHp;
-    io.emit('mobRespawned', { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, size: m.size, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: true, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label });
+    io.emit('mobRespawned', { id: m.id, x: m.x, y: m.y, location: m.location, sprite: m.sprite, appearance: m.appearance || null, equipment: m.equipment || null, size: m.size, hp: m.hp, maxHp: m.maxHp, color: m.color, alive: true, aggressive: m.aggressive, canAttack: m.canAttack, label: m.label });
   }, m.respawnMs || RESPAWN_MS);
 }
 

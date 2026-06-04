@@ -1,7 +1,7 @@
 // Рендер: изометрический мир, мобы, игроки, эффекты.
 import { S } from './state.js';
 import { SCALE, TW, TH, WALL_H, TREE_H, TILE } from './config.js';
-import { isoX, isoY } from './iso.js';
+import { isoX, isoY, screenToTile } from './iso.js';
 import { getCharImage, CHAR_RATIO, CHAR_FEET, DEFAULT_APPEARANCE } from './character.js';
 import { MOB_TEX_BY_ID } from './mob-textures.js';
 import { HELD_ITEMS, HAND_POS } from './held-items.js';
@@ -80,7 +80,23 @@ const signImg = loadImg('/assets/sign.svg');
 const workbenchImg = loadImg('/assets/workbench.svg');
 const adminChestImg = loadImg('/assets/admin-chest.svg');
 const silverOreImg = loadImg('/assets/silver-ore.svg');
+const goldOreImg = loadImg('/assets/gold-ore.svg');
 const returnStoneImg = loadImg('/assets/return-stone.svg');
+// Мебель для домиков (id тайла → картинка + размер). 48 (ковёр) — проходим, остальное непроходимо.
+const FURN = {
+  42: { img: loadImg('/assets/table.svg'), sz: 44 },
+  43: { img: loadImg('/assets/bed.png'), sz: 46 },
+  44: { img: loadImg('/assets/wardrobe.svg'), sz: 48 },
+  45: { img: loadImg('/assets/nightstand.svg'), sz: 40 },
+  46: { img: loadImg('/assets/chair.svg'), sz: 40 },
+  47: { img: loadImg('/assets/barrel.svg'), sz: 30 },
+  48: { img: loadImg('/assets/rug.svg'), sz: 46 },
+  49: { img: loadImg('/assets/table2.svg'), sz: 44 },
+  50: { img: loadImg('/assets/wardrobe2.svg'), sz: 48 },
+  51: { img: loadImg('/assets/wardrobe3.svg'), sz: 48 },
+  52: { img: loadImg('/assets/barrel2.svg'), sz: 32 },
+  53: { img: loadImg('/assets/barrel3.svg'), sz: 32 },
+};
 // Текстуры мобов из реестра (для НОВЫХ существ — общий рисовальщик; курица/волк/медведь рисуются по-своему)
 const mobTexImg = {};
 for (const id in MOB_TEX_BY_ID) mobTexImg[id] = loadImg(MOB_TEX_BY_ID[id].svg);
@@ -426,6 +442,58 @@ function drawBridge(cx, cy) {
   }
 }
 
+// Деревянные полы — у каждого свой цвет И свой узор (pat): доски '/', доски '\', паркет-сетка, ёлочка.
+const WOOD_FLOORS = {
+  38: { base: '#c08a4f', shade: 'rgba(150,100,55,.28)', seam: 'rgba(92,60,28,.5)',  pat: 'd1' },     // обычный — доски «/»
+  39: { base: '#7a5228', shade: 'rgba(50,32,14,.30)',   seam: 'rgba(40,26,10,.55)', pat: 'd2' },     // тёмный — доски «\»
+  40: { base: '#d9b277', shade: 'rgba(185,140,85,.25)', seam: 'rgba(120,82,40,.45)', pat: 'grid' },  // светлый — паркет-сетка
+  41: { base: '#b3814a', shade: 'rgba(150,100,55,.28)', seam: 'rgba(92,60,28,.5)',  pat: 'herring' },// ёлочка
+};
+// Узоры рисуются общей функцией (используется и игрой, и редактором с тем же видом)
+function woodFloorPattern(ctx, cx, cy, hx, hy, lw, w) {
+  ctx.strokeStyle = w.seam; ctx.lineWidth = lw; ctx.lineCap = 'round';
+  const d1 = (s) => { ctx.beginPath(); ctx.moveTo(cx + s * hx, cy - hy + s * hy); ctx.lineTo(cx - s * hx, cy + hy - s * hy); ctx.stroke(); };
+  const d2 = (s) => { ctx.beginPath(); ctx.moveTo(cx - s * hx, cy - hy + s * hy); ctx.lineTo(cx + hx - s * hx, cy + s * hy); ctx.stroke(); };
+  if (w.pat === 'd1') { for (const s of [0.28, 0.5, 0.72]) d1(s); }
+  else if (w.pat === 'd2') { for (const s of [0.28, 0.5, 0.72]) d2(s); }
+  else if (w.pat === 'grid') { for (const s of [0.34, 0.66]) { d1(s); d2(s); } }            // паркет: оба направления
+  else if (w.pat === 'herring') {                                                            // ёлочка (клип по ромбу)
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(cx, cy - hy); ctx.lineTo(cx + hx, cy); ctx.lineTo(cx, cy + hy); ctx.lineTo(cx - hx, cy); ctx.closePath(); ctx.clip();
+    const u = hy * 0.5;
+    let row = 0;
+    for (let yy = cy - hy; yy <= cy + hy + u; yy += u, row++) {
+      for (let xx = cx - hx, col = 0; xx <= cx + hx; xx += u, col++) {
+        ctx.beginPath();
+        if ((row + col) % 2 === 0) { ctx.moveTo(xx, yy + u); ctx.lineTo(xx + u, yy); }
+        else { ctx.moveTo(xx, yy); ctx.lineTo(xx + u, yy + u); }
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+}
+function drawWoodFloor(cx, cy, tile) {
+  const w = WOOD_FLOORS[tile] || WOOD_FLOORS[38];
+  const ctx = S.ctx, hx = TW / 2, hy = TH / 2;
+  fillDiamond(cx, cy, w.base, 'rgba(60,40,18,.45)');
+  ctx.fillStyle = w.shade;                                         // нижняя половина чуть темнее (объём)
+  ctx.beginPath(); ctx.moveTo(cx - hx, cy); ctx.lineTo(cx, cy + hy); ctx.lineTo(cx + hx, cy); ctx.closePath(); ctx.fill();
+  woodFloorPattern(ctx, cx, cy, hx, hy, 1.2 * SCALE, w);
+}
+
+// Деревянная стена (для домиков) — куб с деревянными гранями и горизонтальными досками.
+function drawWoodWall(cx, cy) {
+  drawCube(cx, cy, WALL_H, TILE[37]);
+  const ctx = S.ctx, z = SCALE, hw = TW / 2, hh = TH / 2, h = WALL_H;
+  ctx.strokeStyle = 'rgba(60,38,18,.4)'; ctx.lineWidth = 1.1 * z;
+  for (let k = 1; k <= 3; k++) {                                   // горизонтальные швы досок на обеих гранях
+    const d = (h * k) / 4;
+    ctx.beginPath(); ctx.moveTo(cx, cy + hh - d); ctx.lineTo(cx + hw, cy - d); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy + hh - d); ctx.lineTo(cx - hw, cy - d); ctx.stroke();
+  }
+}
+
 function drawHpBar(cx, topY, hp, maxHp) {
   const ctx = S.ctx, z = SCALE, w = 28 * z, h = 5 * z;
   const x = cx - w / 2, y = topY;
@@ -501,10 +569,23 @@ function drawSpriteMob(cx, cy, m) {
   // HP над головой не рисуем — здоровье показывается в интерфейсе (своё слева, цель боя справа)
 }
 
+// Гуманоидный враг: рисуется как персонаж (своя внешность/экипировка) + красная подсветка и метка
+function drawCharacterMob(cx, cy, m) {
+  const ctx = S.ctx, z = SCALE;
+  ctx.fillStyle = 'rgba(255,70,70,.30)';   // красная «опасная» тень под ногами
+  ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 13 * (z / 1.6), 6 * (z / 1.6), 0, 0, Math.PI * 2); ctx.fill();
+  const ent = getCharImage(m.appearance || DEFAULT_APPEARANCE, m.equipment || {});
+  const H = CHAR_H, W = H * CHAR_RATIO, topY = cy + 5 - H * CHAR_FEET;
+  if (ent.ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; drawCharRim(ent.img, cx - W / 2, topY, W, H); ctx.restore(); }
+  ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(15 * (z / 1.6))}px sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText('!', cx, topY - 3);
+}
+
 function drawMob(cx, cy, m) {
   // множитель размера: своя настройка моба относительно базового размера текстуры (s=1 — без изменений)
   const baseSize = (MOB_TEX_BY_ID[m.sprite] && MOB_TEX_BY_ID[m.sprite].size) || 46;
   const s = m.size ? m.size / baseSize : 1;
+  if (m.sprite === 'character') return drawCharacterMob(cx, cy, m);      // гуманоидный враг (внешность как у персонажа)
   if (m.sprite === 'chicken') return drawChicken(cx, cy, m, s);
   if (m.sprite === 'wolf') return drawWolf(cx, cy, m, s);
   if (m.sprite === 'bear') return drawBear(cx, cy, m, s);
@@ -635,10 +716,18 @@ export function render() {
   S.originY = S.canvas.height / 2 - camY;
   const ox = S.originX, oy = S.originY;
 
+  // Видимая область карты (отсечение): рисуем только клетки рядом с экраном — карта может быть огромной.
+  // Запас по краям, побольше снизу/справа: высокие объекты (стены/деревья/горы) торчат вверх от своей клетки.
+  const cc = [screenToTile(0, 0), screenToTile(S.canvas.width, 0), screenToTile(0, S.canvas.height), screenToTile(S.canvas.width, S.canvas.height)];
+  const vMinX = Math.max(0, Math.min(cc[0].x, cc[1].x, cc[2].x, cc[3].x) - 3);
+  const vMaxX = Math.min(S.mapW - 1, Math.max(cc[0].x, cc[1].x, cc[2].x, cc[3].x) + 6);
+  const vMinY = Math.max(0, Math.min(cc[0].y, cc[1].y, cc[2].y, cc[3].y) - 3);
+  const vMaxY = Math.min(S.mapH - 1, Math.max(cc[0].y, cc[1].y, cc[2].y, cc[3].y) + 6);
+
   // 1) ПОЛ (из слоя FLOOR — он лежит под объектами; тропа/вода сохраняются под сундуком и т.п.)
-  for (let y = 0; y < S.mapH; y++) {
-    for (let x = 0; x < S.mapW; x++) {
-      if (S.MAP[y][x] === 2 || S.MAP[y][x] === 32) continue;        // под стеной/скалой пол не рисуем (объём закрывает)
+  for (let y = vMinY; y <= vMaxY; y++) {
+    for (let x = vMinX; x <= vMaxX; x++) {
+      if (S.MAP[y][x] === 2 || S.MAP[y][x] === 32 || S.MAP[y][x] === 37) continue; // под стеной/скалой/дерев.стеной пол не рисуем
       const f = (S.FLOOR[y] && S.FLOOR[y][x]) || 0;                 // тайл пола
       const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
       if (drawFloorTex(f, cx, cy, x, y)) continue;                  // своя текстура пользователя (если задана и загружена)
@@ -650,16 +739,19 @@ export function render() {
       else if (f === 22) drawFlowers(cx, cy, x, y);                 // цветочная поляна
       else if (f === 23) drawCobble(cx, cy, x, y);                  // брусчатка
       else if (f === 31) drawSand(cx, cy, x, y);                    // песок (пустыня)
+      else if (f === 29) drawBridge(cx, cy);                        // мост — теперь обычный пол
+      else if (f >= 38 && f <= 41) drawWoodFloor(cx, cy, f);        // деревянные полы (разные виды)
       else drawGrass(cx, cy, x, y);                                 // трава (0) по умолчанию
     }
   }
 
-  // 2) ОБЪЕКТЫ (стены, деревья, мобы, игроки) — сортировка по глубине (x+y)
+  // 2) ОБЪЕКТЫ (стены, деревья, мобы, игроки) — сортировка по глубине (x+y); только видимая область
   const drawables = [];
-  for (let y = 0; y < S.mapH; y++) {
-    for (let x = 0; x < S.mapW; x++) {
+  for (let y = vMinY; y <= vMaxY; y++) {
+    for (let x = vMinX; x <= vMaxX; x++) {
       const t = S.MAP[y][x];
       if (t === 2) drawables.push({ d: x + y, kind: 'wall', x, y });
+      else if (t === 37) drawables.push({ d: x + y, kind: 'woodWall', x, y });
       else if (t === 32) drawables.push({ d: x + y, kind: 'caveWall', x, y });
       else if (t === 3) drawables.push({ d: x + y + 0.1, kind: 'tree', x, y });
       else if (t === 5) drawables.push({ d: x + y + 0.1, kind: 'rock', x, y, ore: false });
@@ -678,12 +770,13 @@ export function render() {
       else if (t === 26) drawables.push({ d: x + y + 0.1, kind: 'boulder', x, y });
       else if (t === 27) drawables.push({ d: x + y + 0.1, kind: 'fence', x, y });
       else if (t === 28) drawables.push({ d: x + y + 0.1, kind: 'lamp', x, y });
-      else if (t === 29) drawables.push({ d: x + y - 0.4, kind: 'bridge', x, y });  // мост — рисуем под игроком (можно идти по нему)
       else if (t === 30) drawables.push({ d: x + y + 0.1, kind: 'sign', x, y });
       else if (t === 33) drawables.push({ d: x + y + 0.1, kind: 'workbench', x, y });
       else if (t === 34) drawables.push({ d: x + y + 0.1, kind: 'adminChest', x, y });
       else if (t === 35) drawables.push({ d: x + y + 0.1, kind: 'silverOre', x, y });
+      else if (t === 54) drawables.push({ d: x + y + 0.1, kind: 'goldOre', x, y });
       else if (t === 36) drawables.push({ d: x + y + 0.1, kind: 'returnStone', x, y });
+      else if (FURN[t]) drawables.push({ d: x + y + 0.1, kind: 'furn', x, y, t });
     }
   }
   // Мобы и игроки — только из текущей локации
@@ -695,6 +788,7 @@ export function render() {
 
   for (const o of drawables) {
     if (o.kind === 'wall') drawCube(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), WALL_H, TILE[2]);
+    else if (o.kind === 'woodWall') drawWoodWall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'caveWall') drawCaveWall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
     else if (o.kind === 'tree') drawTree(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), S.depletedNodes.has(`${o.x},${o.y}`), o.x, o.y);
     else if (o.kind === 'rock') drawRock(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.ore, S.depletedNodes.has(`${o.x},${o.y}`));
@@ -712,12 +806,13 @@ export function render() {
     else if (o.kind === 'boulder') objSprite(boulderImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 38);
     else if (o.kind === 'fence') objSprite(fenceImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42);
     else if (o.kind === 'lamp') objSprite(lampImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
-    else if (o.kind === 'bridge') drawBridge(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
     else if (o.kind === 'sign') objSprite(signImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 32);
     else if (o.kind === 'workbench') objSprite(workbenchImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'adminChest') objSprite(adminChestImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'silverOre') { if (S.depletedNodes.has(`${o.x},${o.y}`)) drawRock(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true, true); else objSprite(silverOreImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42); }
+    else if (o.kind === 'goldOre') { if (S.depletedNodes.has(`${o.x},${o.y}`)) drawRock(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true, true); else objSprite(goldOreImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42); }
     else if (o.kind === 'returnStone') objSprite(returnStoneImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 40);
+    else if (o.kind === 'furn') objSprite(FURN[o.t].img, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), FURN[o.t].sz);
     else if (o.kind === 'fishspot') drawFishingSpot(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
     else if (o.kind === 'mob') drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
     else if (o.kind === 'authNpc') drawAuthNpc(ox + isoX(o.n.x, o.n.y), oy + isoY(o.n.x, o.n.y), o.n);

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: кровать (изо): рама, матрас, одеяло, подушка -->
+  <polygon points="168,170 408,290 320,430 80,310" fill="#6e4a24"/>
+  <polygon points="178,185 393,292 312,415 95,305" fill="#e8e0d0"/>
+  <polygon points="252,250 393,292 312,415 178,360" fill="#5b8def"/>
+  <polygon points="178,205 248,240 214,290 144,255" fill="#ffffff"/>
+</svg>

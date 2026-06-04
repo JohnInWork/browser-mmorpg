@@ -1,38 +1,449 @@
 {
   "_note": "Рецепты по станциям. smelter (плавильня): руда→слитки. anvil (наковальня): слитки→броня/инструменты. campfire (костёр): сырая еда→приготовленная.",
   "smelter": [
-    { "out": "ingot", "outQty": 1, "in": [{ "id": "ore", "qty": 2 }] },
-    { "out": "silverIngot", "outQty": 1, "in": [{ "id": "silverOre", "qty": 2 }] },
-    { "out": "emptyFlask", "outQty": 1, "in": [{ "id": "sand", "qty": 2 }] }
+    {
+      "out": "ingot",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "ore",
+          "qty": 2
+        }
+      ]
+    },
+    {
+      "out": "silverIngot",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "silverOre",
+          "qty": 2
+        }
+      ]
+    },
+    {
+      "out": "emptyFlask",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "sand",
+          "qty": 2
+        }
+      ]
+    },
+    {
+      "out": "goldIngot",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "goldOre",
+          "qty": 2
+        }
+      ]
+    }
   ],
   "campfire": [
-    { "out": "cookedChicken", "outQty": 1, "in": [{ "id": "rawChicken", "qty": 1 }] },
-    { "out": "cookedSprat",  "outQty": 1, "in": [{ "id": "sprat",  "qty": 1 }] },
-    { "out": "cookedPerch",  "outQty": 1, "in": [{ "id": "perch",  "qty": 1 }] },
-    { "out": "cookedTrout",  "outQty": 1, "in": [{ "id": "trout",  "qty": 1 }] },
-    { "out": "cookedSalmon", "outQty": 1, "in": [{ "id": "salmon", "qty": 1 }] }
+    {
+      "out": "cookedChicken",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "rawChicken",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish1",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish1",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish2",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish2",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish3",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish3",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish4",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish4",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish5",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish5",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish6",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish6",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish7",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish7",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish8",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish8",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish9",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish9",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish10",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish10",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish11",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish11",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish12",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish12",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish13",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish13",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedFish14",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "fish14",
+          "qty": 1
+        }
+      ]
+    },
+    {
+      "out": "cookedWildMeat",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "rawWildMeat",
+          "qty": 1
+        }
+      ]
+    }
   ],
   "anvil": [
-    { "out": "helmet", "in": [{ "id": "ingot", "qty": 2 }] },
-    { "out": "chest",  "in": [{ "id": "ingot", "qty": 4 }] },
-    { "out": "axe",     "in": [{ "id": "ingot", "qty": 1 }, { "id": "wood", "qty": 2 }] },
-    { "out": "pickaxe", "in": [{ "id": "ingot", "qty": 1 }, { "id": "wood", "qty": 2 }] },
-    { "out": "shovel",  "in": [{ "id": "ingot", "qty": 1 }, { "id": "wood", "qty": 2 }] },
-    { "out": "ironSword",      "in": [{ "id": "ingot", "qty": 2 }, { "id": "wood", "qty": 1 }] },
-    { "out": "ironGreatsword", "in": [{ "id": "ingot", "qty": 4 }, { "id": "wood", "qty": 1 }] },
-    { "out": "ironShield",     "in": [{ "id": "ingot", "qty": 3 }] },
-    { "out": "silverHelmet", "in": [{ "id": "silverIngot", "qty": 2 }] },
-    { "out": "silverChest",  "in": [{ "id": "silverIngot", "qty": 4 }] },
-    { "out": "silverGloves", "in": [{ "id": "silverIngot", "qty": 2 }] },
-    { "out": "silverLegs",   "in": [{ "id": "silverIngot", "qty": 3 }] },
-    { "out": "silverBoots",  "in": [{ "id": "silverIngot", "qty": 2 }] }
+    {
+      "out": "chest",
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 80
+        }
+      ]
+    },
+    {
+      "out": "pickaxe",
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 20
+        },
+        {
+          "id": "wood",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "out": "shovel",
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 20
+        },
+        {
+          "id": "wood",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "out": "ironSword",
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 40
+        },
+        {
+          "id": "wood",
+          "qty": 20
+        }
+      ]
+    },
+    {
+      "out": "ironGreatsword",
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 80
+        },
+        {
+          "id": "wood",
+          "qty": 20
+        }
+      ]
+    },
+    {
+      "out": "ironShield",
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 60
+        }
+      ]
+    },
+    {
+      "out": "silverHelmet",
+      "in": [
+        {
+          "id": "silverIngot",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "out": "silverChest",
+      "in": [
+        {
+          "id": "silverIngot",
+          "qty": 80
+        }
+      ]
+    },
+    {
+      "out": "silverGloves",
+      "in": [
+        {
+          "id": "silverIngot",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "out": "silverLegs",
+      "in": [
+        {
+          "id": "silverIngot",
+          "qty": 60
+        }
+      ]
+    },
+    {
+      "out": "silverBoots",
+      "in": [
+        {
+          "id": "silverIngot",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "out": "helmet",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "out": "goldHelmet",
+      "in": [
+        {
+          "id": "goldIngot",
+          "qty": 50
+        }
+      ]
+    },
+    {
+      "out": "goldChest",
+      "in": [
+        {
+          "id": "goldIngot",
+          "qty": 100
+        }
+      ]
+    },
+    {
+      "out": "goldGloves",
+      "in": [
+        {
+          "id": "goldIngot",
+          "qty": 50
+        }
+      ]
+    },
+    {
+      "out": "goldLegs",
+      "in": [
+        {
+          "id": "goldIngot",
+          "qty": 75
+        }
+      ]
+    },
+    {
+      "out": "goldBoots",
+      "in": [
+        {
+          "id": "goldIngot",
+          "qty": 50
+        }
+      ]
+    },
+    {
+      "out": "axe",
+      "outQty": 1,
+      "in": [
+        {
+          "id": "ingot",
+          "qty": 20
+        },
+        {
+          "id": "wood",
+          "qty": 40
+        }
+      ]
+    }
   ],
   "workbench": [
-    { "out": "fishingRod",   "in": [{ "id": "wood", "qty": 3 }] },
-    { "out": "leatherHat",   "in": [{ "id": "leather", "qty": 3 }] },
-    { "out": "leatherTunic", "in": [{ "id": "leather", "qty": 5 }] },
-    { "out": "leatherMitts", "in": [{ "id": "leather", "qty": 2 }] },
-    { "out": "leatherLegs",  "in": [{ "id": "leather", "qty": 4 }] },
-    { "out": "leatherShoes", "in": [{ "id": "leather", "qty": 2 }] }
+    {
+      "out": "fishingRod",
+      "in": [
+        {
+          "id": "wood",
+          "qty": 60
+        }
+      ]
+    },
+    {
+      "out": "leatherHat",
+      "in": [
+        {
+          "id": "leather",
+          "qty": 60
+        }
+      ]
+    },
+    {
+      "out": "leatherTunic",
+      "in": [
+        {
+          "id": "leather",
+          "qty": 100
+        }
+      ]
+    },
+    {
+      "out": "leatherMitts",
+      "in": [
+        {
+          "id": "leather",
+          "qty": 40
+        }
+      ]
+    },
+    {
+      "out": "leatherLegs",
+      "in": [
+        {
+          "id": "leather",
+          "qty": 80
+        }
+      ]
+    },
+    {
+      "out": "leatherShoes",
+      "in": [
+        {
+          "id": "leather",
+          "qty": 40
+        }
+      ]
+    }
   ]
 }

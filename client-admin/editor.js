@@ -3,28 +3,83 @@
 import { buildCharacterSVG, getCharImage, PALETTES, DEFAULT_APPEARANCE, CHAR_RATIO, CHAR_FEET, HAIR_STYLES } from '/js/character.js';
 import { MOB_TEXTURES, MOB_TEX_BY_ID } from '/js/mob-textures.js';
 import { FLOOR_TEX } from '/js/floor-textures.js';
+import { itemIcon, ITEMS as GAME_ITEMS } from '/js/items.js';   // иконки предметов (как в игре)
+
+// Кастомный выпадающий список с иконками: прячет родной <select>, .value читается как прежде.
+function enhanceIconSelect(sel) {
+  if (!sel || sel._iconified) return; sel._iconified = true;
+  const wrap = document.createElement('span'); wrap.className = 'isel';
+  sel.parentNode.insertBefore(wrap, sel);
+  wrap.appendChild(sel); sel.classList.add('isel-native');
+  const trig = document.createElement('button'); trig.type = 'button'; trig.className = 'isel-trig';
+  const pop = document.createElement('div'); pop.className = 'isel-pop hidden';
+  wrap.appendChild(trig); wrap.appendChild(pop);
+  const cell = (id, txt) => `<span class="isel-ic">${id ? itemIcon(id) : ''}</span><span class="isel-tx">${txt}</span>`;
+  [...sel.options].forEach(o => {
+    const opt = document.createElement('div'); opt.className = 'isel-opt'; opt.dataset.v = o.value;
+    opt.innerHTML = cell(o.value, o.textContent);
+    opt.addEventListener('click', (e) => { e.stopPropagation(); sel.value = o.value; refresh(); pop.classList.add('hidden'); sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    pop.appendChild(opt);
+  });
+  function refresh() {
+    const o = sel.selectedOptions[0];
+    trig.innerHTML = cell(sel.value, o ? o.textContent : sel.value) + '<i class="isel-ar">▾</i>';
+    pop.querySelectorAll('.isel-opt').forEach(el => el.classList.toggle('sel', el.dataset.v === sel.value));
+  }
+  trig.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const wasHidden = pop.classList.contains('hidden');
+    document.querySelectorAll('.isel-pop').forEach(p => p.classList.add('hidden'));
+    if (wasHidden) { const r = trig.getBoundingClientRect(); pop.style.left = r.left + 'px'; pop.style.top = (r.bottom + 3) + 'px'; pop.style.width = r.width + 'px'; pop.classList.remove('hidden'); }
+  });
+  refresh();
+  return wrap;
+}
+document.addEventListener('click', () => document.querySelectorAll('.isel-pop').forEach(p => p.classList.add('hidden')));
+
+// Все предметы игры (из реестра, пришедшего с сервера) — для дропдаунов лута/наград.
+function allGameItemOpts() {
+  const ids = Object.keys(GAME_ITEMS);
+  if (!ids.length) return LOOT_ITEMS;   // фолбэк, пока данные не пришли
+  return ids.sort((a, b) => (GAME_ITEMS[a].name || a).localeCompare(GAME_ITEMS[b].name || b)).map(id => [id, GAME_ITEMS[id].name || id]);
+}
+const rewardItemOpts = () => [['', '— нет —'], ...allGameItemOpts()];
 
 const socket = io({ query: { mode: 'admin' } });
 
 // --- Данные для конструктора НПС ---
 // Экипируемые предметы по слотам (id → имя). Только те, у кого есть визуал на персонаже.
+// Экипируемое по слотам — ТОЛЬКО id (только вещи с видом на теле). Названия берутся из реестра (устойчиво к переименованию).
 const EQUIP_ITEMS = {
-  helmet: [['', '— нет —'], ['helmet', 'Железный шлем'], ['leatherHat', 'Кожаный капюшон'], ['silverHelmet', 'Серебряный шлем'], ['bearHelmet', 'Медвежий шлем']],
-  chest: [['', '— нет —'], ['chest', 'Железный нагрудник'], ['leatherTunic', 'Кожаный нагрудник'], ['silverChest', 'Серебряный нагрудник'], ['merchantRobe', 'Кафтан торговца'], ['forestTunic', 'Лесная туника']],
-  gloves: [['', '— нет —'], ['leatherMitts', 'Кожаные перчатки'], ['silverGloves', 'Серебряные перчатки'], ['blueGloves', 'Синие перчатки']],
-  pants: [['', '— нет —'], ['leatherLegs', 'Кожаные поножи'], ['silverLegs', 'Серебряные поножи'], ['goldPants', 'Золотые штаны'], ['brownPants', 'Кожаные штаны'], ['redPants', 'Красные штаны']],
-  boots: [['', '— нет —'], ['leatherShoes', 'Кожаные сапоги'], ['silverBoots', 'Серебряные сапоги'], ['leatherBoots', 'Кожаные сапоги (одежда)']],
-  cloak: [['', '— нет —'], ['cloak', 'Плащ']],
-  mainHand: [['', '— нет —'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч']],
-  offHand: [['', '— нет —'], ['ironShield', 'Железный щит']],
+  helmet: ['', 'helmet', 'leatherHat', 'silverHelmet', 'goldHelmet', 'bearHelmet', 'wolfHelmet', 'monkHelmet'],
+  chest: ['', 'chest', 'leatherTunic', 'silverChest', 'goldChest', 'merchantRobe', 'forestTunic', 'monkChest', 'farmerChest'],
+  gloves: ['', 'leatherMitts', 'silverGloves', 'goldGloves', 'blueGloves'],
+  pants: ['', 'leatherLegs', 'silverLegs', 'goldLegs', 'goldPants', 'brownPants', 'redPants', 'monkPants', 'farmerLegs'],
+  boots: ['', 'leatherShoes', 'silverBoots', 'goldBoots', 'leatherBoots'],
+  cloak: ['', 'cloak'],
+  mainHand: ['', 'ironSword', 'ironGreatsword'],
+  offHand: ['', 'ironShield'],
 };
+// Имя предмета из реестра (или '— нет —' для пустого id) — единый источник, меняется при переименовании.
+const regName = (id) => id ? ((GAME_ITEMS[id] && GAME_ITEMS[id].name) || id) : '— нет —';
+const equipOpts = (slot) => (EQUIP_ITEMS[slot] || []).map(id => [id, regName(id)]);
 const SLOT_NAMES = { helmet: 'Шлем', chest: 'Тело', gloves: 'Перчатки', pants: 'Ноги', boots: 'Обувь', cloak: 'Плащ', mainHand: 'Прав. рука', offHand: 'Лев. рука' };
 const EQUIP_ORDER = ['helmet', 'chest', 'gloves', 'pants', 'boots', 'cloak', 'mainHand', 'offHand'];
-const GATHER_TARGETS = [['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['sand', 'Песок']];
-const KILL_TARGETS = [['passive', 'Курица'], ['aggressive', 'Волк'], ['bear', 'Медведь']];
+const GATHER_TARGETS = [['wood', 'Древесина'], ['ore', 'Железная руда'], ['sand', 'Песок']];
+// Цели kill-квеста = ТВОИ созданные мобы (по имени) + враждебные НПС (по имени) + дефолтные мобы стартовой карты.
+// Засчёт на сервере матчится по имени конкретного моба ИЛИ по типу-спрайту (для дефолтных).
+function killTargetOpts(current) {
+  const seen = new Set(), out = [];
+  const add = (v, l) => { if (!v || seen.has(v)) return; seen.add(v); out.push([v, l]); };
+  // ТОЛЬКО твои созданные мобы (библиотека конструктора) + твои враждебные НПС
+  for (const m of savedMobs) add((m.name && m.name.trim()) || m.sprite, mobLabelFor(m));
+  for (const ln in LOCS) for (const n of ((LOCS[ln] && LOCS[ln].npcs) || [])) if (n.enemy && n.name) add(n.name, '⚔ ' + n.name);
+  if (current && !seen.has(current)) out.push([current, current]);   // сохранить уже выбранную цель
+  return out;
+}
 // Предметы, которые можно выдать в награду
-const REWARD_ITEMS = [['', '— нет —'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['sand', 'Песок'],
-  ['leather', 'Кожа'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток'], ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['silverHelmet', 'Серебряный шлем'], ['silverChest', 'Серебряный нагрудник']];
+const REWARD_ITEMS = [['', '— нет —'], ['wood', 'Древесина'], ['ore', 'Железная руда'], ['sand', 'Песок'],
+  ['leather', 'Кожа'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток'], ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['wolfHelmet', 'Волчий шлем'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['silverHelmet', 'Серебряный шлем'], ['silverChest', 'Серебряный нагрудник']];
 
 // --- DOM ---
 const paletteEl = document.getElementById('palette');
@@ -41,7 +96,7 @@ const ctx = canvas.getContext('2d');
 let LOCS = {};                 // { name: {map,floor,teleports,W,H} }
 let curLoc = 'surface';        // редактируемая локация
 let MAP = null, FLOOR = null, mapW = 0, mapH = 0;  // ссылки на текущую локацию
-const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23, 31]); // тайлы пола (+ пещера, земля, тёмн.трава, цветы, брусчатка, песок)
+const GROUND = new Set([0, 1, 4, 15, 20, 21, 22, 23, 29, 31, 38, 39, 40, 41]); // тайлы пола (+мост 29, +деревянные полы 38-41)
 const TELES = new Set([13, 14, 16, 17, 18]);       // порталы-телепорты (вид отвязан от связи)
 const isGround = (t) => GROUND.has(t);
 const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
@@ -51,7 +106,7 @@ const EYEDROPPER = -4;                             // пипетка/копир�
 let clipboard = null;                              // буфер пипетки: {kind:'mob'|'npc'|'spot'|'sign', data}
 const SIGN = 30;                                   // табличка с текстом
 const RETURN_STONE = 36;                           // камень возвращения (с именем точки)
-const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты' };
+const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты', desert: 'Пустыня', forest: 'Лес' };
 function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
 
 // --- Изометрия / камера ---
@@ -79,9 +134,29 @@ try { savedSpots = JSON.parse(localStorage.getItem('mmorpg_savedSpots') || '[]')
 function persistSavedSpots() { try { localStorage.setItem('mmorpg_savedSpots', JSON.stringify(savedSpots)); } catch (e) {} }
 function spotLabelFor(s) { return (s && s.name) || 'Рыбное место'; }
 // Рыба, доступная для таблицы рыбного места (id → подпись)
-const FISH_ITEMS = [['sprat', 'Килька'], ['perch', 'Окунь'], ['trout', 'Форель'], ['salmon', 'Лосось']];
+// 14 предсозданных рыб. Дефолты (шанс/мин.уровень/опыт) заданы по «качеству»:
+// простые серые — частые/дешёвые, яркие и экзотические — редкие/дорогие.
+const FISH_ITEMS = [
+  ['fish1', 'Рыба-клоун'], ['fish2', 'Петушок'], ['fish3', 'Уклейка'], ['fish4', 'Голубой хирург'],
+  ['fish5', 'Стерлядь'], ['fish6', 'Красный окунь'], ['fish7', 'Лещ'], ['fish8', 'Окунь'],
+  ['fish9', 'Скат'], ['fish10', 'Морской окунь'], ['fish11', 'Угорь'], ['fish12', 'Зелёный окунь'],
+  ['fish13', 'Сом'], ['fish14', 'Рыба-бабочка'],
+];
+// id → дефолтные шанс(%)/мин.уровень/опыт (подставляются автоматически при выборе рыбы)
+const FISH_DEF = {
+  fish3: { chance: 100, minLevel: 1, xp: 8 }, fish5: { chance: 100, minLevel: 1, xp: 8 },
+  fish7: { chance: 100, minLevel: 1, xp: 8 }, fish8: { chance: 100, minLevel: 1, xp: 8 },
+  fish13: { chance: 100, minLevel: 1, xp: 8 },
+  fish10: { chance: 70, minLevel: 6, xp: 14 },
+  fish1: { chance: 45, minLevel: 14, xp: 22 }, fish6: { chance: 45, minLevel: 14, xp: 22 },
+  fish11: { chance: 45, minLevel: 14, xp: 22 }, fish12: { chance: 45, minLevel: 14, xp: 22 },
+  fish2: { chance: 22, minLevel: 26, xp: 36 }, fish4: { chance: 22, minLevel: 26, xp: 36 },
+  fish9: { chance: 22, minLevel: 26, xp: 36 },
+  fish14: { chance: 10, minLevel: 40, xp: 60 },
+};
 // Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
-const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg'), 36: mkImg('/assets/return-stone.svg') };
+const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg'), 36: mkImg('/assets/return-stone.svg'), 42: mkImg('/assets/table.svg'), 43: mkImg('/assets/bed.png'), 44: mkImg('/assets/wardrobe.svg'), 45: mkImg('/assets/nightstand.svg'), 46: mkImg('/assets/chair.svg'), 47: mkImg('/assets/barrel.svg'), 48: mkImg('/assets/rug.svg'), 49: mkImg('/assets/table2.svg'), 50: mkImg('/assets/wardrobe2.svg'), 51: mkImg('/assets/wardrobe3.svg'), 52: mkImg('/assets/barrel2.svg'), 53: mkImg('/assets/barrel3.svg'), 54: mkImg('/assets/gold-ore.svg') };
+const FURN_SZ = { 42: 44, 43: 46, 44: 48, 45: 40, 46: 40, 47: 30, 48: 46, 49: 44, 50: 48, 51: 48, 52: 32, 53: 32 };  // размеры мебели/декора (как в игре)
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 function tileSeed(x, y) { return (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; }
@@ -120,12 +195,13 @@ let panX = 0, panY = 0; // экранное смещение начала коо
 
 // --- Палитра тайлов по категориям ---
 const CATEGORIES = [
-  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#819A35' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 31, name: 'Песок (пустыня)', color: '#dcc878' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
-  { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' }, { id: 24, name: 'Горы', color: '#7c8088' }, { id: 32, name: 'Скала (пещера)', color: '#4a4f59' }, { id: 27, name: 'Забор', color: '#9a6b3a' } ] },
-  { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 35, name: 'Серебро', color: '#c0c0c0' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
-  { name: 'Природа',  items: [ { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
+  { name: 'Земля',    items: [ { id: 0, name: 'Трава', color: '#819A35' }, { id: 21, name: 'Тёмн. трава', color: '#3f7e3a' }, { id: 22, name: 'Цветы', color: '#62ab51' }, { id: 4, name: 'Тропа', color: '#c6a96a' }, { id: 20, name: 'Земля', color: '#9c7a4d' }, { id: 23, name: 'Брусчатка', color: '#8d8f97' }, { id: 38, name: 'Деревянный пол', color: '#c08a4f' }, { id: 39, name: 'Тёмный пол', color: '#7a5228' }, { id: 40, name: 'Светлый пол', color: '#d9b277' }, { id: 41, name: 'Доски поперёк', color: '#b3814a' }, { id: 29, name: 'Мост (пол)', color: '#a9743f' }, { id: 31, name: 'Песок (пустыня)', color: '#dcc878' }, { id: 1, name: 'Вода', color: '#3a86c8' }, { id: 15, name: 'Пещера', color: '#3b3b46' } ] },
+  { name: 'Стены',    items: [ { id: 2, name: 'Стена', color: '#9aa0ac' }, { id: 37, name: 'Дерев. стена', color: '#b9824a' }, { id: 24, name: 'Горы', color: '#7c8088' }, { id: 32, name: 'Скала (пещера)', color: '#4a4f59' }, { id: 27, name: 'Забор', color: '#9a6b3a' } ] },
+  { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 35, name: 'Серебро', color: '#c0c0c0' }, { id: 54, name: 'Золото', color: '#e8c14f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
+  { name: 'Природа',  items: [ { id: 5, name: 'Камень', color: '#828892' }, { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' }, { id: 33, name: 'Верстак', color: '#a9743f' } ] },
-  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 28, name: 'Фонарь', color: '#f0c24a' }, { id: 29, name: 'Мост', color: '#a9743f' }, { id: 30, name: 'Табличка', color: '#9a6b3a' }, { id: 34, name: 'Админ-сундук', color: '#ff5fb0' }, { id: 36, name: 'Камень возврата', color: '#7fd0e0' } ] },
+  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 30, name: 'Табличка', color: '#9a6b3a' }, { id: 34, name: 'Админ-сундук', color: '#ff5fb0' }, { id: 36, name: 'Камень возврата', color: '#7fd0e0' } ] },
+  { name: 'Декор', items: [ { id: 42, name: 'Стол', color: '#a9743f' }, { id: 49, name: 'Стол 2', color: '#a9743f' }, { id: 43, name: 'Кровать', color: '#5b8def' }, { id: 44, name: 'Шкаф', color: '#8a5e30' }, { id: 50, name: 'Шкаф 2', color: '#8a5e30' }, { id: 51, name: 'Шкаф 3', color: '#8a5e30' }, { id: 45, name: 'Тумбочка', color: '#a9743f' }, { id: 46, name: 'Стул', color: '#a9743f' }, { id: 47, name: 'Бочка', color: '#9c6a34' }, { id: 52, name: 'Бочка 2', color: '#9c6a34' }, { id: 53, name: 'Бочка 3', color: '#9c6a34' }, { id: 48, name: 'Ковёр', color: '#cf5a3e' }, { id: 28, name: 'Фонарь', color: '#f0c24a' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
   { name: 'НПС', items: [ { id: 'npc', name: 'Создать НПС', color: '#e0a93b' } ] },
@@ -148,7 +224,7 @@ function persistCollapsed() { try { localStorage.setItem('mmorpg_palCollapsed', 
 const ICON_PX = 40;                             // размер иконки в палитре (px)
 const floorTexImgEd = {};                       // кэш картинок текстур пола (FLOOR_TEX) для редактора и палитры
 
-const TOP = { 0:'#819A35', 1:'#3a86c8', 2:'#9aa0ac', 3:'#819A35', 4:'#c6a96a', 5:'#819A35', 6:'#819A35', 7:'#819A35', 8:'#819A35', 9:'#819A35', 10:'#819A35', 11:'#819A35', 12:'#819A35', 13:'#819A35', 14:'#819A35', 15:'#3b3b46', 16:'#819A35', 17:'#819A35', 18:'#819A35', 19:'#819A35', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#819A35', 25:'#819A35', 26:'#819A35', 27:'#819A35', 28:'#819A35', 29:'#3a86c8', 30:'#819A35', 31:'#dcc878', 33:'#819A35', 34:'#819A35', 35:'#819A35' };
+const TOP = { 0:'#819A35', 1:'#3a86c8', 2:'#9aa0ac', 3:'#819A35', 4:'#c6a96a', 5:'#819A35', 6:'#819A35', 7:'#819A35', 8:'#819A35', 9:'#819A35', 10:'#819A35', 11:'#819A35', 12:'#819A35', 13:'#819A35', 14:'#819A35', 15:'#3b3b46', 16:'#819A35', 17:'#819A35', 18:'#819A35', 19:'#819A35', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#819A35', 25:'#819A35', 26:'#819A35', 27:'#819A35', 28:'#819A35', 29:'#a9743f', 30:'#819A35', 31:'#dcc878', 33:'#819A35', 34:'#819A35', 35:'#819A35', 37:'#b9824a', 38:'#c08a4f', 39:'#7a5228', 40:'#d9b277', 41:'#b3814a', 54:'#819A35' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
@@ -235,8 +311,8 @@ function switchLoc(name) {
 
 // Изменить размер текущей локации (содержимое сохраняется, новые клетки — трава)
 function applyResize() {
-  const w = Math.max(5, Math.min(60, parseInt(mapWInput.value, 10) || mapW));
-  const h = Math.max(5, Math.min(60, parseInt(mapHInput.value, 10) || mapH));
+  const w = Math.max(5, Math.min(400, parseInt(mapWInput.value, 10) || mapW));
+  const h = Math.max(5, Math.min(400, parseInt(mapHInput.value, 10) || mapH));
   mapWInput.value = w; mapHInput.value = h;
   if (w === mapW && h === mapH) return;
   const nm = [], nf = [];
@@ -267,6 +343,39 @@ function teleAt(x, y) { return LOCS[curLoc].teleports.find(e => e.x === x && e.y
 // Мобы текущей локации
 function removeMob(x, y) { LOCS[curLoc].mobs = LOCS[curLoc].mobs.filter(m => !(m.x === x && m.y === y)); }
 function setMob(x, y, cfg) { removeMob(x, y); LOCS[curLoc].mobs.push({ ...cfg, x, y }); }
+// Копия данных моба для библиотеки (без координат — это шаблон)
+function libCopy(d) { const c = JSON.parse(JSON.stringify(d)); delete c.x; delete c.y; return c; }
+// Сколько расставлено мобов с таким именем (во всех локациях)
+function countMobByName(name) { if (!name) return 0; let c = 0; for (const ln in LOCS) for (const m of (LOCS[ln].mobs || [])) if ((m.name || '').trim() === name) c++; return c; }
+// Применить правку моба по выбранной области: one — только эта клетка; new — этот станет новым (+в библиотеку);
+// all — все копии с прежним именем (во всех локациях) + запись в библиотеке.
+function applyMobEdit(scope, x, y, oldName, data) {
+  if (scope === 'one') { setMob(x, y, data); return; }
+  if (scope === 'new') { setMob(x, y, data); savedMobs.push(libCopy(data)); persistSavedMobs(); buildPalette(); return; }
+  if (scope === 'all') {
+    for (const ln in LOCS) { const arr = LOCS[ln].mobs || []; for (let i = 0; i < arr.length; i++) if ((arr[i].name || '').trim() === oldName) arr[i] = { ...libCopy(data), x: arr[i].x, y: arr[i].y }; }
+    let found = false;
+    for (let i = 0; i < savedMobs.length; i++) if ((savedMobs[i].name || '').trim() === oldName) { savedMobs[i] = libCopy(data); found = true; }
+    if (!found) savedMobs.push(libCopy(data));
+    persistSavedMobs(); buildPalette();
+  }
+}
+// Модалка выбора области применения правки моба
+function showMobScopeChoice(oldName, copies, inLib, cb) {
+  const m = document.createElement('div');
+  m.className = 'npc-overlay'; m.style.zIndex = 95;
+  m.innerHTML = `<div class="npc-modal" style="display:block;width:440px;max-width:92vw">
+    <h3>Моб «${escHtml(oldName)}» изменён</h3>
+    <p class="npc-hint">На картах копий: <b>${copies}</b>${inLib ? ' · есть в библиотеке' : ''}. Куда применить изменения (новые параметры и имя)?</p>
+    <div class="npc-btns" style="flex-direction:column;align-items:stretch;gap:8px;margin-top:6px">
+      <button class="m-ok" data-s="all">Обновить везде — все копии и библиотеку</button>
+      <button class="m-cancel" data-s="new">Создать нового моба — этот станет новым</button>
+      <button class="m-cancel" data-s="one">Изменить только этого</button>
+      <button class="m-cancel" data-s="cancel">Отмена</button>
+    </div></div>`;
+  document.body.appendChild(m);
+  m.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const s = b.dataset.s; m.remove(); if (s !== 'cancel') cb(s); }));
+}
 function mobAt(x, y) { return LOCS[curLoc].mobs.find(m => m.x === x && m.y === y); }
 // Таблички текущей локации
 function removeSign(x, y) { LOCS[curLoc].signs = LOCS[curLoc].signs.filter(s => !(s.x === x && s.y === y)); }
@@ -311,6 +420,7 @@ function drawIcon(c, id) {
   }
   // Всё остальное — БЕЗ фона травы (рисуем сам объект на прозрачном; тёмный фон кнопки сам по себе)
   if (id === 2) { c.fillStyle = '#5d626d'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#787e8a'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#9aa0ac'; c.fillRect(7, 4, 16, 4); return; }
+  if (id === 37) { c.fillStyle = '#6e4a24'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#946033'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#b9824a'; c.fillRect(7, 4, 16, 4); return; }
   if (id === 32) { c.fillStyle = '#333842'; c.beginPath(); c.moveTo(15, 24); c.lineTo(6, 19); c.lineTo(6, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#4a4f59'; c.beginPath(); c.moveTo(15, 24); c.lineTo(24, 19); c.lineTo(24, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#646b75'; c.beginPath(); c.moveTo(15, 7); c.lineTo(24, 11); c.lineTo(16, 3); c.lineTo(9, 10); c.closePath(); c.fill(); return; }
   if (id === 'mob') {     // создать моба — голова волка из спрайта или кружок-зверь
     const mi = MOB_IMG.wolf; if (mi && mi._ready) return void c.drawImage(mi, 3, 2, 24, 24);
@@ -650,17 +760,67 @@ function fillDiamond(cx, cy, color, stroke) {
   ctx.fillStyle = color; ctx.fill();
   if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 1; ctx.stroke(); }
 }
-function drawCube(cx, cy, h) {
+function drawCube(cx, cy, h, col) {
+  col = col || WALL;
   const hw = (TW / 2) * zoom, hh = (TH / 2) * zoom; h *= zoom;
   ctx.beginPath();
   ctx.moveTo(cx, cy + hh); ctx.lineTo(cx + hw, cy);
   ctx.lineTo(cx + hw, cy - h); ctx.lineTo(cx, cy + hh - h);
-  ctx.closePath(); ctx.fillStyle = WALL.right; ctx.fill();
+  ctx.closePath(); ctx.fillStyle = col.right; ctx.fill();
   ctx.beginPath();
   ctx.moveTo(cx, cy + hh); ctx.lineTo(cx - hw, cy);
   ctx.lineTo(cx - hw, cy - h); ctx.lineTo(cx, cy + hh - h);
-  ctx.closePath(); ctx.fillStyle = WALL.left; ctx.fill();
-  fillDiamond(cx, cy - h, WALL.top, 'rgba(0,0,0,.15)');
+  ctx.closePath(); ctx.fillStyle = col.left; ctx.fill();
+  fillDiamond(cx, cy - h, col.top, 'rgba(0,0,0,.15)');
+}
+const WOOD_WALL_COL = { top: '#b9824a', left: '#6e4a24', right: '#946033' };
+// Деревянная стена в редакторе: куб с деревянными гранями + горизонтальные доски
+function drawWoodWallEd(cx, cy) {
+  drawCube(cx, cy, WALL_H, WOOD_WALL_COL);
+  const hw = (TW / 2) * zoom, hh = (TH / 2) * zoom, h = WALL_H * zoom;
+  ctx.strokeStyle = 'rgba(60,38,18,.4)'; ctx.lineWidth = 1.1 * zoom;
+  for (let k = 1; k <= 3; k++) { const d = (h * k) / 4; ctx.beginPath(); ctx.moveTo(cx, cy + hh - d); ctx.lineTo(cx + hw, cy - d); ctx.stroke(); ctx.beginPath(); ctx.moveTo(cx, cy + hh - d); ctx.lineTo(cx - hw, cy - d); ctx.stroke(); }
+}
+// Деревянный пол в редакторе: ромб-настил, у каждого вида свой узор (как в игре)
+const WOOD_FLOORS_ED = {
+  38: { base: '#c08a4f', seam: 'rgba(92,60,28,.5)',  pat: 'd1' },
+  39: { base: '#7a5228', seam: 'rgba(40,26,10,.55)', pat: 'd2' },
+  40: { base: '#d9b277', seam: 'rgba(120,82,40,.45)', pat: 'grid' },
+  41: { base: '#b3814a', seam: 'rgba(92,60,28,.5)',  pat: 'herring' },
+};
+function drawWoodFloorEd(cx, cy, tile) {
+  const w = WOOD_FLOORS_ED[tile] || WOOD_FLOORS_ED[38];
+  const hx = (TW / 2) * zoom, hy = (TH / 2) * zoom;
+  fillDiamond(cx, cy, w.base, 'rgba(60,40,18,.45)');
+  ctx.strokeStyle = w.seam; ctx.lineWidth = 1.2 * zoom; ctx.lineCap = 'round';
+  const d1 = (s) => { ctx.beginPath(); ctx.moveTo(cx + s * hx, cy - hy + s * hy); ctx.lineTo(cx - s * hx, cy + hy - s * hy); ctx.stroke(); };
+  const d2 = (s) => { ctx.beginPath(); ctx.moveTo(cx - s * hx, cy - hy + s * hy); ctx.lineTo(cx + hx - s * hx, cy + s * hy); ctx.stroke(); };
+  if (w.pat === 'd1') { for (const s of [0.28, 0.5, 0.72]) d1(s); }
+  else if (w.pat === 'd2') { for (const s of [0.28, 0.5, 0.72]) d2(s); }
+  else if (w.pat === 'grid') { for (const s of [0.34, 0.66]) { d1(s); d2(s); } }
+  else if (w.pat === 'herring') {
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(cx, cy - hy); ctx.lineTo(cx + hx, cy); ctx.lineTo(cx, cy + hy); ctx.lineTo(cx - hx, cy); ctx.closePath(); ctx.clip();
+    const u = hy * 0.5; let row = 0;
+    for (let yy = cy - hy; yy <= cy + hy + u; yy += u, row++) {
+      for (let xx = cx - hx, col = 0; xx <= cx + hx; xx += u, col++) {
+        ctx.beginPath();
+        if ((row + col) % 2 === 0) { ctx.moveTo(xx, yy + u); ctx.lineTo(xx + u, yy); }
+        else { ctx.moveTo(xx, yy); ctx.lineTo(xx + u, yy + u); }
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+}
+// Мост-пол в редакторе (тот же вид, что был объект-мост)
+function drawBridgeEd(cx, cy) {
+  const hx = (TW / 2) * zoom, hy = (TH / 2) * zoom;
+  fillDiamond(cx, cy, '#a9743f', 'rgba(58,36,16,.55)');
+  ctx.fillStyle = 'rgba(140,92,48,.35)';
+  ctx.beginPath(); ctx.moveTo(cx - hx, cy); ctx.lineTo(cx, cy + hy); ctx.lineTo(cx + hx, cy); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(74,48,24,.6)'; ctx.lineWidth = 1.3 * zoom; ctx.lineCap = 'round';
+  for (const s of [0.28, 0.5, 0.72]) { ctx.beginPath(); ctx.moveTo(cx - s * hx, cy - hy + s * hy); ctx.lineTo(cx + hx - s * hx, cy + s * hy); ctx.stroke(); }
 }
 function drawTree(cx, cy, x, y) {
   const z = zoom;
@@ -725,12 +885,21 @@ function render() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!MAP) { requestAnimationFrame(render); return; }
 
+  // Видимая область (отсечение): рисуем только клетки рядом с экраном — карта может быть огромной.
+  const cc = [screenToTile(0, 0), screenToTile(canvas.width, 0), screenToTile(0, canvas.height), screenToTile(canvas.width, canvas.height)];
+  const vMinX = Math.max(0, Math.min(cc[0].x, cc[1].x, cc[2].x, cc[3].x) - 3);
+  const vMaxX = Math.min(mapW - 1, Math.max(cc[0].x, cc[1].x, cc[2].x, cc[3].x) + 6);
+  const vMinY = Math.max(0, Math.min(cc[0].y, cc[1].y, cc[2].y, cc[3].y) - 3);
+  const vMaxY = Math.min(mapH - 1, Math.max(cc[0].y, cc[1].y, cc[2].y, cc[3].y) + 6);
+
   // Пол (из слоя FLOOR — под объектами сохраняется земля)
-  for (let y = 0; y < mapH; y++) {
-    for (let x = 0; x < mapW; x++) {
-      if (MAP[y][x] === 2 || MAP[y][x] === 32) continue;  // под стеной/скалой пол не рисуем
+  for (let y = vMinY; y <= vMaxY; y++) {
+    for (let x = vMinX; x <= vMaxX; x++) {
+      if (MAP[y][x] === 2 || MAP[y][x] === 32 || MAP[y][x] === 37) continue;  // под стеной/скалой/дерев.стеной пол не рисуем
       const fx = panX + isoX(x, y), fy = panY + isoY(x, y);
       if (drawFloorTexEd(FLOOR[y][x], fx, fy, x, y)) continue;   // своя текстура пола (как в игре)
+      if (FLOOR[y][x] === 29) { drawBridgeEd(fx, fy); continue; }      // мост — теперь пол
+      if (FLOOR[y][x] >= 38 && FLOOR[y][x] <= 41) { drawWoodFloorEd(fx, fy, FLOOR[y][x]); continue; } // деревянные полы
       fillDiamond(fx, fy, TOP[FLOOR[y][x]] || TOP[0], 'rgba(0,0,0,.18)');
     }
   }
@@ -739,12 +908,13 @@ function render() {
     fillDiamond(panX + isoX(hover.x, hover.y), panY + isoY(hover.x, hover.y),
                 'rgba(255,255,255,.25)', '#fff');
   }
-  // Объекты (стены, деревья) по глубине
+  // Объекты (стены, деревья) по глубине — только видимая область
   const obj = [];
-  for (let y = 0; y < mapH; y++)
-    for (let x = 0; x < mapW; x++) {
+  for (let y = vMinY; y <= vMaxY; y++)
+    for (let x = vMinX; x <= vMaxX; x++) {
       const t = MAP[y][x];
       if (t === 2) obj.push({ d: x + y, k: 2, x, y });
+      else if (t === 37) obj.push({ d: x + y, k: 37, x, y });
       else if (t === 32) obj.push({ d: x + y, k: 32, x, y });
       else if (t === 3) obj.push({ d: x + y + 0.1, k: 3, x, y });
       else if (t === 5) obj.push({ d: x + y + 0.1, k: 5, x, y });
@@ -760,11 +930,12 @@ function render() {
       else if (t === 16 || t === 17 || t === 18) obj.push({ d: x + y + 0.1, k: t, x, y });
       else if (t === 19) obj.push({ d: x + y + 0.2, k: 19, x, y });
       else if (t === 24 || t === 25 || t === 26 || t === 27 || t === 28 || t === 30 || t === 33 || t === 34 || t === 35 || t === 36) obj.push({ d: x + y + 0.1, k: t, x, y });
-      else if (t === 29) obj.push({ d: x + y - 0.4, k: 29, x, y });
+      else if (t >= 42 && t <= 53) obj.push({ d: x + y + 0.1, k: t, x, y });   // мебель / декор
     }
   obj.sort((a, b) => a.d - b.d);
   for (const o of obj) {
     if (o.k === 2) drawCube(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), WALL_H);
+    else if (o.k === 37) drawWoodWallEd(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
     else if (o.k === 32) drawCaveWallEd(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.x, o.y);
     else if (o.k === 3) drawTree(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), o.x, o.y);
     else if (o.k === 7) drawAnvil(panX + isoX(o.x, o.y), panY + isoY(o.x, o.y));
@@ -789,19 +960,12 @@ function render() {
     else if (o.k === 33) objSprite(OBJ_IMG[33], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 34) objSprite(OBJ_IMG[34], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 35) objSprite(OBJ_IMG[35], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);
+    else if (o.k >= 42 && o.k <= 53) objSprite(OBJ_IMG[o.k], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), FURN_SZ[o.k]);  // мебель / декор
     else if (o.k === 36) {                          // камень возврата + его имя над ним
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
       objSprite(OBJ_IMG[36], sx, sy, 40);
       const st = stoneAtEd(o.x, o.y);
       if (st && st.name) { ctx.fillStyle = '#bfe3ff'; ctx.font = `bold ${Math.round(11 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 3 * zoom; ctx.strokeText(st.name, sx, sy - 22 * zoom); ctx.fillText(st.name, sx, sy - 22 * zoom); }
-    }
-    else if (o.k === 29) {                          // мост — плоская клетка-настил (как в игре)
-      const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y), hx = (TW / 2) * zoom, hy = (TH / 2) * zoom;
-      fillDiamond(sx, sy, '#a9743f', 'rgba(58,36,16,.55)');
-      ctx.fillStyle = 'rgba(140,92,48,.35)';
-      ctx.beginPath(); ctx.moveTo(sx - hx, sy); ctx.lineTo(sx, sy + hy); ctx.lineTo(sx + hx, sy); ctx.closePath(); ctx.fill();
-      ctx.strokeStyle = 'rgba(74,48,24,.6)'; ctx.lineWidth = 1.3 * zoom; ctx.lineCap = 'round';
-      for (const s of [0.28, 0.5, 0.72]) { ctx.beginPath(); ctx.moveTo(sx - s * hx, sy - hy + s * hy); ctx.lineTo(sx + hx - s * hx, sy + s * hy); ctx.stroke(); }
     }
     else if (o.k === 30) {
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
@@ -830,13 +994,13 @@ const escAttr = escHtml;
 // Предметы, которые НПС может продавать игроку (Купить)
 const SELL_ITEMS = [
   ['axe', 'Топор'], ['pickaxe', 'Кирка'], ['shovel', 'Лопата'], ['emptyFlask', 'Пустая колба'], ['cookedChicken', 'Жареная курица'],
-  ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'],
+  ['wood', 'Древесина'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'],
   ['leather', 'Кожа'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'],
   ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['leatherMitts', 'Кожаные перчатки'], ['leatherLegs', 'Кожаные поножи'], ['leatherShoes', 'Кожаные сапоги'],
   ['silverHelmet', 'Серебряный шлем'], ['silverChest', 'Серебряный нагрудник'], ['silverGloves', 'Серебряные перчатки'], ['silverLegs', 'Серебряные поножи'], ['silverBoots', 'Серебряные сапоги'],
   ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['ironGreatsword', 'Двуручный меч'],
 ];
-function npcDefaults() { return { name: 'НПС', link: '', description: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, sells: [], dialogue: '', talkText: '', quests: [] }; }
+function npcDefaults() { return { name: 'НПС', link: '', description: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, sells: [], dialogue: '', talkText: '', quests: [], enemy: false, hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, loot: [] }; }
 function questDefaults() { return { title: 'Задание', desc: '', type: 'gather', target: 'wood', count: 5, reward: 50, rewardItem: null, thanks: 'Спасибо!', repeatable: false }; }
 const optHtml = (arr, sel) => arr.map(([v, l]) => `<option value="${escAttr(v)}"${v === sel ? ' selected' : ''}>${escHtml(l)}</option>`).join('');
 
@@ -853,20 +1017,21 @@ function makeQuestBlock(q) {
     <label class="npc-f q-target-box"></label>
     <label class="npc-f q-count-row">Количество<input class="q-count" type="number" min="1" value="${q.count}"></label>
     <label class="npc-f">Награда — золото<input class="q-reward" type="number" min="0" value="${q.reward}"></label>
-    <label class="npc-f">Награда — предмет<span class="npc-inline"><select class="q-ritem">${optHtml(REWARD_ITEMS, q.rewardItem ? q.rewardItem.id : '')}</select>×<input class="q-rqty" type="number" min="1" value="${q.rewardItem ? q.rewardItem.qty : 1}"></span></label>
+    <label class="npc-f">Награда — предмет<span class="npc-inline"><select class="q-ritem">${optHtml(rewardItemOpts(), q.rewardItem ? q.rewardItem.id : '')}</select>×<input class="q-rqty" type="number" min="1" value="${q.rewardItem ? q.rewardItem.qty : 1}"></span></label>
     <label class="npc-f">Текст благодарности<textarea class="q-thanks" rows="2">${escHtml(q.thanks)}</textarea></label>
     <label class="npc-chk"><input class="q-rep" type="checkbox"${q.repeatable ? ' checked' : ''}> Повторяемый (можно брать снова)</label>`;
   const tbox = el.querySelector('.q-target-box');
   const typeSel = el.querySelector('.q-type');
   const renderTarget = (type) => {
     if (type === 'talk') tbox.innerHTML = `Метка/имя НПС-цели<input class="q-target" type="text" value="${escAttr(q.type === 'talk' ? q.target : '')}" placeholder="напр. Кузнец или 123">`;
-    else if (type === 'kill') tbox.innerHTML = `Кого убить<select class="q-target">${optHtml(KILL_TARGETS, q.type === 'kill' ? q.target : 'passive')}</select>`;
-    else tbox.innerHTML = `Что собрать<select class="q-target">${optHtml(GATHER_TARGETS, q.type === 'gather' ? q.target : 'wood')}</select>`;
+    else if (type === 'kill') { const ko = killTargetOpts(q.type === 'kill' ? q.target : ''); tbox.innerHTML = `Кого убить<select class="q-target">${optHtml(ko, q.type === 'kill' ? q.target : ((ko[0] && ko[0][0]) || 'wolf'))}</select>`; }
+    else { tbox.innerHTML = `Что принести<select class="q-target">${optHtml(allGameItemOpts(), q.type === 'gather' ? q.target : 'wood')}</select>`; enhanceIconSelect(tbox.querySelector('.q-target')); }
     el.querySelector('.q-count-row').style.display = (type === 'talk') ? 'none' : '';
   };
   renderTarget(q.type);
   typeSel.addEventListener('change', () => renderTarget(typeSel.value));
   el.querySelector('.q-remove').addEventListener('click', () => el.remove());
+  enhanceIconSelect(el.querySelector('.q-ritem'));   // награда — любой предмет, с иконкой
   return el;
 }
 function readQuestBlock(el) {
@@ -899,8 +1064,7 @@ function openNpcEditor(x, y, existing) {
   const skinSw = PALETTES.skin.map(c => `<span class="npc-skin${data.appearance.skin === c ? ' sel' : ''}" data-c="${c}" style="background:${c}"></span>`).join('');
   const hairColSw = PALETTES.hair.map(c => `<span class="npc-skin${data.appearance.hair === c ? ' sel' : ''}" data-haircol="${c}" style="background:${c}"></span>`).join('');
   const hairBtns = [{ id: '', name: 'Без' }, ...HAIR_STYLES].map(s => `<button class="npc-hair${data.appearance.hairStyle === s.id ? ' sel' : ''}" data-hair="${s.id}">${s.art ? `<svg viewBox="185 40 150 135">${s.art.split('#484848').join('#6b4a2b')}</svg>` : '✕'}</button>`).join('');
-  const equipRows = EQUIP_ORDER.map(slot => `<label class="npc-eq"><span>${SLOT_NAMES[slot]}</span><select data-slot="${slot}">${optHtml(EQUIP_ITEMS[slot], data.equipment[slot] || '')}</select></label>`).join('');
-  const sellChecks = SELL_ITEMS.map(([id, l]) => `<label class="npc-sell"><input type="checkbox" data-sell="${id}"${data.sells.includes(id) ? ' checked' : ''}> ${escHtml(l)}</label>`).join('');
+  const equipRows = EQUIP_ORDER.map(slot => `<label class="npc-eq"><span>${SLOT_NAMES[slot]}</span><select data-slot="${slot}">${optHtml(equipOpts(slot), data.equipment[slot] || '')}</select></label>`).join('');
   ov.innerHTML = `
     <div class="npc-modal">
       <div class="npc-left">
@@ -915,14 +1079,27 @@ function openNpcEditor(x, y, existing) {
       <div class="npc-right">
         <h3>${existing ? 'Изменить НПС' : 'Создать НПС'}</h3>
         <label class="npc-f">Имя<input id="npcName" type="text" maxlength="24" value="${escAttr(data.name)}"></label>
-        <label class="npc-f">Метка связи<input id="npcLink" type="text" maxlength="24" value="${escAttr(data.link)}" placeholder="для квеста «поговори с…» (иначе имя)"></label>
-        <label class="npc-f">Описание (видно в окне разговора)<textarea id="npcDesc" maxlength="300" rows="2">${escHtml(data.description)}</textarea></label>
-        <label class="npc-f">Реплика (кнопка «Поговорить»)<textarea id="npcDialogue" maxlength="300" rows="2">${escHtml(data.dialogue)}</textarea></label>
-        <label class="npc-f">Финальный диалог talk-квеста<textarea id="npcTalk" maxlength="300" rows="2" placeholder="покажется, когда игрок придёт сюда завершить квест «поговори с…»">${escHtml(data.talkText)}</textarea></label>
-        <label class="npc-chk"><input id="npcTrader" type="checkbox"${data.trader ? ' checked' : ''}> Принимает товары (игрок ПРОДАЁТ ему)</label>
-        <label class="npc-chk"><input id="npcSeller" type="checkbox"${data.sells.length ? ' checked' : ''}> Продаёт товары (игрок ПОКУПАЕТ)</label>
-        <div class="npc-f npc-sellbox${data.sells.length ? '' : ' hidden'}" id="npcSellBox">Что продаёт:<div class="npc-sells" id="npcSells">${sellChecks}</div></div>
-        <div class="npc-f">Квесты<div id="npcQuests"></div><button id="npcAddQuest" class="npc-addq">+ Добавить квест</button></div>
+        <label class="npc-chk npc-enemy-chk"><input id="npcEnemy" type="checkbox"${data.enemy ? ' checked' : ''}> ⚔ Враг — агрессивный, дерётся с игроками</label>
+        <div id="npcCombat" class="${data.enemy ? '' : 'hidden'}">
+          <div class="ce-grid">
+            <label class="npc-f">HP<input id="npcHp" type="number" min="1" value="${data.hp || 24}"></label>
+            <label class="npc-f">Броня<input id="npcArmor" type="number" min="0" value="${data.armor || 0}"></label>
+            <label class="npc-f">Урон мин<input id="npcDmgMin" type="number" min="0" value="${data.dmgMin != null ? data.dmgMin : 2}"></label>
+            <label class="npc-f">Урон макс<input id="npcDmgMax" type="number" min="0" value="${data.dmgMax != null ? data.dmgMax : 5}"></label>
+            <label class="npc-f">Респавн, сек<input id="npcRespawn" type="number" min="1" value="${data.respawn || 10}"></label>
+          </div>
+          <div class="npc-f">Лут (предмет · кол-во · шанс)<div id="npcLoot"></div><button id="npcAddLoot" class="npc-addq" type="button">+ Добавить лут</button></div>
+        </div>
+        <div id="npcFriendly" class="${data.enemy ? 'hidden' : ''}">
+          <label class="npc-f">Метка связи<input id="npcLink" type="text" maxlength="24" value="${escAttr(data.link)}" placeholder="для квеста «поговори с…» (иначе имя)"></label>
+          <label class="npc-f">Описание (видно в окне разговора)<textarea id="npcDesc" maxlength="300" rows="2">${escHtml(data.description)}</textarea></label>
+          <label class="npc-f">Реплика (кнопка «Поговорить»)<textarea id="npcDialogue" maxlength="300" rows="2">${escHtml(data.dialogue)}</textarea></label>
+          <label class="npc-f">Финальный диалог talk-квеста<textarea id="npcTalk" maxlength="300" rows="2" placeholder="покажется, когда игрок придёт сюда завершить квест «поговори с…»">${escHtml(data.talkText)}</textarea></label>
+          <label class="npc-chk"><input id="npcTrader" type="checkbox"${data.trader ? ' checked' : ''}> Принимает товары (игрок ПРОДАЁТ ему)</label>
+          <label class="npc-chk"><input id="npcSeller" type="checkbox"${data.sells.length ? ' checked' : ''}> Продаёт товары (игрок ПОКУПАЕТ)</label>
+          <div class="npc-f npc-sellbox${data.sells.length ? '' : ' hidden'}" id="npcSellBox">Что продаёт (по одному товару):<div id="npcSells"></div><button id="npcAddSell" class="npc-addq" type="button">+ Добавить товар</button></div>
+          <div class="npc-f">Квесты<div id="npcQuests"></div><button id="npcAddQuest" class="npc-addq">+ Добавить квест</button></div>
+        </div>
         <div class="npc-btns">
           ${existing ? '<button id="npcDelete" class="m-danger">Удалить</button>' : ''}
           <button id="npcCancel" class="m-cancel">Отмена</button>
@@ -955,12 +1132,23 @@ function openNpcEditor(x, y, existing) {
     const slot = sel.dataset.slot; if (sel.value) data.equipment[slot] = sel.value; else delete data.equipment[slot];
     preview();
   }));
+  ov.querySelectorAll('select[data-slot]').forEach(enhanceIconSelect);   // иконки в слотах экипировки
   // Квесты: блоки + кнопка добавить
   const questsBox = $('npcQuests');
   data.quests.forEach(q => questsBox.appendChild(makeQuestBlock(q)));
   $('npcAddQuest').addEventListener('click', () => questsBox.appendChild(makeQuestBlock(questDefaults())));
-  // Список товаров доступен только если включён «продавец»
+  // Товары на продажу — строки с иконками (как лут). Доступно только если включён «продавец».
+  const sellsBox = $('npcSells');
+  (data.sells || []).forEach(id => sellsBox.appendChild(makeSellRow(id)));
+  $('npcAddSell').addEventListener('click', () => sellsBox.appendChild(makeSellRow()));
   $('npcSeller').addEventListener('change', () => $('npcSellBox').classList.toggle('hidden', !$('npcSeller').checked));
+  // Лут врага (как у моба)
+  const lootBox = $('npcLoot');
+  (data.loot || []).forEach(l => lootBox.appendChild(makeLootBlock(l)));
+  $('npcAddLoot').addEventListener('click', () => lootBox.appendChild(makeLootBlock()));
+  // Переключатель «враг»: показать боевые поля, скрыть дружелюбные (и наоборот)
+  const syncEnemy = () => { const on = $('npcEnemy').checked; $('npcCombat').classList.toggle('hidden', !on); $('npcFriendly').classList.toggle('hidden', on); $('npcPreview').classList.toggle('npc-enemy-prev', on); };
+  $('npcEnemy').addEventListener('change', syncEnemy); syncEnemy();
 
   const close = () => { ov.classList.add('hidden'); ov.innerHTML = ''; };
   $('npcCancel').addEventListener('click', close);
@@ -972,16 +1160,25 @@ function openNpcEditor(x, y, existing) {
     data.trader = $('npcTrader').checked;
     data.dialogue = ($('npcDialogue').value || '').slice(0, 300);
     data.talkText = ($('npcTalk').value || '').slice(0, 300);
-    data.sells = $('npcSeller').checked ? [...ov.querySelectorAll('[data-sell]')].filter(c => c.checked).map(c => c.dataset.sell) : [];
+    data.sells = $('npcSeller').checked ? [...new Set([...ov.querySelectorAll('#npcSells .s-item')].map(s => s.value).filter(Boolean))] : [];
     data.quests = [...questsBox.querySelectorAll('.npc-qblock')].map(readQuestBlock);
     delete data.quest;       // убрать легаси-поле
+    data.enemy = $('npcEnemy').checked;
+    if (data.enemy) {        // боевые параметры (как у моба)
+      data.hp = Math.max(1, parseInt($('npcHp').value, 10) || 24);
+      data.armor = Math.max(0, parseInt($('npcArmor').value, 10) || 0);
+      data.dmgMin = Math.max(0, parseInt($('npcDmgMin').value, 10) || 0);
+      data.dmgMax = Math.max(data.dmgMin, parseInt($('npcDmgMax').value, 10) || 0);
+      data.respawn = Math.max(1, parseInt($('npcRespawn').value, 10) || 10);
+      data.loot = [...lootBox.querySelectorAll('.mob-loot-row')].map(r => ({ id: r.querySelector('.l-item').value, qty: Math.max(1, parseInt(r.querySelector('.l-qty').value, 10) || 1), chance: Math.max(1, Math.min(100, parseInt(r.querySelector('.l-chance').value, 10) || 100)) / 100 })).filter(l => l.id);
+    }
     setNpc(x, y, data);
     close();
   });
 }
 
 // --- Конструктор моба ---
-const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['leather', 'Кожа'], ['wood', 'Древесина'], ['stone', 'Камень'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток']];
+const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['rawWildMeat', 'Мясо дикого животного'], ['cookedWildMeat', 'Жареное мясо'], ['leather', 'Кожа'], ['wood', 'Древесина'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['wolfHelmet', 'Волчий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток']];
 const MOB_SPRITE_OPTS = MOB_TEXTURES.map(t => [t.id, t.name]);
 function mobTexSize(id) { return (MOB_TEX_BY_ID[id] && MOB_TEX_BY_ID[id].size) || 46; }
 function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, size: 0, loot: [] }; }
@@ -989,8 +1186,18 @@ function makeLootBlock(l) {
   l = l || { id: 'rawChicken', qty: 1, chance: 1 };
   const el = document.createElement('div');
   el.className = 'mob-loot-row';
-  el.innerHTML = `<select class="l-item">${optHtml(LOOT_ITEMS, l.id)}</select><span>×</span><input class="l-qty" type="number" min="1" value="${l.qty || 1}"><input class="l-chance" type="number" min="1" max="100" value="${Math.round((l.chance != null ? l.chance : 1) * 100)}"><span>%</span><button class="l-remove" title="Убрать">✕</button>`;
+  el.innerHTML = `<select class="l-item">${optHtml(allGameItemOpts(), l.id)}</select><span>×</span><input class="l-qty" type="number" min="1" value="${l.qty || 1}"><input class="l-chance" type="number" min="1" max="100" value="${Math.round((l.chance != null ? l.chance : 1) * 100)}"><span>%</span><button class="l-remove" title="Убрать">✕</button>`;
   el.querySelector('.l-remove').addEventListener('click', () => el.remove());
+  enhanceIconSelect(el.querySelector('.l-item'));
+  return el;
+}
+// Строка «товар на продажу»: иконочный дропдаун (любой предмет) + удалить. Значение — id предмета.
+function makeSellRow(id) {
+  const el = document.createElement('div');
+  el.className = 'mob-loot-row';
+  el.innerHTML = `<select class="s-item">${optHtml(allGameItemOpts(), id || (allGameItemOpts()[0] || [''])[0])}</select><button class="l-remove" type="button" title="Убрать">✕</button>`;
+  el.querySelector('.l-remove').addEventListener('click', () => el.remove());
+  enhanceIconSelect(el.querySelector('.s-item'));
   return el;
 }
 function readLootBlock(el) {
@@ -1062,12 +1269,21 @@ function openMobEditor(x, y, existing, toLibrary) {
     data.respawn = Math.max(1, parseInt($('mResp').value, 10) || 10);
     data.size = Math.max(8, Math.min(200, parseInt($('mSize').value, 10) || mobTexSize(data.sprite)));
     data.loot = [...lootBox.querySelectorAll('.mob-loot-row')].map(readLootBlock);
-    setMob(x, y, data);
-    if (toLibrary) {   // новый моб → в библиотеку + сразу выбран для штамповки
-      savedMobs.push(JSON.parse(JSON.stringify(data))); persistSavedMobs();
+    if (toLibrary) {   // создание НОВОГО моба → клетка + в библиотеку + выбран для штамповки
+      setMob(x, y, data);
+      savedMobs.push(libCopy(data)); persistSavedMobs();
       selected = 'mobstamp:' + (savedMobs.length - 1); buildPalette();
+      close(); return;
     }
-    close();
+    // Редактирование существующего моба: если он именованный и есть другие копии/запись в библиотеке — спросить область
+    const oldName = (existing && existing.name || '').trim();
+    const copies = countMobByName(oldName);
+    const inLib = !!oldName && savedMobs.some(m => (m.name || '').trim() === oldName);
+    if (oldName && (copies > 1 || inLib)) {
+      showMobScopeChoice(oldName, copies, inLib, (scope) => { applyMobEdit(scope, x, y, oldName, data); close(); });
+    } else {
+      setMob(x, y, data); close();   // безымянный/единственный — просто обновить эту клетку
+    }
   });
 }
 
@@ -1076,12 +1292,19 @@ function drawNpcMarker(cx, cy, n) {
   const z = zoom;
   const ent = getCharImage(n.appearance || DEFAULT_APPEARANCE, n.equipment || {});
   const H = 46 * z, W = H * CHAR_RATIO, topY = cy + 4 * z - H * CHAR_FEET;
+  if (n.enemy) {   // красная подсветка под врагом
+    ctx.save();
+    ctx.fillStyle = 'rgba(255,70,70,.28)';
+    ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, W * 0.55, W * 0.26, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
   if (ent.ready) ctx.drawImage(ent.img, cx - W / 2, topY, W, H);
   else { ctx.fillStyle = '#f3cfa6'; ctx.beginPath(); ctx.arc(cx, cy - 10 * z, 6 * z, 0, Math.PI * 2); ctx.fill(); }
-  // имя
-  ctx.fillStyle = '#fff'; ctx.font = `bold ${Math.round(11 * z)}px sans-serif`; ctx.textAlign = 'center';
-  ctx.fillText(n.name || 'НПС', cx, topY - 4 * z);
+  // имя (враг — красным)
+  ctx.fillStyle = n.enemy ? '#ff5b5b' : '#fff'; ctx.font = `bold ${Math.round(11 * z)}px sans-serif`; ctx.textAlign = 'center';
+  ctx.fillText((n.enemy ? '⚔ ' : '') + (n.name || 'НПС'), cx, topY - 4 * z);
   // значки ролей
+  if (n.enemy) { ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`; ctx.fillText('!', cx, topY - 16 * z); return; }
   let badge = '';
   if (n.quests && n.quests.length) badge += '!';
   else if (n.quest) badge += '!';                 // легаси
@@ -1108,10 +1331,11 @@ function drawSpotMarker(cx, cy, s) {
 }
 
 // --- Конструктор рыбного места (модальное окно) ---
-function spotDefaults() { return { name: 'Рыбное место', fish: [{ id: 'sprat', chance: 70, minLevel: 1, xp: 8 }] }; }
-// Одна строка таблицы рыбы: рыба · шанс(%) · мин.уровень · опыт
+function spotDefaults() { return { name: 'Рыбное место', fish: [{ id: 'fish8', ...FISH_DEF.fish8 }] }; }
+// Одна строка таблицы рыбы: выбираешь вид рыбы — шанс/уровень/опыт подставляются сами (можно поправить).
 function makeFishRow(f) {
-  f = { id: 'sprat', chance: 50, minLevel: 1, xp: 10, ...f };
+  const d0 = FISH_DEF.fish8;
+  f = { id: 'fish8', chance: d0.chance, minLevel: d0.minLevel, xp: d0.xp, ...f };
   const el = document.createElement('div');
   el.className = 'mob-loot-row fish-row';
   el.innerHTML = `
@@ -1121,6 +1345,14 @@ function makeFishRow(f) {
     <span class="npc-inline">опыт<input class="f-xp" type="number" min="1" value="${f.xp || 10}"></span>
     <button class="l-remove" title="Удалить">✕</button>`;
   el.querySelector('.l-remove').addEventListener('click', () => el.remove());
+  // при выборе другого вида рыбы — автоподстановка её «качества»
+  el.querySelector('.f-item').addEventListener('change', (e) => {
+    const def = FISH_DEF[e.target.value]; if (!def) return;
+    el.querySelector('.f-chance').value = def.chance;
+    el.querySelector('.f-min').value = def.minLevel;
+    el.querySelector('.f-xp').value = def.xp;
+  });
+  enhanceIconSelect(el.querySelector('.f-item'));
   return el;
 }
 function readFishRow(el) {
@@ -1169,4 +1401,131 @@ function openSpotEditor(x, y, existing, toLibrary) {
     close();
   });
 }
+
+// ============ РЕДАКТОР ПРЕДМЕТОВ, ЦЕН И КРАФТА ============
+let ITEMS_DATA = {};      // id -> предмет (рабочая копия данных сервера)
+let RECIPES_DATA = {};    // станция -> [рецепты]
+
+socket.on('itemsData', ({ items, recipes }) => {
+  ITEMS_DATA = JSON.parse(JSON.stringify(items || {}));
+  RECIPES_DATA = JSON.parse(JSON.stringify(recipes || {}));
+  Object.assign(GAME_ITEMS, items || {});   // наполнить реестр, чтобы itemIcon рисовал иконки
+});
+socket.on('itemsSaveResult', ({ ok }) => {
+  statusEl.textContent = ok ? '✓ Предметы и крафт сохранены' : '✗ Ошибка сохранения';
+  setTimeout(() => { statusEl.textContent = ''; }, 2400);
+});
+
+const CE_STATIONS = [['', '— не крафтится —'], ['smelter', 'Плавильня'], ['anvil', 'Наковальня'], ['campfire', 'Костёр'], ['workbench', 'Верстак']];
+const CE_LABELS = { armor: 'Защита', damage: 'Урон', hands: 'Рук (1/2)', heal: 'Лечит (HP)', stackable: 'Стакается', minLevel: 'Мин. уровень рыбалки', xp: 'Опыт за лов', chance: 'Базовый шанс (0–1)', bonusVsPassive: 'Доп. урон по мирным', onHitHeal: 'Лечит за удар (HP)', nosell: 'Нельзя продать', gathers: 'Добывает' };
+const CE_SKIP = new Set(['name', 'desc', 'price', 'tags', 'type', 'cat', 'slot', 'rarity']);
+const ceItemOpts = () => Object.keys(ITEMS_DATA).sort((a, b) => (ITEMS_DATA[a].name || a).localeCompare(ITEMS_DATA[b].name || b)).map(id => [id, ITEMS_DATA[id].name || id]);
+function ceFindRecipe(id) {
+  for (const st of ['smelter', 'anvil', 'campfire', 'workbench']) {
+    const arr = RECIPES_DATA[st] || [];
+    const idx = arr.findIndex(r => r.out === id);
+    if (idx >= 0) return { station: st, recipe: arr[idx] };
+  }
+  return null;
+}
+
+function openContentEditor() {
+  const ov = document.getElementById('contentOverlay');
+  let selId = Object.keys(ITEMS_DATA).sort()[0] || null;
+  ov.innerHTML = `
+    <div class="npc-modal ce-modal">
+      <div class="ce-body">
+        <div class="ce-list">
+          <input id="ceSearch" type="text" placeholder="Поиск предмета…">
+          <div id="ceItems" class="ce-items"></div>
+        </div>
+        <div class="npc-right ce-form" id="ceForm"></div>
+      </div>
+      <div class="npc-btns ce-footer">
+        <span class="ce-hint">Цены, характеристики и рецепты. Сохраняется на диск и обновляет живую игру.</span>
+        <button class="m-cancel" id="ceCancel">Закрыть</button>
+        <button class="m-ok" id="ceSave">Сохранить всё</button>
+      </div>
+    </div>`;
+  ov.classList.remove('hidden');
+  const $ = (id) => ov.querySelector('#' + id);
+
+  function renderList(filter = '') {
+    const box = $('ceItems'); box.innerHTML = '';
+    const f = filter.trim().toLowerCase();
+    Object.keys(ITEMS_DATA).sort((a, b) => (ITEMS_DATA[a].name || a).localeCompare(ITEMS_DATA[b].name || b)).forEach(id => {
+      const it = ITEMS_DATA[id];
+      if (f && !((it.name || '').toLowerCase().includes(f) || id.toLowerCase().includes(f))) return;
+      const row = document.createElement('div');
+      row.className = 'ce-item' + (id === selId ? ' active' : '');
+      row.innerHTML = `<span class="ce-ic">${itemIcon(id)}</span><span class="ce-nm">${escHtml(it.name || id)}</span>`; row.title = id;
+      row.addEventListener('click', () => { commitForm(); selId = id; renderList($('ceSearch').value); renderForm(); });
+      box.appendChild(row);
+    });
+  }
+
+  function makeIngRow(ing) {
+    ing = ing || { id: Object.keys(ITEMS_DATA).sort()[0], qty: 1 };
+    const el = document.createElement('div');
+    el.className = 'mob-loot-row';
+    el.innerHTML = `<select class="ce-ing-id">${optHtml(ceItemOpts(), ing.id)}</select><span>×</span><input class="ce-ing-qty" type="number" min="1" value="${ing.qty || 1}"><button class="l-remove" type="button" title="Убрать">✕</button>`;
+    el.querySelector('.l-remove').addEventListener('click', () => el.remove());
+    enhanceIconSelect(el.querySelector('.ce-ing-id'));
+    return el;
+  }
+
+  function renderForm() {
+    const form = $('ceForm');
+    if (!selId || !ITEMS_DATA[selId]) { form.innerHTML = '<p class="npc-hint">Выбери предмет слева.</p>'; return; }
+    const it = ITEMS_DATA[selId];
+    const dynKeys = Object.keys(it).filter(k => !CE_SKIP.has(k) && (typeof it[k] === 'number' || typeof it[k] === 'boolean'));
+    const dynHtml = dynKeys.map(k => typeof it[k] === 'boolean'
+      ? `<label class="npc-f ce-inline"><input type="checkbox" class="ce-f" data-k="${k}" data-t="bool" ${it[k] ? 'checked' : ''}> ${CE_LABELS[k] || k}</label>`
+      : `<label class="npc-f">${CE_LABELS[k] || k}<input type="number" step="any" class="ce-f" data-k="${k}" data-t="num" value="${it[k]}"></label>`).join('');
+    const rec = ceFindRecipe(selId);
+    form.innerHTML = `
+      <h3>${escHtml(it.name || selId)} <span class="ce-id">${selId}</span></h3>
+      <div class="ce-meta">тип: <b>${it.type || '—'}</b> · кат: <b>${it.cat || '—'}</b>${it.slot ? ` · слот: <b>${it.slot}</b>` : ''}${it.rarity ? ` · <b>${it.rarity}</b>` : ''}</div>
+      <label class="npc-f">Название<input id="ceName" type="text" value="${escAttr(it.name || '')}"></label>
+      <label class="npc-f">Описание<textarea id="ceDesc" rows="2">${escHtml(it.desc || '')}</textarea></label>
+      <label class="npc-f">Цена продажи (золото)<input id="cePrice" type="number" min="0" value="${it.price || 0}"></label>
+      ${dynHtml ? `<div class="ce-sec">Характеристики</div><div class="ce-grid">${dynHtml}</div>` : ''}
+      <div class="ce-sec">Крафт</div>
+      <label class="npc-f">Где создаётся<select id="ceStation">${optHtml(CE_STATIONS, rec ? rec.station : '')}</select></label>
+      <label class="npc-f" id="ceOutWrap">Сколько получается за раз<input id="ceOutQty" type="number" min="1" value="${rec && rec.recipe.outQty ? rec.recipe.outQty : 1}"></label>
+      <div class="npc-f" id="ceIngWrap">Из чего (ингредиенты)<div id="ceIngs"></div><button id="ceAddIng" class="npc-addq" type="button">+ Добавить ингредиент</button></div>`;
+    const ings = $('ceIngs');
+    if (rec) rec.recipe.in.forEach(ing => ings.appendChild(makeIngRow(ing)));
+    $('ceAddIng').addEventListener('click', () => ings.appendChild(makeIngRow()));
+    const sync = () => { const on = !!$('ceStation').value; $('ceOutWrap').style.display = on ? '' : 'none'; $('ceIngWrap').style.display = on ? '' : 'none'; };
+    $('ceStation').addEventListener('change', sync); sync();
+  }
+
+  function commitForm() {
+    if (!selId || !ITEMS_DATA[selId] || !$('ceName')) return;
+    const it = ITEMS_DATA[selId];
+    it.name = $('ceName').value.trim() || selId;
+    it.desc = $('ceDesc').value;
+    it.price = Math.max(0, parseInt($('cePrice').value, 10) || 0);
+    ov.querySelectorAll('.ce-f').forEach(inp => {
+      const k = inp.dataset.k;
+      if (inp.dataset.t === 'bool') it[k] = inp.checked;
+      else { const v = parseFloat(inp.value); if (!isNaN(v)) it[k] = v; }
+    });
+    for (const st of ['smelter', 'anvil', 'campfire', 'workbench']) if (RECIPES_DATA[st]) RECIPES_DATA[st] = RECIPES_DATA[st].filter(r => r.out !== selId);
+    const st = $('ceStation').value;
+    if (st) {
+      const ings = [...ov.querySelectorAll('#ceIngs .mob-loot-row')].map(r => ({ id: r.querySelector('.ce-ing-id').value, qty: Math.max(1, parseInt(r.querySelector('.ce-ing-qty').value, 10) || 1) })).filter(i => i.id);
+      if (ings.length) { if (!RECIPES_DATA[st]) RECIPES_DATA[st] = []; RECIPES_DATA[st].push({ out: selId, outQty: Math.max(1, parseInt($('ceOutQty').value, 10) || 1), in: ings }); }
+    }
+  }
+
+  $('ceSearch').addEventListener('input', () => renderList($('ceSearch').value));
+  $('ceCancel').addEventListener('click', () => { ov.classList.add('hidden'); ov.innerHTML = ''; });
+  $('ceSave').addEventListener('click', () => { commitForm(); for (const k in GAME_ITEMS) delete GAME_ITEMS[k]; Object.assign(GAME_ITEMS, ITEMS_DATA); socket.emit('saveItemsData', { items: ITEMS_DATA, recipes: RECIPES_DATA }); ov.classList.add('hidden'); ov.innerHTML = ''; });
+  renderList(); renderForm();
+}
+const contentBtnEl = document.getElementById('contentBtn');
+if (contentBtnEl) contentBtnEl.addEventListener('click', openContentEditor);
+
 requestAnimationFrame(render);

@@ -12,5 +12,8 @@ export const MOB_TEXTURES = [
   { id: 'fireelemental', name: 'Огненный элементаль', svg: '/assets/fire-elemental.svg', size: 52 },
   { id: 'scaretree',     name: 'Жуткое дерево',      svg: '/assets/scare-tree.svg',     size: 62 },
   { id: 'reddragon',     name: 'Красный дракон',     svg: '/assets/red-dragon.svg',     size: 60 },
+  { id: 'ghost',         name: 'Призрак',            svg: '/assets/ghost.svg',          size: 46 },
+  { id: 'deer',          name: 'Олень',              svg: '/assets/deer.svg',           size: 54 },
+  { id: 'camel',         name: 'Верблюд',            svg: '/assets/camel.svg',          size: 58 },
 ];
 export const MOB_TEX_BY_ID = Object.fromEntries(MOB_TEXTURES.map(t => [t.id, t]));

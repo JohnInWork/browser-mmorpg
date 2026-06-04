@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Золотая руда: камень с золотыми вкраплениями. -->
+  <polygon points="120,360 100,250 180,170 320,160 410,240 400,360 256,420" fill="#7d7a72"/>
+  <polygon points="120,360 100,250 180,170 220,260 200,380 256,420" fill="#5f5d57"/>
+  <polygon points="180,170 320,160 360,225 240,250" fill="#928e84"/>
+  <circle cx="200" cy="250" r="20" fill="#ffe98a"/>
+  <circle cx="200" cy="250" r="10" fill="#fff7d0"/>
+  <circle cx="300" cy="230" r="15" fill="#e8c14f"/>
+  <circle cx="270" cy="320" r="17" fill="#ffe98a"/>
+  <circle cx="270" cy="320" r="8" fill="#fff7d0"/>
+  <circle cx="340" cy="300" r="11" fill="#d4af37"/>
+</svg>

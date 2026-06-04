@@ -149,6 +149,11 @@ function hotbarToInv(p, slot, invIndex = null) {
 
 // Переместить/обменять предметы внутри рюкзака (drag-n-drop в любую клетку).
 function moveItem(p, from, to) { return moveSlot(p.inventory, from, p.inventory, to); }
+// Переместить/обменять предметы между слотами панели быстрого доступа (хотбар).
+function moveHotbar(p, from, to) {
+  if (!Number.isInteger(from) || !Number.isInteger(to) || from < 0 || to < 0 || from >= p.hotbar.length || to >= p.hotbar.length) return false;
+  return moveSlot(p.hotbar, from, p.hotbar, to);
+}
 
 // --- Банк (личное хранилище, общее для всех сундуков) ---
 function bankArr(p, which) { return which === 'bank' ? p.bank.slots : p.inventory; }
@@ -201,6 +206,21 @@ function eat(p, invIndex) {
   const before = p.hp;
   p.hp = Math.min(p.maxHp, p.hp + def.heal);
   removeItems(p, item.id, 1);
+  return p.hp - before;
+}
+
+// Съесть еду прямо из слота хотбара (по номеру слота). Возвращает вылеченное HP (0 — нельзя).
+function eatHotbar(p, slot) {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= p.hotbar.length) return 0;
+  const item = p.hotbar[slot];
+  if (!item) return 0;
+  const def = ITEMS[item.id];
+  if (!def || def.type !== 'food' || !def.heal) return 0;
+  if (p.hp >= p.maxHp) return 0;
+  const before = p.hp;
+  p.hp = Math.min(p.maxHp, p.hp + def.heal);
+  item.qty -= 1;
+  if (item.qty <= 0) { p.hotbar[slot] = null; if (p.activeSlot === slot) p.activeSlot = null; }
   return p.hp - before;
 }
 
@@ -260,6 +280,24 @@ function equipItem(p, invIndex) {
   const prev = p.equipment[def.slot];
   p.equipment[def.slot] = item.id;
   back(prev);
+  return true;
+}
+
+// Надеть броню/оружие/щит прямо из слота хотбара (по номеру слота). Снятое возвращается в тот же слот (свап).
+function equipHotbar(p, slot) {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= p.hotbar.length) return false;
+  const item = p.hotbar[slot];
+  if (!item) return false;
+  const def = ITEMS[item.id];
+  if (!def || !def.slot || !['armor', 'weapon', 'shield'].includes(def.type)) return false;
+  if (!(def.slot in p.equipment)) return false;
+  const back = (id) => { if (id) { const e = firstEmpty(p); if (e >= 0) p.inventory[e] = { id, qty: 1 }; } };
+  if (def.slot === 'mainHand' && def.hands === 2) { back(p.equipment.offHand); p.equipment.offHand = null; }
+  if (def.slot === 'offHand') { const mh = ITEMS[p.equipment.mainHand]; if (mh && mh.hands === 2) { back(p.equipment.mainHand); p.equipment.mainHand = null; } }
+  const prev = p.equipment[def.slot];
+  p.equipment[def.slot] = item.id;
+  p.hotbar[slot] = prev ? { id: prev, qty: 1 } : null;   // снятое — обратно в этот слот хотбара (свап)
+  if (p.activeSlot === slot && !p.hotbar[slot]) p.activeSlot = null;
   return true;
 }
 
@@ -374,4 +412,4 @@ function respawn(io, p) {
 
 module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
   bankMove, bankQuick, upgradeBank, bankStateOf, pourFlask, fillFlasks, invState, ITEMS,
-  ownsReturnStone, bindReturnStone, RETURN_STONE_ID };
+  ownsReturnStone, bindReturnStone, RETURN_STONE_ID, eatHotbar, moveHotbar, equipHotbar };

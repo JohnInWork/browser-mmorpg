@@ -25,17 +25,18 @@ function finishNpc(p, id, def) {
 }
 
 // Засчитать убийство моба mobType: сюжет + активные НПС-квесты типа kill. Возвращает массив результатов.
-function recordKill(p, mobType) {
+function recordKill(p, kind, name) {
   const out = [];
   const q = activeStory(p);
-  if (q && q.kill === mobType) {
+  if (q && q.kill === kind) {
     p.quests.progress++;
     if (p.quests.progress < q.count) out.push({ quest: q, done: false });
     else { p.quests.completed.push(q.id); p.quests.story++; p.quests.progress = 0; p.gold += q.reward; out.push({ quest: q, done: true, reward: q.reward }); }
   }
   for (const id in p.quests.active) {
     const d = npcDef(id);
-    if (!d || killTarget(d) !== mobType) continue;
+    const tgt = d && killTarget(d);
+    if (!d || (tgt !== kind && tgt !== name)) continue;   // совпадение по типу-спрайту ИЛИ по имени конкретного моба
     p.quests.active[id]++;
     if (p.quests.active[id] < d.count) out.push({ quest: d, done: false });
     else out.push(finishNpc(p, id, d));
@@ -58,16 +59,27 @@ function acceptNpc(p, id) {
   return true;
 }
 
-// Засчитать сбор ресурса itemId — продвигает активные gather-квесты. Возвращает результат | null.
-function recordGather(p, itemId) {
+// Засчитать получение предмета itemId (qty шт.) — продвигает активные gather-квесты. Результат | null.
+// Вызывается при ЛЮБОМ способе получить предмет: добыча, рыбалка, лут с моба, крафт.
+function recordGather(p, itemId, qty = 1) {
   for (const id in p.quests.active) {
     const d = npcDef(id);
     if (!d || gatherTarget(d) !== itemId) continue;
-    p.quests.active[id]++;
+    p.quests.active[id] += qty;
     if (p.quests.active[id] < d.count) return { quest: d, done: false };
     return finishNpc(p, id, d);
   }
   return null;
+}
+
+// Применить результат recordGather: выдать предмет-награду и разослать события клиенту (io+pid).
+// addItem — функция выдачи предмета (из players.js). inventoryUpdate шлёт вызывающий.
+function applyGatherResult(io, pid, p, q, addItem) {
+  if (!q) return false;
+  if (q.done && q.rewardItem && addItem) addItem(p, q.rewardItem.id, q.rewardItem.qty);
+  io.to(pid).emit('questUpdate', clientState(p));
+  if (q.done) io.to(pid).emit('questDone', { title: q.quest.title, reward: q.reward });
+  return true;
 }
 
 // Поговорил с НПС (метка link/имя). Завершает активный talk-квест с такой целью. Результат | null.
@@ -89,4 +101,4 @@ function clientState(p) {
 // Определения квестов для клиента (сюжет + побочные + НПС с авторскими)
 function clientDefs() { return { story: QUESTS.story, side: QUESTS.side || [], npc: npcDefs() }; }
 
-module.exports = { QUESTS, setAuthored, npcDefs, npcDef, defaultState, activeStory, recordKill, recordGather, recordTalk, npcStatus, acceptNpc, clientState, clientDefs };
+module.exports = { QUESTS, setAuthored, npcDefs, npcDef, defaultState, activeStory, recordKill, recordGather, applyGatherResult, recordTalk, npcStatus, acceptNpc, clientState, clientDefs };
