@@ -8,6 +8,7 @@ export const ITEM_TEX = {
   axe: '/assets/axe.svg',
   shovel: '/assets/shovel.svg',
   fishingRod: '/assets/fishing-rod.svg',
+  returnStone: '/assets/return-stone.svg',
   leather: '/assets/leather.svg',
   silverOre: '/assets/silver-ore.svg',
   silverIngot: '/assets/silver-ingot.svg',

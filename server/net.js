@@ -151,7 +151,9 @@ function setup(io) {
       const set = new Set(indices.filter(i => Number.isInteger(i)));
       let g = 0;
       player.inventory.forEach((it, i) => {
-        if (it && set.has(i)) { g += priceOf(it.id) * (it.qty || 1); player.inventory[i] = null; }
+        if (!it || !set.has(i)) return;
+        if (playersMod.ITEMS[it.id] && playersMod.ITEMS[it.id].nosell) return;   // непродаваемое (камень возвращения) — пропускаем
+        g += priceOf(it.id) * (it.qty || 1); player.inventory[i] = null;
       });
       if (g <= 0) return;
       player.gold += g;
@@ -214,6 +216,40 @@ function setup(io) {
       player.target = null; player.turn = null; // рубка прерывает бой
       io.to(socket.id).emit('combatTarget', null);
       player.gathering = n.id;
+    });
+
+    // --- Камень возвращения ---
+    // Привязать/сменить точку возврата (подошёл вплотную к камню). Подтверждение — на клиенте.
+    socket.on('bindStone', ({ x, y } = {}) => {
+      const st = world.stoneAt(player.location, x, y);
+      if (!st || !adjOrtho(player.x, player.y, st.x, st.y)) return;
+      const r = playersMod.bindReturnStone(player, { location: player.location, x: st.x, y: st.y, name: st.name });
+      if (!r.ok) { socket.emit('chatMessage', { cat: 'system', text: 'В рюкзаке нет места для камня возвращения.' }); return; }
+      socket.emit('inventoryUpdate', playersMod.invState(player));
+      socket.emit('chatMessage', { cat: 'system', text: `Точка возврата привязана: «${st.name}». Используй камень в рюкзаке, чтобы вернуться.` });
+    });
+
+    // Использовать камень возвращения из рюкзака → телепорт к точке (с кулдауном)
+    socket.on('useReturnStone', ({ invIndex } = {}) => {
+      const it = player.inventory[invIndex];
+      if (!it || it.id !== playersMod.RETURN_STONE_ID) return;
+      if (!player.returnPoint) { socket.emit('chatMessage', { cat: 'system', text: 'Камень ни к чему не привязан.' }); return; }
+      const now = Date.now();
+      if (now < player.returnCdUntil) {
+        const left = Math.ceil((player.returnCdUntil - now) / 1000);
+        socket.emit('chatMessage', { cat: 'system', text: `Камень возвращения перезаряжается: ${left} c.` });
+        return;
+      }
+      const rp = player.returnPoint;
+      let tx = rp.x, ty = rp.y, found = false;        // камень непроходим → ищем клетку рядом
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
+        if (world.isWalkable(rp.location, rp.x + dx, rp.y + dy)) { tx = rp.x + dx; ty = rp.y + dy; found = true; break; }
+      }
+      if (!found) { const s = world.randomSpawn(rp.location); tx = s.x; ty = s.y; }
+      player.returnCdUntil = now + cfg.RETURN_COOLDOWN_MS;
+      teleport({ location: rp.location, x: tx, y: ty });
+      socket.emit('inventoryUpdate', playersMod.invState(player));   // обновить кулдаун на предмете
+      socket.emit('chatMessage', { cat: 'system', text: `Возвращение к «${rp.name}».` });
     });
 
     // Предмет «в руке» (для отрисовки на персонаже у всех игроков)

@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- ЗАГЛУШКА: камень возвращения — стоячий рунный камень со светящимся кругом (плоские цвета). -->
+  <ellipse cx="256" cy="452" rx="120" ry="34" fill="rgba(0,0,0,.28)"/>
+  <!-- тело камня -->
+  <polygon points="180,150 332,150 360,430 152,430" fill="#6b7280"/>
+  <polygon points="180,150 256,150 256,430 152,430" fill="#565d68"/>
+  <polygon points="180,150 332,150 300,118 212,118" fill="#7c8490"/>
+  <!-- трещины -->
+  <path d="M236 170 L222 300 L244 410" fill="none" stroke="#454b54" stroke-width="6"/>
+  <!-- светящийся рунный круг -->
+  <circle cx="256" cy="300" r="78" fill="none" stroke="#3fe0d0" stroke-width="10"/>
+  <circle cx="256" cy="300" r="78" fill="#173f3f" opacity="0.55"/>
+  <!-- руна-стрелка возврата -->
+  <path d="M256 250 L256 350 M256 250 L226 284 M256 250 L286 284" fill="none" stroke="#9af5ea" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="256" cy="300" r="78" fill="none" stroke="#9af5ea" stroke-width="2" opacity="0.7"/>
+</svg>

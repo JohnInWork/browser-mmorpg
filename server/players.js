@@ -1,5 +1,5 @@
 // Игроки: хранилище, инвентарь/хотбар, операции. Владеет объектом players.
-const { PLAYER_MAX_HP, BANK_BASE, BANK_PER_LEVEL, BANK_UPGRADE_COST } = require('./config');
+const { PLAYER_MAX_HP, BANK_BASE, BANK_PER_LEVEL, BANK_UPGRADE_COST, DEATH_ARMOR_LOSS_CHANCE, DEATH_HOTBAR_LOSS_CHANCE } = require('./config');
 const world = require('./world');
 const skills = require('./skills');
 const ITEMS = require('./data/items.json').items;
@@ -57,6 +57,8 @@ function create(id) {
     gathering: null,   // id ресурс-ноды (дерева), которую рубим
     quests: { story: 0, progress: 0, completed: [], active: {} }, // story-цепочка + npc-квесты (active: id→прогресс)
     skills: skills.defaultSkills(),  // навыки игрока (опыт/уровни)
+    returnPoint: null,   // точка возврата камня: {location,x,y,name} | null
+    returnCdUntil: 0,    // timestamp окончания кулдауна телепорта камнем
   };
   player.inventory = padInv(player.inventory);   // дополнить до 32 ячеек пустыми
   player.bank = { level: 0, slots: padTo([], bankSize(0)) }; // личное хранилище (банк)
@@ -202,6 +204,36 @@ function eat(p, invIndex) {
   return p.hp - before;
 }
 
+// --- Камень возвращения ---
+const RETURN_STONE_ID = 'returnStone';
+// Найти камень возвращения у игрока где угодно: рюкзак/банк/хотбар → {store,index} | null
+function findReturnStone(p) {
+  let i = p.inventory.findIndex(s => s && s.id === RETURN_STONE_ID);
+  if (i >= 0) return { store: 'inv', index: i };
+  i = p.bank.slots.findIndex(s => s && s.id === RETURN_STONE_ID);
+  if (i >= 0) return { store: 'bank', index: i };
+  i = p.hotbar.findIndex(s => s && s.id === RETURN_STONE_ID);
+  if (i >= 0) return { store: 'hotbar', index: i };
+  return null;
+}
+function ownsReturnStone(p) { return !!findReturnStone(p); }
+// Привязать/сменить точку: убрать старый камень откуда угодно и выдать новый в рюкзак.
+// { ok:true } | { ok:false, reason:'full' } — если в рюкзаке нет места под новый камень.
+function bindReturnStone(p, point) {
+  const existing = findReturnStone(p);
+  let free = p.inventory.filter(s => !s).length;          // свободных клеток рюкзака
+  if (existing && existing.store === 'inv') free += 1;     // старый освободит свою клетку
+  if (free < 1) return { ok: false, reason: 'full' };
+  if (existing) {
+    if (existing.store === 'inv') p.inventory[existing.index] = null;
+    else if (existing.store === 'bank') p.bank.slots[existing.index] = null;
+    else if (existing.store === 'hotbar') { p.hotbar[existing.index] = null; if (p.activeSlot === existing.index) p.activeSlot = null; }
+  }
+  addItem(p, RETURN_STONE_ID, 1);                          // не стакается → в первую свободную клетку рюкзака
+  p.returnPoint = { location: point.location, x: point.x, y: point.y, name: String(point.name || 'Точка возврата') };
+  return { ok: true };
+}
+
 // Суммарная защита от надетой брони
 function armorValue(p) {
   let a = 0;
@@ -294,16 +326,52 @@ function invState(p) {
     inventory: p.inventory, hotbar: p.hotbar, activeSlot: p.activeSlot,
     activeInvId: p.activeInvId, activeTool: activeTool(p), gold: p.gold,
     equipment: p.equipment, armor: armorValue(p), hp: p.hp, maxHp: p.maxHp,
+    returnPoint: p.returnPoint, returnCdUntil: p.returnCdUntil,
   };
 }
 
-// Смерть → респаун с полным HP в новой точке
+// Штраф за смерть: рюкзак теряется ПОЛНОСТЬЮ. Отдельными бросками — шанс потерять 1 предмет брони
+// и шанс потерять 1 предмет из хотбара (независимо). Возвращает имена потерянного для окна смерти.
+function applyDeathPenalty(p) {
+  for (let i = 0; i < p.inventory.length; i++) p.inventory[i] = null;   // весь рюкзак — всегда
+  let lostArmor = null, lostHotbar = null;
+  // бросок по броне (слоты экипировки)
+  if (Math.random() < DEATH_ARMOR_LOSS_CHANCE) {
+    const slots = Object.keys(p.equipment).filter(s => p.equipment[s]);
+    if (slots.length) {
+      const slot = slots[Math.floor(Math.random() * slots.length)];
+      const id = p.equipment[slot]; p.equipment[slot] = null;
+      lostArmor = (ITEMS[id] && ITEMS[id].name) || id;
+    }
+  }
+  // отдельный бросок по панели быстрого доступа (хотбар)
+  if (Math.random() < DEATH_HOTBAR_LOSS_CHANCE) {
+    const idxs = []; p.hotbar.forEach((it, i) => { if (it) idxs.push(i); });
+    if (idxs.length) {
+      const i = idxs[Math.floor(Math.random() * idxs.length)];
+      const id = p.hotbar[i].id; p.hotbar[i] = null;
+      lostHotbar = (ITEMS[id] && ITEMS[id].name) || id;
+    }
+  }
+  // подчистить «в руке», если активное исчезло
+  if (p.activeSlot != null && !p.hotbar[p.activeSlot]) p.activeSlot = null;
+  if (p.activeInvId && !hasItem(p, p.activeInvId)) p.activeInvId = null;
+  return { lostArmor, lostHotbar };
+}
+
+// Смерть → штраф + респаун с полным HP в точке спавна
 function respawn(io, p) {
+  const { lostArmor, lostHotbar } = applyDeathPenalty(p);
   const s = world.pickSpawn(p.location);
   p.x = s.x; p.y = s.y; p.hp = PLAYER_MAX_HP;
   p.target = null; p.turn = null; p.gathering = null;
   io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp, location: p.location });
+  io.to(p.id).emit('inventoryUpdate', invState(p));                 // обновить рюкзак/хотбар/броню владельцу
+  io.emit('playerEquipment', { id: p.id, equipment: p.equipment }); // другие видят изменившуюся броню
+  io.emit('playerHeld', { id: p.id, held: activeTool(p) });         // и предмет в руке
+  io.to(p.id).emit('youDied', { lostArmor, lostHotbar });           // окно смерти у погибшего
 }
 
 module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
-  bankMove, bankQuick, upgradeBank, bankStateOf, pourFlask, fillFlasks, invState, ITEMS };
+  bankMove, bankQuick, upgradeBank, bankStateOf, pourFlask, fillFlasks, invState, ITEMS,
+  ownsReturnStone, bindReturnStone, RETURN_STONE_ID };

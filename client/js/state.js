@@ -38,6 +38,9 @@ export const S = {
   signs: [],              // таблички текущей локации: [{x,y,text}] (текст для игрока по клику)
   npcs: [],               // НПС текущей локации: [{id,x,y,name,link,appearance,equipment,trader,dialogue,quest}]
   spots: [],              // рыбные места текущей локации: [{x,y,name}] (на воде, ловим удочкой)
+  stones: [],             // камни возвращения текущей локации: [{x,y,name}]
+  returnPoint: null,      // привязанная точка возврата игрока: {location,x,y,name} | null
+  returnCdUntil: 0,       // timestamp окончания кулдауна камня возвращения (для счётчика на предмете)
   items: {},              // данные предметов (с сервера — единый источник; см. items.js для иконок/цветов)
   skills: {},             // навыки игрока (с сервера): { key: {name,desc,trains,xp,level,levelXp,nextXp,max} }
   recipes: { smelter: [], anvil: [], campfire: [] }, // рецепты крафта (с сервера)

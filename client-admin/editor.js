@@ -50,6 +50,7 @@ const POINTER = -3;                                // указатель — н�
 const EYEDROPPER = -4;                             // пипетка/копирование — скопировать объект под курсором
 let clipboard = null;                              // буфер пипетки: {kind:'mob'|'npc'|'spot'|'sign', data}
 const SIGN = 30;                                   // табличка с текстом
+const RETURN_STONE = 36;                           // камень возвращения (с именем точки)
 const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты' };
 function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
 
@@ -80,7 +81,7 @@ function spotLabelFor(s) { return (s && s.name) || 'Рыбное место'; }
 // Рыба, доступная для таблицы рыбного места (id → подпись)
 const FISH_ITEMS = [['sprat', 'Килька'], ['perch', 'Окунь'], ['trout', 'Форель'], ['salmon', 'Лосось']];
 // Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
-const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg') };
+const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg'), 36: mkImg('/assets/return-stone.svg') };
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
 function tileSeed(x, y) { return (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; }
@@ -124,7 +125,7 @@ const CATEGORIES = [
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 5, name: 'Камень', color: '#828892' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 35, name: 'Серебро', color: '#c0c0c0' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Природа',  items: [ { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' }, { id: 33, name: 'Верстак', color: '#a9743f' } ] },
-  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 28, name: 'Фонарь', color: '#f0c24a' }, { id: 29, name: 'Мост', color: '#a9743f' }, { id: 30, name: 'Табличка', color: '#9a6b3a' }, { id: 34, name: 'Админ-сундук', color: '#ff5fb0' } ] },
+  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 28, name: 'Фонарь', color: '#f0c24a' }, { id: 29, name: 'Мост', color: '#a9743f' }, { id: 30, name: 'Табличка', color: '#9a6b3a' }, { id: 34, name: 'Админ-сундук', color: '#ff5fb0' }, { id: 36, name: 'Камень возврата', color: '#7fd0e0' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
   { name: 'НПС', items: [ { id: 'npc', name: 'Создать НПС', color: '#e0a93b' } ] },
@@ -174,7 +175,8 @@ socket.on('mapData', (data) => {
     LOCS[k] = { map: L.map.map(r => r.slice()), floor: (L.floor || deriveFloor(L.map)).map(r => r.slice()),
                 teleports: (L.teleports || []).map(e => ({ ...e })), mobs: (L.mobs || []).map(m => ({ ...m })),
                 signs: (L.signs || []).map(s => ({ ...s })), npcs: (L.npcs || []).map(n => JSON.parse(JSON.stringify(n))),
-                spots: (L.spots || []).map(s => JSON.parse(JSON.stringify(s))), W: L.width, H: L.height };
+                spots: (L.spots || []).map(s => JSON.parse(JSON.stringify(s))),
+                stones: (L.stones || []).map(s => ({ ...s })), W: L.width, H: L.height };
   }
   switchLoc(LOCS.surface ? 'surface' : Object.keys(LOCS)[0]);
 });
@@ -207,7 +209,7 @@ function blankLocation() {
     for (let x = 0; x < W; x++) { const b = (x === 0 || y === 0 || x === W - 1 || y === H - 1); mr.push(b ? 2 : 0); fr.push(0); }
     map.push(mr); floor.push(fr);
   }
-  return { map, floor, teleports: [], mobs: [], signs: [], npcs: [], spots: [], W, H };
+  return { map, floor, teleports: [], mobs: [], signs: [], npcs: [], spots: [], stones: [], W, H };
 }
 function addLocation() {
   const name = (prompt('Название новой локации:', '') || '').trim();
@@ -252,7 +254,8 @@ function applyResize() {
   const signs = LOCS[curLoc].signs.filter(s => s.x < w && s.y < h);
   const npcs = LOCS[curLoc].npcs.filter(n => n.x < w && n.y < h);
   const spots = (LOCS[curLoc].spots || []).filter(s => s.x < w && s.y < h);
-  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, signs, npcs, spots, W: w, H: h };
+  const stones = (LOCS[curLoc].stones || []).filter(s => s.x < w && s.y < h);
+  LOCS[curLoc] = { map: nm, floor: nf, teleports: tele, mobs, signs, npcs, spots, stones, W: w, H: h };
   switchLoc(curLoc);
 }
 mapWInput.addEventListener('change', applyResize);
@@ -269,6 +272,10 @@ function mobAt(x, y) { return LOCS[curLoc].mobs.find(m => m.x === x && m.y === y
 function removeSign(x, y) { LOCS[curLoc].signs = LOCS[curLoc].signs.filter(s => !(s.x === x && s.y === y)); }
 function setSign(x, y, text) { removeSign(x, y); LOCS[curLoc].signs.push({ x, y, text: String(text || '') }); }
 function signAt(x, y) { return LOCS[curLoc].signs.find(s => s.x === x && s.y === y); }
+// Камни возвращения текущей локации
+function removeStone(x, y) { if (LOCS[curLoc].stones) LOCS[curLoc].stones = LOCS[curLoc].stones.filter(s => !(s.x === x && s.y === y)); }
+function setStone(x, y, name) { if (!LOCS[curLoc].stones) LOCS[curLoc].stones = []; removeStone(x, y); LOCS[curLoc].stones.push({ x, y, name: String(name || 'Камень возвращения') }); }
+function stoneAtEd(x, y) { return (LOCS[curLoc].stones || []).find(s => s.x === x && s.y === y); }
 // Рыбные места текущей локации
 function removeSpot(x, y) { LOCS[curLoc].spots = (LOCS[curLoc].spots || []).filter(s => !(s.x === x && s.y === y)); }
 function setSpot(x, y, data) { if (!LOCS[curLoc].spots) LOCS[curLoc].spots = []; removeSpot(x, y); LOCS[curLoc].spots.push({ ...data, x, y }); }
@@ -471,7 +478,7 @@ function applyPaletteFilter() {
 
 saveBtn.addEventListener('click', () => {
   const out = {};
-  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs, signs: LOCS[k].signs, npcs: LOCS[k].npcs, spots: LOCS[k].spots || [] };
+  for (const k in LOCS) out[k] = { map: LOCS[k].map, floor: LOCS[k].floor, teleports: LOCS[k].teleports, mobs: LOCS[k].mobs, signs: LOCS[k].signs, npcs: LOCS[k].npcs, spots: LOCS[k].spots || [], stones: LOCS[k].stones || [] };
   socket.emit('saveMap', { locations: out });
 });
 
@@ -506,7 +513,7 @@ canvas.addEventListener('mousedown', (e) => {
   else if (e.button === 0) {
     // Инструменты с диалогом (табличка/изменить) — только одиночный клик, БЕЗ протяжки:
     // prompt() блокирует поток и «съедает» mouseup, иначе курсор продолжал бы рисовать.
-    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc' || selected === 'mob' || selected === 'fishspot'
+    const dialogTool = (selected === SIGN || selected === RETURN_STONE || selected === EDIT || selected === 'npc' || selected === 'mob' || selected === 'fishspot'
                         || selected === POINTER || selected === EYEDROPPER || selected === 'paste');
     if (!dialogTool) painting = true;
     paintAt(e, true);   // true = одиночный клик (можно спросить текст/правку)
@@ -555,7 +562,7 @@ function paintAt(e, isClick) {
     const s = savedSpots[+selected.slice(10)]; if (s) setSpot(t.x, t.y, JSON.parse(JSON.stringify(s))); return;
   }
   if (selected === ERASE) {                          // ластик: убрать объект/моба/НПС/рыбное место, оставить пол
-    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y); removeNpc(t.x, t.y); removeSpot(t.x, t.y);
+    MAP[t.y][t.x] = FLOOR[t.y][t.x]; removeTele(t.x, t.y); removeMob(t.x, t.y); removeSign(t.x, t.y); removeNpc(t.x, t.y); removeSpot(t.x, t.y); removeStone(t.x, t.y);
   } else if (isGround(selected)) {                   // пол: меняем землю (под объектом — тоже, объект сохраняется)
     FLOOR[t.y][t.x] = selected;
     if (isGround(MAP[t.y][t.x])) MAP[t.y][t.x] = selected;
@@ -568,6 +575,12 @@ function paintAt(e, isClick) {
     if (txt === null) return;                        // «Отмена» — передумал, ничего не ставим
     MAP[t.y][t.x] = SIGN; removeTele(t.x, t.y);
     setSign(t.x, t.y, txt);
+  } else if (selected === RETURN_STONE) {            // камень возвращения: спрашиваем имя точки
+    const cur = stoneAtEd(t.x, t.y);
+    const name = prompt('Название точки возврата (его увидит игрок):', cur ? cur.name : '');
+    if (name === null) return;
+    MAP[t.y][t.x] = RETURN_STONE; removeTele(t.x, t.y);
+    setStone(t.x, t.y, name.trim() || 'Камень возвращения');
   } else {                                           // прочий объект: поверх пола; если была лестница — убрать связь
     MAP[t.y][t.x] = selected; removeTele(t.x, t.y);
   }
@@ -611,6 +624,10 @@ function editParams(x, y) {
     const cur = signAt(x, y);
     const txt = prompt('Текст таблички (его увидит игрок):', cur ? cur.text : '');
     if (txt !== null) setSign(x, y, txt);
+  } else if (t === RETURN_STONE) {
+    const cur = stoneAtEd(x, y);
+    const name = prompt('Название точки возврата (его увидит игрок):', cur ? cur.name : '');
+    if (name !== null) setStone(x, y, name.trim() || 'Камень возвращения');
   } else if (TELES.has(t)) {
     const te = teleAt(x, y);
     const sid = prompt('ID связи (порталы/лестницы с одинаковым ID соединены):', te ? te.sid : '');
@@ -742,7 +759,7 @@ function render() {
       else if (t === 14) obj.push({ d: x + y + 0.1, k: 14, x, y });
       else if (t === 16 || t === 17 || t === 18) obj.push({ d: x + y + 0.1, k: t, x, y });
       else if (t === 19) obj.push({ d: x + y + 0.2, k: 19, x, y });
-      else if (t === 24 || t === 25 || t === 26 || t === 27 || t === 28 || t === 30 || t === 33 || t === 34 || t === 35) obj.push({ d: x + y + 0.1, k: t, x, y });
+      else if (t === 24 || t === 25 || t === 26 || t === 27 || t === 28 || t === 30 || t === 33 || t === 34 || t === 35 || t === 36) obj.push({ d: x + y + 0.1, k: t, x, y });
       else if (t === 29) obj.push({ d: x + y - 0.4, k: 29, x, y });
     }
   obj.sort((a, b) => a.d - b.d);
@@ -772,6 +789,12 @@ function render() {
     else if (o.k === 33) objSprite(OBJ_IMG[33], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 34) objSprite(OBJ_IMG[34], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 35) objSprite(OBJ_IMG[35], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);
+    else if (o.k === 36) {                          // камень возврата + его имя над ним
+      const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
+      objSprite(OBJ_IMG[36], sx, sy, 40);
+      const st = stoneAtEd(o.x, o.y);
+      if (st && st.name) { ctx.fillStyle = '#bfe3ff'; ctx.font = `bold ${Math.round(11 * zoom)}px sans-serif`; ctx.textAlign = 'center'; ctx.strokeStyle = 'rgba(0,0,0,.75)'; ctx.lineWidth = 3 * zoom; ctx.strokeText(st.name, sx, sy - 22 * zoom); ctx.fillText(st.name, sx, sy - 22 * zoom); }
+    }
     else if (o.k === 29) {                          // мост — плоская клетка-настил (как в игре)
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y), hx = (TW / 2) * zoom, hy = (TH / 2) * zoom;
       fillDiamond(sx, sy, '#a9743f', 'rgba(58,36,16,.55)');

@@ -3,7 +3,7 @@ import { S } from './state.js';
 import { setupNet } from './net.js';
 import { setupInput, update } from './input.js';
 import { render } from './render.js';
-import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, closeBank, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu } from './ui.js';
+import { showTip, hideTip, closeTrade, selectedTrade, clearTradeSel, selectAllTrade, closeCraft, closeBank, chatFilters, renderChatLog, openGuide, renderGuide, guideGo, guideBack, renderQuests, toggleQuestCat, openItemMenu, setupItemMenu, openReturnTeleport, renderInventory, renderHotbar } from './ui.js';
 import { buildCharacterSVG, PALETTES, HAIR_STYLES } from './character.js';
 import { itemType } from './items.js';
 
@@ -130,6 +130,7 @@ function setupUi() {
     slot.addEventListener('click', () => {
       const stack = S.inventory[i];
       if (!stack) return;
+      if (stack.id === 'returnStone') { openReturnTeleport(i); return; }   // камень возвращения → окно телепорта
       const t = itemType(stack.id);
       if (t === 'armor' || t === 'weapon' || t === 'shield') S.socket.emit('equip', i);
       else if (t === 'tool') S.socket.emit('activateInv', i);
@@ -247,3 +248,8 @@ function frame(t) {
   requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
+
+// Тик обновления счётчика кулдауна камня возвращения на предмете (раз в секунду, пока КД активен + 1 кадр после)
+setInterval(() => {
+  if (S.returnCdUntil && Date.now() < S.returnCdUntil + 1200) { renderInventory(); renderHotbar(); }
+}, 1000);

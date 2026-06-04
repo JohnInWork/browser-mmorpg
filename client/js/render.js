@@ -80,6 +80,7 @@ const signImg = loadImg('/assets/sign.svg');
 const workbenchImg = loadImg('/assets/workbench.svg');
 const adminChestImg = loadImg('/assets/admin-chest.svg');
 const silverOreImg = loadImg('/assets/silver-ore.svg');
+const returnStoneImg = loadImg('/assets/return-stone.svg');
 // Текстуры мобов из реестра (для НОВЫХ существ — общий рисовальщик; курица/волк/медведь рисуются по-своему)
 const mobTexImg = {};
 for (const id in MOB_TEX_BY_ID) mobTexImg[id] = loadImg(MOB_TEX_BY_ID[id].svg);
@@ -682,6 +683,7 @@ export function render() {
       else if (t === 33) drawables.push({ d: x + y + 0.1, kind: 'workbench', x, y });
       else if (t === 34) drawables.push({ d: x + y + 0.1, kind: 'adminChest', x, y });
       else if (t === 35) drawables.push({ d: x + y + 0.1, kind: 'silverOre', x, y });
+      else if (t === 36) drawables.push({ d: x + y + 0.1, kind: 'returnStone', x, y });
     }
   }
   // Мобы и игроки — только из текущей локации
@@ -715,6 +717,7 @@ export function render() {
     else if (o.kind === 'workbench') objSprite(workbenchImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'adminChest') objSprite(adminChestImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 44);
     else if (o.kind === 'silverOre') { if (S.depletedNodes.has(`${o.x},${o.y}`)) drawRock(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true, true); else objSprite(silverOreImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42); }
+    else if (o.kind === 'returnStone') objSprite(returnStoneImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 40);
     else if (o.kind === 'fishspot') drawFishingSpot(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
     else if (o.kind === 'mob') drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
     else if (o.kind === 'authNpc') drawAuthNpc(ox + isoX(o.n.x, o.n.y), oy + isoY(o.n.x, o.n.y), o.n);
@@ -730,7 +733,7 @@ export function render() {
   // 3) Всплывающие цифры урона
   ctx.textAlign = 'center';
   for (const f of S.floaters) {
-    const fx = ox + isoX(f.wx, f.wy);
+    const fx = ox + isoX(f.wx, f.wy) + (f.dx || 0);
     const fy = oy + isoY(f.wx, f.wy) - 30 * SCALE - f.t * 40;
     ctx.globalAlpha = Math.max(0, 1 - f.t / 1.1);
     ctx.fillStyle = f.color;

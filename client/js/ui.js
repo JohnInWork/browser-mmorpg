@@ -15,7 +15,12 @@ function rarityBg(id) {
 function rarityNameColor(id) { return itemRarity(id) === 'common' ? '' : rarityColor(id); }
 
 export function addFloater(tx, ty, text, color) {
-  S.floaters.push({ wx: tx, wy: ty, text, color, t: 0 });
+  // Несколько игроков бьют одного моба → цифры урона рождаются на одной клетке.
+  // Разводим их веером по горизонтали (по числу «свежих» цифр над этой клеткой), чтобы не перекрывались.
+  let n = 0;
+  for (const f of S.floaters) if (f.wx === tx && f.wy === ty && f.t < 0.5) n++;
+  const dx = (n % 2 === 0 ? 1 : -1) * (10 + Math.floor(n / 2) * 16) + (Math.random() - 0.5) * 4;
+  S.floaters.push({ wx: tx, wy: ty, text, color, t: 0, dx });
 }
 
 // Верхний левый: имя + HP игрока
@@ -48,7 +53,11 @@ export function renderInventory() {
     const slot = slots[i];
     const stack = S.inventory[i];
     if (stack) {
-      slot.innerHTML = itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '');
+      let html = itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '');
+      if (stack.id === 'returnStone' && S.returnCdUntil && Date.now() < S.returnCdUntil) {
+        html += `<span class="cd">${Math.ceil((S.returnCdUntil - Date.now()) / 1000)}с</span>`;
+      }
+      slot.innerHTML = html;
       slot.draggable = true;
       slot.dataset.itemId = stack.id;
       slot.style.background = rarityBg(stack.id);
@@ -118,6 +127,82 @@ export function openSign(text) {
       <div class="modal-btns"><button class="m-ok" data-act="sign-ok">Закрыть</button></div>
     </div>`);
   document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => closeModal()));
+}
+
+// Окно смерти: всегда сообщаем о потере рюкзака + что ещё потеряно (или что повезло)
+export function showDeathWindow(d) {
+  d = d || {};
+  const lost = [];
+  if (d.lostArmor) lost.push(`Броня: <b>${escHtml(d.lostArmor)}</b>`);
+  if (d.lostHotbar) lost.push(`Быстрый доступ: <b>${escHtml(d.lostHotbar)}</b>`);
+  const extra = lost.length
+    ? `<div class="death-lost">Также потеряно:<br>${lost.join('<br>')}</div>`
+    : `<div class="death-luck">Тебе повезло — броня и панель быстрого доступа уцелели.</div>`;
+  openModal(`
+    <div class="death-modal">
+      <h2 class="death-title">Вы погибли</h2>
+      <div class="death-body">
+        <div class="death-bag">Потерян весь рюкзак.</div>
+        ${extra}
+      </div>
+      <div class="modal-btns"><button class="m-ok" data-act="death-ok">Продолжить</button></div>
+    </div>`);
+  document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => closeModal()));
+}
+
+// Есть ли у игрока камень возвращения где угодно (рюкзак/хотбар/банк)
+function clientOwnsReturnStone() {
+  const has = arr => (arr || []).some(s => s && s.id === 'returnStone');
+  return has(S.inventory) || has(S.hotbar) || has(S.bank && S.bank.slots);
+}
+
+// Окно привязки/смены точки возврата (при взаимодействии с камнем в мире)
+export function openStoneBind(stone) {
+  const owns = clientOwnsReturnStone();
+  const cur = S.returnPoint;
+  const body = (owns && cur)
+    ? `Сменить точку возврата на «<b>${escHtml(stone.name)}</b>»?<br><span class="stone-warn">Прежний камень («${escHtml(cur.name)}») будет удалён, новый появится в рюкзаке.</span>`
+    : `Взять камень возвращения «<b>${escHtml(stone.name)}</b>»?<br>Он появится в рюкзаке — используй его, чтобы телепортироваться сюда (кулдаун 5 мин).`;
+  openModal(`
+    <div class="stone-modal">
+      <h3 class="stone-title">Камень возвращения</h3>
+      <div class="stone-body">${body}</div>
+      <div class="modal-btns">
+        <button class="m-cancel" data-act="cancel">Отмена</button>
+        <button class="m-ok" data-act="bind">${owns && cur ? 'Сменить' : 'Взять'}</button>
+      </div>
+    </div>`);
+  document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.act === 'bind') S.socket.emit('bindStone', { x: stone.x, y: stone.y });
+    closeModal();
+  }));
+}
+
+// Окно использования камня возвращения (телепорт к привязанной точке)
+export function openReturnTeleport(invIndex) {
+  const rp = S.returnPoint;
+  if (!rp) {
+    openModal(`<div class="stone-modal"><div class="stone-body">Камень ни к чему не привязан. Активируй его у камня возвращения в мире, чтобы задать точку.</div><div class="modal-btns"><button class="m-ok" data-act="cancel">Закрыть</button></div></div>`);
+    document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => closeModal()));
+    return;
+  }
+  const now = Date.now();
+  const onCd = S.returnCdUntil && now < S.returnCdUntil;
+  const left = onCd ? Math.ceil((S.returnCdUntil - now) / 1000) : 0;
+  openModal(`
+    <div class="stone-modal">
+      <h3 class="stone-title">Возвращение</h3>
+      <div class="stone-body">Телепортироваться к «<b>${escHtml(rp.name)}</b>»?</div>
+      ${onCd ? `<div class="stone-cd">Перезарядка: ${left} c.</div>` : ''}
+      <div class="modal-btns">
+        <button class="m-cancel" data-act="cancel">Отмена</button>
+        <button class="m-ok" data-act="tp"${onCd ? ' disabled' : ''}>Телепорт</button>
+      </div>
+    </div>`);
+  document.getElementById('modalBox').querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.act === 'tp' && !onCd) S.socket.emit('useReturnStone', { invIndex });
+    closeModal();
+  }));
 }
 
 function openSplitDialog(invIndex) {
@@ -217,8 +302,10 @@ export function renderHotbar() {
   for (let i = 0; i < slots.length; i++) {
     const slot = slots[i];
     const stack = S.hotbar[i];
+    const cd = (stack && stack.id === 'returnStone' && S.returnCdUntil && Date.now() < S.returnCdUntil)
+      ? `<span class="cd">${Math.ceil((S.returnCdUntil - Date.now()) / 1000)}с</span>` : '';
     slot.innerHTML = `<span class="num">${i + 1}</span>`
-      + (stack ? itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '') : '');
+      + (stack ? itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '') + cd : '');
     slot.draggable = !!stack;
     slot.style.background = stack ? rarityBg(stack.id) : '';
     slot.classList.toggle('active', S.activeSlot === i);

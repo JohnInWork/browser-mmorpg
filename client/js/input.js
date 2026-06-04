@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { BLOCKED, MOVE_SPEED } from './config.js';
 import { screenToTile } from './iso.js';
-import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, openCreative, closeInteractions } from './ui.js';
+import { addFloater, showTip, hideTip, TYPE_NAMES, openTrade, openCraft, openQuestDialog, openSign, openNpcHub, openCreative, openStoneBind, closeInteractions } from './ui.js';
 
 // Имя моба: пришло с сервера (label), иначе запасное
 function mobLabel(m) { return (m && m.label) || 'Существо'; }
@@ -114,6 +114,8 @@ function nodeAt(x, y) {
 function wellAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 12; }
 // Рыбное место на клетке (текущая локация) или null
 function spotAt(x, y) { return (S.spots || []).find(s => s.x === x && s.y === y) || null; }
+// Камень возвращения на клетке (текущая локация) или null
+function stoneAt(x, y) { return (S.stones || []).find(s => s.x === x && s.y === y) || null; }
 // Табличка на клетке (тайл 30): возвращает {x,y,text} или null
 function signAt(x, y) {
   if (!(S.MAP && S.MAP[y] && S.MAP[y][x] === 30)) return null;
@@ -153,6 +155,7 @@ export function setupInput() {
     else if (pl) { showTip(pl.name); canvas.style.cursor = 'pointer'; }
     else if (st) { showTip(st.name); canvas.style.cursor = 'pointer'; }
     else if (spot) { showTip(spot.name || 'Рыбное место'); canvas.style.cursor = 'pointer'; }
+    else if (stoneAt(t.x, t.y)) { showTip(stoneAt(t.x, t.y).name || 'Камень возвращения'); canvas.style.cursor = 'pointer'; }
     else if (adminChestAt(t.x, t.y)) { showTip('Админ-сундук'); canvas.style.cursor = 'pointer'; }
     else if (chestAt(t.x, t.y)) { showTip('Сундук'); canvas.style.cursor = 'pointer'; }
     else if (wellAt(t.x, t.y)) { showTip('Колодец'); canvas.style.cursor = 'pointer'; }
@@ -256,6 +259,15 @@ export function setupInput() {
       S.path = ap.path; S.targetTile = t;
       return;
     }
+    // Клик по камню возвращения — подойти и привязать точку (подтверждение в окне)
+    const stone = stoneAt(t.x, t.y);
+    if (stone) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      S.pendingAction = { kind: 'stone', x: t.x, y: t.y };
+      S.path = ap.path; S.targetTile = t;
+      return;
+    }
     // Иначе — обычный ход
     if (!canStep(t.x, t.y)) return;
     if (S.pendingAction) { S.pendingAction = null; S.socket.emit('stopAttack'); }
@@ -314,6 +326,9 @@ function decideStep() {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openCreative();
     } else if (a.kind === 'well') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) S.socket.emit('fillWater');
+    } else if (a.kind === 'stone') {
+      const s = stoneAt(a.x, a.y);
+      if (s && adjOrtho(me.x, me.y, a.x, a.y)) openStoneBind(s);   // окно привязки/смены точки возврата
     } else if (a.kind === 'questnpc') {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openQuestDialog(a.npc);
     } else if (a.kind === 'notice') {

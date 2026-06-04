@@ -1,6 +1,6 @@
 // Сетевой слой клиента: подписка на события сервера и обновление состояния.
 import { S } from './state.js';
-import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, openSign, npcHubMessage } from './ui.js';
+import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, openSign, npcHubMessage, showDeathWindow } from './ui.js';
 import { itemName } from './items.js';
 
 // Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
@@ -18,6 +18,7 @@ export function setupNet() {
     S.signs = data.signs || [];
     S.npcs = data.npcs || [];
     S.spots = data.spots || [];
+    S.stones = data.stones || [];
     for (const id in data.players) {
       const p = data.players[id];
       S.players[id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null };
@@ -30,6 +31,8 @@ export function setupNet() {
     S.activeInvId = data.you.activeInvId ?? null;
     S.activeTool = data.you.activeTool ?? null;
     if (data.you.equipment) S.equipment = data.you.equipment;
+    S.returnPoint = data.you.returnPoint ?? null;
+    S.returnCdUntil = data.you.returnCdUntil ?? 0;
     S.depletedNodes = new Set(data.depleted || []);
     if (data.recipes) S.recipes = data.recipes;
     if (data.skills) S.skills = data.skills;
@@ -45,6 +48,7 @@ export function setupNet() {
     S.signs = data.signs || [];
     S.npcs = data.npcs || [];
     S.spots = data.spots || [];
+    S.stones = data.stones || [];
     S.depletedNodes.clear(); // деревья пересозданы редактором
   });
 
@@ -57,6 +61,7 @@ export function setupNet() {
     S.signs = data.signs || [];
     S.npcs = data.npcs || [];
     S.spots = data.spots || [];
+    S.stones = data.stones || [];
     const me = S.players[S.myId];
     if (me) { me.x = data.x; me.y = data.y; me.rx = data.x; me.ry = data.y; me.location = data.location; }
     S.path = []; S.targetTile = null; S.pendingAction = null;
@@ -77,6 +82,8 @@ export function setupNet() {
     if (st.equipment) { S.equipment = st.equipment; if (S.players[S.myId]) S.players[S.myId].equipment = st.equipment; }
     if (st.armor != null) S.armor = st.armor;
     if (st.gold != null && S.players[S.myId]) S.players[S.myId].gold = st.gold;
+    if (st.returnPoint !== undefined) S.returnPoint = st.returnPoint;
+    if (st.returnCdUntil !== undefined) S.returnCdUntil = st.returnCdUntil;
     renderInventory(); renderHotbar(); renderEquipment(); updateStats(); updateGold(); renderTrade(); renderCraft(); renderBank();
   });
 
@@ -181,6 +188,9 @@ export function setupNet() {
     addFloater(p.x, p.y, '+' + heal, '#3ad07a');
     if (id === S.myId) { updateHpHud(); updateStats(); }
   });
+
+  // Окно смерти у погибшего игрока (что потерял / повезло)
+  socket.on('youDied', (d) => showDeathWindow(d));
 
   socket.on('playerRespawn', ({ id, x, y, hp, location }) => {
     const p = S.players[id];
