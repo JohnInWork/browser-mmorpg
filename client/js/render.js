@@ -5,6 +5,7 @@ import { isoX, isoY } from './iso.js';
 import { getCharImage, CHAR_RATIO, CHAR_FEET, DEFAULT_APPEARANCE } from './character.js';
 import { MOB_TEX_BY_ID } from './mob-textures.js';
 import { HELD_ITEMS, HAND_POS } from './held-items.js';
+import { FLOOR_TEX } from './floor-textures.js';
 
 // Спрайты мобов из SVG-файлов (client/assets/) — рисуются картинками
 const wolfImg = new Image();
@@ -39,6 +40,27 @@ campfireImg.src = '/assets/campfire.svg';
 
 // Прочие объекты — тоже из SVG-файлов (единый источник: правишь файл — меняется в игре, редакторе и палитре)
 const loadImg = (src) => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; };
+
+// Текстуры пола из FLOOR_TEX (твои svg). Кладём картинку в изо-клетку с обрезкой по ромбу.
+// Возвращает true, если клетка нарисована своей текстурой (тогда процедурную не рисуем).
+const floorTexImg = {};
+function floorImg(path) { return floorTexImg[path] || (floorTexImg[path] = loadImg(path)); }
+function drawFloorTex(f, cx, cy, x, y) {
+  const t = FLOOR_TEX[f];
+  if (!t) return false;
+  const list = Array.isArray(t) ? t : [t];
+  const path = list.length > 1 ? list[tileSeed(x, y) % list.length] : list[0];   // вариант по клетке (без повторов-сетки)
+  const img = floorImg(path);
+  if (!img._ready) return false;                  // ещё грузится — кадр-другой рисуем процедурно
+  const ctx = S.ctx, hw = TW / 2, hh = TH / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx, cy + hh); ctx.lineTo(cx - hw, cy); ctx.closePath();
+  ctx.clip();
+  ctx.drawImage(img, cx - hw, cy - hh, TW, TH);   // квадратную текстуру укладываем в bounding box клетки
+  ctx.restore();
+  return true;
+}
 const smelterImg = loadImg('/assets/smelter.svg');
 const wellImg = loadImg('/assets/well.svg');
 const sandpileImg = loadImg('/assets/sandpile.svg');
@@ -388,7 +410,20 @@ function drawPortal(cx, cy, tile) { objSprite(portalImg[tile], cx, cy, 36); }
 // Лестница-телепорт — спрайт из SVG (вниз/вверх)
 function drawStairs(cx, cy, down) { objSprite(down ? stairsDownImg : stairsUpImg, cx, cy, 34); }
 // Мост — лежит плоско на клетке (без подъёма), накрывает воду; по нему можно идти
-function drawBridge(cx, cy) { const im = bridgeImg; if (im && im._ready) { const W = 66 * SCALE, H = 42 * SCALE; S.ctx.drawImage(im, cx - W / 2, cy - H / 2, W, H); } }
+// Мост — плоская клетка-настил (деревянный ромб с досками), как тайлы земли. Накрывает воду, проходим.
+function drawBridge(cx, cy) {
+  const ctx = S.ctx, z = SCALE, hx = TW / 2, hy = TH / 2;
+  fillDiamond(cx, cy, '#a9743f', 'rgba(58,36,16,.55)');           // деревянный настил
+  ctx.fillStyle = 'rgba(140,92,48,.35)';                          // нижняя половина темнее (лёгкий объём, без градиента)
+  ctx.beginPath(); ctx.moveTo(cx - hx, cy); ctx.lineTo(cx, cy + hy); ctx.lineTo(cx + hx, cy); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(74,48,24,.6)'; ctx.lineWidth = 1.3 * z; ctx.lineCap = 'round';   // швы между досками (вдоль ребра ромба)
+  for (const s of [0.28, 0.5, 0.72]) {
+    ctx.beginPath();
+    ctx.moveTo(cx - s * hx, cy - hy + s * hy);
+    ctx.lineTo(cx + hx - s * hx, cy + s * hy);
+    ctx.stroke();
+  }
+}
 
 function drawHpBar(cx, topY, hp, maxHp) {
   const ctx = S.ctx, z = SCALE, w = 28 * z, h = 5 * z;
@@ -605,6 +640,7 @@ export function render() {
       if (S.MAP[y][x] === 2 || S.MAP[y][x] === 32) continue;        // под стеной/скалой пол не рисуем (объём закрывает)
       const f = (S.FLOOR[y] && S.FLOOR[y][x]) || 0;                 // тайл пола
       const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
+      if (drawFloorTex(f, cx, cy, x, y)) continue;                  // своя текстура пользователя (если задана и загружена)
       if (f === 1) drawWater(cx, cy, x, y);
       else if (f === 4) fillDiamond(cx, cy, TILE[4].top, 'rgba(0,0,0,.18)'); // тропа
       else if (f === 15) fillDiamond(cx, cy, '#3b3b46', 'rgba(0,0,0,.3)');   // пещерный пол (Шахты)
@@ -615,12 +651,6 @@ export function render() {
       else if (f === 31) drawSand(cx, cy, x, y);                    // песок (пустыня)
       else drawGrass(cx, cy, x, y);                                 // трава (0) по умолчанию
     }
-  }
-
-  // Маркер цели клика
-  if (S.targetTile) {
-    fillDiamond(ox + isoX(S.targetTile.x, S.targetTile.y), oy + isoY(S.targetTile.x, S.targetTile.y),
-                'rgba(241,196,15,.35)', '#f1c40f');
   }
 
   // 2) ОБЪЕКТЫ (стены, деревья, мобы, игроки) — сортировка по глубине (x+y)
@@ -689,6 +719,12 @@ export function render() {
     else if (o.kind === 'mob') drawMob(ox + isoX(o.m.x, o.m.y), oy + isoY(o.m.x, o.m.y), o.m);
     else if (o.kind === 'authNpc') drawAuthNpc(ox + isoX(o.n.x, o.n.y), oy + isoY(o.n.x, o.n.y), o.n);
     else drawPlayer(ox + isoX(o.p.rx, o.p.ry), oy + isoY(o.p.rx, o.p.ry), o.p, o.isMe);
+  }
+
+  // Маркер цели клика — ПОВЕРХ объектов (виден и на мосту/дереве/мобе, которые перекрыли бы пол)
+  if (S.targetTile) {
+    fillDiamond(ox + isoX(S.targetTile.x, S.targetTile.y), oy + isoY(S.targetTile.x, S.targetTile.y),
+                'rgba(241,196,15,.22)', '#f1c40f');
   }
 
   // 3) Всплывающие цифры урона

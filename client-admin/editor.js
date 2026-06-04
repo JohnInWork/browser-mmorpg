@@ -2,6 +2,7 @@
 // Подключается как mode=admin, проходит проверку пароля, рисует и сохраняет карту.
 import { buildCharacterSVG, getCharImage, PALETTES, DEFAULT_APPEARANCE, CHAR_RATIO, CHAR_FEET, HAIR_STYLES } from '/js/character.js';
 import { MOB_TEXTURES, MOB_TEX_BY_ID } from '/js/mob-textures.js';
+import { FLOOR_TEX } from '/js/floor-textures.js';
 
 const socket = io({ query: { mode: 'admin' } });
 
@@ -45,6 +46,9 @@ const TELES = new Set([13, 14, 16, 17, 18]);       // порталы-телеп�
 const isGround = (t) => GROUND.has(t);
 const ERASE = -1;                                  // «ластик» — убрать объект (оставить пол)
 const EDIT = -2;                                   // «изменить» — правка параметров поставленного объекта
+const POINTER = -3;                                // указатель — нейтральный режим (клик ничего не делает)
+const EYEDROPPER = -4;                             // пипетка/копирование — скопировать объект под курсором
+let clipboard = null;                              // буфер пипетки: {kind:'mob'|'npc'|'spot'|'sign', data}
 const SIGN = 30;                                   // табличка с текстом
 const LOC_NAMES = { surface: 'Поверхность', mines: 'Шахты' };
 function deriveFloor(map) { return map.map(row => row.map(t => (isGround(t) ? t : 0))); }
@@ -126,18 +130,42 @@ const CATEGORIES = [
   { name: 'НПС', items: [ { id: 'npc', name: 'Создать НПС', color: '#e0a93b' } ] },
   { name: 'Существа', items: [ { id: 'mob', name: 'Создать моба', color: '#c0392b' } ] },
   { name: 'Рыбалка', items: [ { id: 'fishspot', name: 'Рыбное место', color: '#3a86c8' } ] },
-  { name: 'Правка', items: [ { id: -1, name: 'Убрать объект', color: '#444' }, { id: -2, name: 'Изменить (текст/связь)', color: '#3aa' } ] },
 ];
-let selected = 0; // выбранный id тайла
+// Функциональные инструменты (отдельный ряд кнопок над палитрой, не в категориях блоков)
+const TOOLS = [
+  { id: POINTER,    name: 'Указатель' },
+  { id: EYEDROPPER, name: 'Пипетка' },
+  { id: EDIT,       name: 'Редактировать' },
+  { id: ERASE,      name: 'Удалить' },
+];
+let selected = POINTER; // выбранный инструмент/тайл (по умолчанию — указатель: клик ничего не делает)
 let iconCanvases = [];                          // {c: canvas, id} — мини-иконки палитры (перерисовка после загрузки SVG)
+let palQuery = '';                              // текст поиска по палитре
+let collapsedCats = new Set();                  // свёрнутые категории (по названию)
+try { collapsedCats = new Set(JSON.parse(localStorage.getItem('mmorpg_palCollapsed') || '[]')); } catch (e) {}
+function persistCollapsed() { try { localStorage.setItem('mmorpg_palCollapsed', JSON.stringify([...collapsedCats])); } catch (e) {} }
+const ICON_PX = 40;                             // размер иконки в палитре (px)
+const floorTexImgEd = {};                       // кэш картинок текстур пола (FLOOR_TEX) для редактора и палитры
 
 const TOP = { 0:'#819A35', 1:'#3a86c8', 2:'#9aa0ac', 3:'#819A35', 4:'#c6a96a', 5:'#819A35', 6:'#819A35', 7:'#819A35', 8:'#819A35', 9:'#819A35', 10:'#819A35', 11:'#819A35', 12:'#819A35', 13:'#819A35', 14:'#819A35', 15:'#3b3b46', 16:'#819A35', 17:'#819A35', 18:'#819A35', 19:'#819A35', 20:'#9c7a4d', 21:'#3f7e3a', 22:'#62ab51', 23:'#8d8f97', 24:'#819A35', 25:'#819A35', 26:'#819A35', 27:'#819A35', 28:'#819A35', 29:'#3a86c8', 30:'#819A35', 31:'#dcc878', 33:'#819A35', 34:'#819A35', 35:'#819A35' };
 const WALL = { top:'#9aa0ac', left:'#5d626d', right:'#787e8a' };
 
 // Без логина: редактор открыт сразу. Палитра и размер — на загрузке, центрирование — когда придёт карта.
 socket.emit('adminAuth');               // сервер выдаёт права (на всякий случай)
+buildTools();
 buildPalette();
 resize();
+
+// Поиск по палитре + сворачивание всей панели
+const palSearchEl = document.getElementById('palSearch');
+const palCollapseEl = document.getElementById('palCollapse');
+const paletteDockEl = document.getElementById('paletteDock');
+palSearchEl.addEventListener('input', () => { palQuery = palSearchEl.value.trim().toLowerCase(); applyPaletteFilter(); });
+palCollapseEl.addEventListener('click', () => {
+  const col = paletteDockEl.classList.toggle('collapsed');
+  palCollapseEl.textContent = col ? '›' : '‹';
+  resize(); centerMap();                 // панель изменила ширину — пересчитать холст
+});
 
 socket.on('mapData', (data) => {
   LOCS = {};
@@ -259,8 +287,21 @@ function bg(c, color) { c.fillStyle = color; c.beginPath(); c.moveTo(15, 4); c.l
 function drawIcon(c, id) {
   c.clearRect(0, 0, 30, 30);
   const TAU = Math.PI * 2;
-  // Тайлы пола — это и есть цвет-иконка (оставляем заливку ромбом)
-  if (GROUND.has(id)) return bg(c, TOP[id]);
+  // Тайлы пола: если задана своя текстура (FLOOR_TEX) — рисуем её в ромб, иначе цветной ромб
+  if (GROUND.has(id)) {
+    const ft = FLOOR_TEX[id];
+    if (ft) {
+      const img = floorImgEd(Array.isArray(ft) ? ft[0] : ft);
+      if (img._ready) {
+        c.save();
+        c.beginPath(); c.moveTo(15, 4); c.lineTo(27, 15); c.lineTo(15, 26); c.lineTo(3, 15); c.closePath(); c.clip();
+        c.drawImage(img, 3, 4, 24, 22);
+        c.restore();
+        return;
+      }
+    }
+    return bg(c, TOP[id]);
+  }
   // Всё остальное — БЕЗ фона травы (рисуем сам объект на прозрачном; тёмный фон кнопки сам по себе)
   if (id === 2) { c.fillStyle = '#5d626d'; c.fillRect(7, 9, 16, 14); c.fillStyle = '#787e8a'; c.fillRect(7, 6, 16, 9); c.fillStyle = '#9aa0ac'; c.fillRect(7, 4, 16, 4); return; }
   if (id === 32) { c.fillStyle = '#333842'; c.beginPath(); c.moveTo(15, 24); c.lineTo(6, 19); c.lineTo(6, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#4a4f59'; c.beginPath(); c.moveTo(15, 24); c.lineTo(24, 19); c.lineTo(24, 11); c.lineTo(15, 7); c.closePath(); c.fill(); c.fillStyle = '#646b75'; c.beginPath(); c.moveTo(15, 7); c.lineTo(24, 11); c.lineTo(16, 3); c.lineTo(9, 10); c.closePath(); c.fill(); return; }
@@ -288,6 +329,16 @@ function drawIcon(c, id) {
     c.fillStyle = '#1a1a24'; c.font = 'bold 7px sans-serif'; c.textAlign = 'center'; c.fillText('+', 23, 9.5); return;
   }
   if (id === -1) { c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
+  if (id === -3) { // указатель-курсор
+    c.fillStyle = '#dfe4ee'; c.strokeStyle = '#1a1a24'; c.lineWidth = 1;
+    c.beginPath(); c.moveTo(9, 6); c.lineTo(9, 23); c.lineTo(13.5, 19); c.lineTo(16.5, 25); c.lineTo(19, 24); c.lineTo(16, 18); c.lineTo(22, 18); c.closePath(); c.fill(); c.stroke(); return;
+  }
+  if (id === -4) { // пипетка
+    c.strokeStyle = '#7fd0e0'; c.lineWidth = 2.4; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(8, 23); c.lineTo(18, 13); c.stroke();             // трубка
+    c.fillStyle = '#cfa14a'; c.beginPath(); c.moveTo(17, 9); c.lineTo(22, 14); c.lineTo(19.5, 16.5); c.lineTo(14.5, 11.5); c.closePath(); c.fill(); // колпачок
+    c.fillStyle = '#7fd0e0'; c.beginPath(); c.arc(8, 23, 2.2, 0, TAU); c.fill(); return; // капля
+  }
   if (id === -2) { // карандаш «изменить»
     c.fillStyle = '#3ad0c0'; c.beginPath(); c.moveTo(8, 22); c.lineTo(18, 12); c.lineTo(21, 15); c.lineTo(11, 25); c.closePath(); c.fill();
     c.fillStyle = '#cfa14a'; c.beginPath(); c.moveTo(19, 11); c.lineTo(22, 8); c.lineTo(25, 11); c.lineTo(22, 14); c.closePath(); c.fill();
@@ -298,80 +349,123 @@ function drawIcon(c, id) {
 }
 function refreshPaletteIcons() { for (const o of iconCanvases) drawIcon(o.c.getContext('2d'), o.id); }
 
-// --- Палитра (кнопки) ---
+// --- Палитра (боковая панель): крупные иконки сеткой + поиск + сворачиваемые группы ---
+// Канвас-иконка нужного размера: рисуем в 30-координатах drawIcon, масштабируем контекст до ICON_PX.
+function makeIcon(id) {
+  const ic = document.createElement('canvas');
+  ic.width = ICON_PX; ic.height = ICON_PX; ic.className = 'dot-ic';
+  const c = ic.getContext('2d'); c.scale(ICON_PX / 30, ICON_PX / 30);
+  drawIcon(c, id);
+  iconCanvases.push({ c: ic, id });
+  return ic;
+}
+// Один кафель палитры: иконка + подпись (подпись используется и для поиска).
+function makeSwatch(id, name, opts = {}) {
+  const el = document.createElement('div');
+  el.className = 'swatch' + (id === selected ? ' active' : '');
+  el.dataset.name = String(name).toLowerCase();
+  el.dataset.tool = String(id);
+  el.title = opts.title || name;
+  el.appendChild(makeIcon(id));
+  const cap = document.createElement('span'); cap.className = 'sw-cap'; cap.textContent = name;
+  el.appendChild(cap);
+  el.addEventListener('click', () => { setTool(id); if (opts.onClick) opts.onClick(); });
+  if (opts.onContext) el.addEventListener('contextmenu', (e) => { e.preventDefault(); opts.onContext(); });
+  return el;
+}
+
+// Выбрать инструмент/тайл: запомнить и подсветить активный и в палитре, и в ряду инструментов.
+function setTool(id) {
+  selected = id;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.toggle('active', s.dataset.tool === String(id)));
+  document.querySelectorAll('.pal-tool').forEach(b => b.classList.toggle('active', b.dataset.tool === String(id) || (id === 'paste' && +b.dataset.tool === EYEDROPPER)));
+}
+
+// Ряд функциональных инструментов над палитрой (указатель/пипетка/правка/удаление)
+function buildTools() {
+  const box = document.getElementById('palTools');
+  if (!box) return;
+  box.innerHTML = '';
+  TOOLS.forEach(t => {
+    const b = document.createElement('button');
+    b.className = 'pal-tool' + (t.id === selected ? ' active' : '');
+    b.dataset.tool = String(t.id);
+    b.title = t.name;
+    const ic = document.createElement('canvas'); ic.width = ICON_PX; ic.height = ICON_PX; ic.className = 'dot-ic';
+    const c = ic.getContext('2d'); c.scale(ICON_PX / 30, ICON_PX / 30); drawIcon(c, t.id);
+    b.appendChild(ic);
+    b.appendChild(document.createTextNode(t.name));
+    b.addEventListener('click', () => setTool(t.id));
+    box.appendChild(b);
+  });
+}
+
 function buildPalette() {
   paletteEl.innerHTML = '';
   iconCanvases = [];
   CATEGORIES.forEach((cat) => {
     const group = document.createElement('div');
-    group.className = 'pal-group';
-    group.innerHTML = `<span class="pal-cat">${cat.name}</span>`;
-    cat.items.forEach((t) => {
-      const el = document.createElement('div');
-      el.className = 'swatch' + (t.id === selected ? ' active' : '');
-      const ic = document.createElement('canvas'); ic.width = 30; ic.height = 30; ic.className = 'dot-ic';
-      drawIcon(ic.getContext('2d'), t.id);
-      iconCanvases.push({ c: ic, id: t.id });
-      el.appendChild(ic);
-      el.appendChild(document.createTextNode(' ' + t.name));
-      el.addEventListener('click', () => {
-        selected = t.id;
-        document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-        el.classList.add('active');
-        if (TELES.has(t.id)) {                       // выбрал портал — сразу спросить связь (число ИЛИ слово)
-          const v = prompt(`Связь для «${t.name}» (одинаковая метка у пары порталов, напр. 1 или «Лес»):`, sidInput.value || '1');
-          if (v !== null && v.trim()) sidInput.value = v.trim();
-        }
-      });
-      group.appendChild(el);
+    group.className = 'pal-group' + (collapsedCats.has(cat.name) ? ' collapsed' : '');
+    group.dataset.cat = cat.name;
+    const head = document.createElement('button');
+    head.className = 'pal-cat';
+    head.innerHTML = `<span class="pal-chev">▼</span>${cat.name}`;
+    head.addEventListener('click', () => {
+      const col = group.classList.toggle('collapsed');
+      if (col) collapsedCats.add(cat.name); else collapsedCats.delete(cat.name);
+      persistCollapsed();
     });
-    // В группу «Существа» добавляем кнопку на каждого сохранённого моба (выбираешь — штампуешь его)
+    const items = document.createElement('div'); items.className = 'pal-items';
+    group.appendChild(head); group.appendChild(items);
+
+    cat.items.forEach((t) => {
+      items.appendChild(makeSwatch(t.id, t.name, {
+        onClick: () => {
+          if (TELES.has(t.id)) {                       // выбрал портал — сразу спросить связь (число ИЛИ слово)
+            const v = prompt(`Связь для «${t.name}» (одинаковая метка у пары порталов, напр. 1 или «Лес»):`, sidInput.value || '1');
+            if (v !== null && v.trim()) sidInput.value = v.trim();
+          }
+        },
+      }));
+    });
+    // Сохранённые мобы → в группу «Существа» (выбрал — штампуешь его)
     if (cat.name === 'Существа') {
       savedMobs.forEach((m, i) => {
         const sid = 'mobstamp:' + i;
-        const el = document.createElement('div');
-        el.className = 'swatch' + (sid === selected ? ' active' : '');
-        el.title = 'ЛКМ — выбрать и ставить · ПКМ — удалить из библиотеки';
-        const ic = document.createElement('canvas'); ic.width = 30; ic.height = 30; ic.className = 'dot-ic';
-        drawIcon(ic.getContext('2d'), sid);
-        iconCanvases.push({ c: ic, id: sid });
-        el.appendChild(ic);
-        el.appendChild(document.createTextNode(' ' + mobLabelFor(m)));
-        el.addEventListener('click', () => {
-          selected = sid;
-          document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active')); el.classList.add('active');
-        });
-        el.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          if (confirm(`Удалить моба «${mobLabelFor(m)}» из библиотеки?`)) { savedMobs.splice(i, 1); persistSavedMobs(); if (selected === sid) selected = 'mob'; buildPalette(); }
-        });
-        group.appendChild(el);
+        items.appendChild(makeSwatch(sid, mobLabelFor(m), {
+          title: 'ЛКМ — ставить · ПКМ — удалить из библиотеки',
+          onContext: () => { if (confirm(`Удалить моба «${mobLabelFor(m)}» из библиотеки?`)) { savedMobs.splice(i, 1); persistSavedMobs(); if (selected === sid) selected = 'mob'; buildPalette(); } },
+        }));
       });
     }
-    // В группу «Рыбалка» — кнопка на каждое сохранённое рыбное место (выбрал — штампуешь его таблицу рыбы)
+    // Сохранённые рыбные места → в группу «Рыбалка»
     if (cat.name === 'Рыбалка') {
       savedSpots.forEach((s, i) => {
         const sid = 'spotstamp:' + i;
-        const el = document.createElement('div');
-        el.className = 'swatch' + (sid === selected ? ' active' : '');
-        el.title = 'ЛКМ — выбрать и ставить · ПКМ — удалить из библиотеки';
-        const ic = document.createElement('canvas'); ic.width = 30; ic.height = 30; ic.className = 'dot-ic';
-        drawIcon(ic.getContext('2d'), sid);
-        iconCanvases.push({ c: ic, id: sid });
-        el.appendChild(ic);
-        el.appendChild(document.createTextNode(' ' + spotLabelFor(s)));
-        el.addEventListener('click', () => {
-          selected = sid;
-          document.querySelectorAll('.swatch').forEach(w => w.classList.remove('active')); el.classList.add('active');
-        });
-        el.addEventListener('contextmenu', (e) => {
-          e.preventDefault();
-          if (confirm(`Удалить «${spotLabelFor(s)}» из библиотеки рыбных мест?`)) { savedSpots.splice(i, 1); persistSavedSpots(); if (selected === sid) selected = 'fishspot'; buildPalette(); }
-        });
-        group.appendChild(el);
+        items.appendChild(makeSwatch(sid, spotLabelFor(s), {
+          title: 'ЛКМ — ставить · ПКМ — удалить из библиотеки',
+          onContext: () => { if (confirm(`Удалить «${spotLabelFor(s)}» из библиотеки рыбных мест?`)) { savedSpots.splice(i, 1); persistSavedSpots(); if (selected === sid) selected = 'fishspot'; buildPalette(); } },
+        }));
       });
     }
     paletteEl.appendChild(group);
+  });
+  applyPaletteFilter();
+}
+
+// Фильтр палитры по тексту поиска: прячем не подходящие кафели и пустые группы; при поиске — раскрываем.
+function applyPaletteFilter() {
+  const q = palQuery;
+  paletteEl.querySelectorAll('.pal-group').forEach(g => {
+    let any = false;
+    g.querySelectorAll('.swatch').forEach(s => {
+      const m = !q || s.dataset.name.includes(q);
+      s.style.display = m ? '' : 'none';
+      if (m) any = true;
+    });
+    g.style.display = any ? '' : 'none';
+    if (q) g.classList.remove('collapsed');                       // поиск раскрывает найденное
+    else g.classList.toggle('collapsed', collapsedCats.has(g.dataset.cat)); // вернуть ручное состояние
   });
 }
 
@@ -412,7 +506,8 @@ canvas.addEventListener('mousedown', (e) => {
   else if (e.button === 0) {
     // Инструменты с диалогом (табличка/изменить) — только одиночный клик, БЕЗ протяжки:
     // prompt() блокирует поток и «съедает» mouseup, иначе курсор продолжал бы рисовать.
-    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc' || selected === 'mob' || selected === 'fishspot');
+    const dialogTool = (selected === SIGN || selected === EDIT || selected === 'npc' || selected === 'mob' || selected === 'fishspot'
+                        || selected === POINTER || selected === EYEDROPPER || selected === 'paste');
     if (!dialogTool) painting = true;
     paintAt(e, true);   // true = одиночный клик (можно спросить текст/правку)
   }
@@ -446,6 +541,9 @@ function paintAt(e, isClick) {
   const r = canvas.getBoundingClientRect();
   const t = screenToTile(e.clientX - r.left, e.clientY - r.top);
   if (t.x < 0 || t.y < 0 || t.x >= mapW || t.y >= mapH) return;
+  if (selected === POINTER) return;                                      // указатель — ничего не делаем
+  if (selected === EYEDROPPER) { if (isClick) eyedropPick(t.x, t.y); return; } // пипетка: скопировать объект под курсором
+  if (selected === 'paste') { if (isClick) pasteAt(t.x, t.y); return; }  // вставка скопированного пипеткой
   if (selected === EDIT) { if (isClick) editParams(t.x, t.y); return; }  // «Изменить»: правка параметров поставленного объекта
   if (selected === 'npc') { if (isClick) openNpcEditor(t.x, t.y, npcAt(t.x, t.y) || null); return; } // создать/править НПС
   if (selected === 'mob') { if (isClick) openMobEditor(t.x, t.y, null, true); return; }                 // конструктор НОВОГО моба (в библиотеку)
@@ -473,6 +571,31 @@ function paintAt(e, isClick) {
   } else {                                           // прочий объект: поверх пола; если была лестница — убрать связь
     MAP[t.y][t.x] = selected; removeTele(t.x, t.y);
   }
+}
+
+// Короткая подсказка в строке статуса
+function status(msg) { statusEl.textContent = msg; clearTimeout(status._t); status._t = setTimeout(() => { statusEl.textContent = ''; }, 2800); }
+
+// Пипетка: скопировать то, что на клетке. Объект (моб/НПС/место/табличка) → режим вставки; тайл → берём как кисть.
+function eyedropPick(x, y) {
+  const mob = mobAt(x, y);
+  if (mob) { clipboard = { kind: 'mob', data: JSON.parse(JSON.stringify(mob)) }; setTool('paste'); status('Скопирован моб: ' + mobLabelFor(mob) + ' — кликай, чтобы ставить'); return; }
+  const npc = npcAt(x, y);
+  if (npc) { clipboard = { kind: 'npc', data: JSON.parse(JSON.stringify(npc)) }; setTool('paste'); status('Скопирован НПС: ' + (npc.name || 'НПС') + ' — кликай, чтобы ставить'); return; }
+  const spot = spotAtEd(x, y);
+  if (spot) { clipboard = { kind: 'spot', data: JSON.parse(JSON.stringify(spot)) }; setTool('paste'); status('Скопировано рыбное место — кликай, чтобы ставить'); return; }
+  const tile = MAP[y][x];
+  if (tile === SIGN) { const s = signAt(x, y); clipboard = { kind: 'sign', data: { text: s ? s.text : '' } }; setTool('paste'); status('Скопирована табличка — кликай, чтобы ставить'); return; }
+  clipboard = null; setTool(tile); status('Взят тайл как кисть');   // обычный тайл/объект → классическая пипетка
+}
+
+// Вставить скопированное пипеткой на клетку (можно сколько угодно раз)
+function pasteAt(x, y) {
+  if (!clipboard) { setTool(POINTER); return; }
+  if (clipboard.kind === 'mob') setMob(x, y, JSON.parse(JSON.stringify(clipboard.data)));
+  else if (clipboard.kind === 'npc') setNpc(x, y, JSON.parse(JSON.stringify(clipboard.data)));
+  else if (clipboard.kind === 'spot') setSpot(x, y, JSON.parse(JSON.stringify(clipboard.data)));
+  else if (clipboard.kind === 'sign') { MAP[y][x] = SIGN; removeTele(x, y); setSign(x, y, clipboard.data.text); }
 }
 
 // «Изменить» — правка параметров уже поставленного объекта на клетке
@@ -563,6 +686,23 @@ function drawSpawn(cx, cy) { objSprite(OBJ_IMG[19], cx, cy, 38); }       // то
 function drawPortal(cx, cy, tile) { objSprite(OBJ_IMG[tile], cx, cy, 36); }
 function drawStairs(cx, cy, down) { objSprite(OBJ_IMG[down ? 13 : 14], cx, cy, 34); }
 
+// Текстуры пола из FLOOR_TEX (те же svg, что в игре) — укладываем в изо-клетку с обрезкой по ромбу.
+function floorImgEd(path) { return floorTexImgEd[path] || (floorTexImgEd[path] = mkImg(path)); }
+function drawFloorTexEd(f, cx, cy, x, y) {
+  const t = FLOOR_TEX[f];
+  if (!t) return false;
+  const list = Array.isArray(t) ? t : [t];
+  const path = list.length > 1 ? list[tileSeed(x, y) % list.length] : list[0];
+  const img = floorImgEd(path);
+  if (!img._ready) return false;
+  const hw = (TW / 2) * zoom, hh = (TH / 2) * zoom;
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(cx, cy - hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx, cy + hh); ctx.lineTo(cx - hw, cy); ctx.closePath(); ctx.clip();
+  ctx.drawImage(img, cx - hw, cy - hh, hw * 2, hh * 2);
+  ctx.restore();
+  return true;
+}
+
 function render() {
   ctx.fillStyle = '#10131a';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -572,7 +712,9 @@ function render() {
   for (let y = 0; y < mapH; y++) {
     for (let x = 0; x < mapW; x++) {
       if (MAP[y][x] === 2 || MAP[y][x] === 32) continue;  // под стеной/скалой пол не рисуем
-      fillDiamond(panX + isoX(x, y), panY + isoY(x, y), TOP[FLOOR[y][x]] || TOP[0], 'rgba(0,0,0,.18)');
+      const fx = panX + isoX(x, y), fy = panY + isoY(x, y);
+      if (drawFloorTexEd(FLOOR[y][x], fx, fy, x, y)) continue;   // своя текстура пола (как в игре)
+      fillDiamond(fx, fy, TOP[FLOOR[y][x]] || TOP[0], 'rgba(0,0,0,.18)');
     }
   }
   // Подсветка тайла под курсором
@@ -630,7 +772,14 @@ function render() {
     else if (o.k === 33) objSprite(OBJ_IMG[33], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 34) objSprite(OBJ_IMG[34], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 35) objSprite(OBJ_IMG[35], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);
-    else if (o.k === 29) { const im = OBJ_IMG[29]; if (im && im._ready) { const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y), W = 66 * zoom, H = 42 * zoom; ctx.drawImage(im, sx - W / 2, sy - H / 2, W, H); } }
+    else if (o.k === 29) {                          // мост — плоская клетка-настил (как в игре)
+      const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y), hx = (TW / 2) * zoom, hy = (TH / 2) * zoom;
+      fillDiamond(sx, sy, '#a9743f', 'rgba(58,36,16,.55)');
+      ctx.fillStyle = 'rgba(140,92,48,.35)';
+      ctx.beginPath(); ctx.moveTo(sx - hx, sy); ctx.lineTo(sx, sy + hy); ctx.lineTo(sx + hx, sy); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle = 'rgba(74,48,24,.6)'; ctx.lineWidth = 1.3 * zoom; ctx.lineCap = 'round';
+      for (const s of [0.28, 0.5, 0.72]) { ctx.beginPath(); ctx.moveTo(sx - s * hx, sy - hy + s * hy); ctx.lineTo(sx + hx - s * hx, sy + s * hy); ctx.stroke(); }
+    }
     else if (o.k === 30) {
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
       objSprite(OBJ_IMG[30], sx, sy, 32);

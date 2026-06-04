@@ -40,17 +40,45 @@ body {
   padding: 10px 16px; background: #22222e; border-bottom: 1px solid #333; font-size: 14px;
 }
 #toolbar .title { font-weight: 700; }
-#palette { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
-.pal-group { display: flex; align-items: center; gap: 6px; padding: 4px 8px; background: #1f1f2a; border: 1px solid #333; border-radius: 10px; }
-.pal-cat { font-size: 11px; font-weight: 700; color: #9aa0b0; text-transform: uppercase; margin-right: 2px; }
+
+/* --- Рабочая область: боковая палитра + холст --- */
+#workArea { flex: 1; display: flex; min-height: 0; position: relative; }
+#canvas { flex: 1; min-width: 0; }
+#paletteDock { flex: 0 0 380px; width: 380px; display: flex; flex-direction: column; background: #1b1b25; border-right: 1px solid #2f2f3c; transition: flex-basis .12s ease, width .12s ease; }
+#paletteDock.collapsed { flex-basis: 40px; width: 40px; }
+#palHead { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid #2a2a36; }
+#palSearch { flex: 1; min-width: 0; background: #12121a; border: 1px solid #3a3a4e; color: #eee; border-radius: 8px; padding: 7px 9px; font-size: 13px; outline: none; }
+#palSearch:focus { border-color: #e0a93b; }
+#palCollapse { flex: 0 0 28px; height: 32px; border: none; border-radius: 8px; background: #2a2a3e; color: #cfd6e4; cursor: pointer; font-size: 16px; line-height: 1; }
+#palCollapse:hover { background: #3a3a4e; }
+#paletteDock.collapsed #palSearch, #paletteDock.collapsed #palette { display: none; }
+/* Функциональные инструменты — отдельная плашка внизу по центру экрана (поверх холста) */
+#palTools { position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 20;
+  display: flex; gap: 8px; padding: 8px 10px; background: rgba(27,27,37,.94);
+  border: 1px solid #2f2f3c; border-radius: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.5); }
+.pal-tool { display: flex; align-items: center; gap: 5px; padding: 5px 9px; border: 2px solid transparent; border-radius: 8px; background: #1a1a24; color: #cfd6e4; cursor: pointer; font-size: 12px; font-family: inherit; }
+.pal-tool:hover { background: #20202c; }
+.pal-tool.active { border-color: #fff; background: #262633; }
+.pal-tool canvas { width: 22px; height: 22px; }
+#palette { display: flex; flex-direction: column; gap: 8px; padding: 10px; overflow-y: auto; flex: 1; }
+.pal-empty { color: #777; font-size: 12px; text-align: center; padding: 16px 4px; }
+.pal-group { flex: 0 0 auto; display: flex; flex-direction: column; background: #1f1f2a; border: 1px solid #333; border-radius: 10px; overflow: hidden; }
+.pal-cat { display: flex; align-items: center; gap: 7px; width: 100%; text-align: left; background: #24242f; border: none; color: #aeb4c4; font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 8px 10px; cursor: pointer; font-family: inherit; letter-spacing: .3px; }
+.pal-cat:hover { background: #2a2a37; }
+.pal-chev { display: inline-block; transition: transform .12s; font-size: 9px; color: #777; }
+.pal-group.collapsed .pal-chev { transform: rotate(-90deg); }
+.pal-group.collapsed .pal-items { display: none; }
+.pal-items { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 8px; }
 .swatch {
-  display: flex; align-items: center; gap: 6px;
-  padding: 6px 10px; border: 2px solid transparent; border-radius: 8px;
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 0; padding: 6px 3px; border: 2px solid transparent; border-radius: 9px;
   background: #1a1a24; cursor: pointer; user-select: none;
 }
-.swatch.active { border-color: #fff; }
+.swatch:hover { background: #20202c; }
+.swatch.active { border-color: #fff; background: #262633; }
 .swatch .dot { width: 16px; height: 16px; border-radius: 4px; }
-.swatch .dot-ic { width: 26px; height: 26px; flex: 0 0 auto; }
+.swatch .dot-ic { width: 40px; height: 40px; flex: 0 0 auto; }
+.sw-cap { font-size: 9.5px; line-height: 1.12; color: #aeb4c4; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 #saveBtn {
   padding: 8px 14px; border: none; border-radius: 8px;
   background: #2ecc71; color: #0d2616; font-weight: 700; cursor: pointer;

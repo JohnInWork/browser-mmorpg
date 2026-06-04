@@ -176,12 +176,12 @@ export function setupInput() {
       if (!ap) return;
       if (!m.canAttack) {                            // мирный — атаковать нельзя
         S.pendingAction = { kind: 'notice', text: mobLabel(m), color: '#2ecc71' };
-        S.path = ap.path; S.targetTile = null;
+        S.path = ap.path; S.targetTile = t;
         return;
       }
       S.socket.emit('engage', m.id);                 // намерение драться: этот моб не ударит первым
       S.pendingAction = { kind: 'attack', id: m.id };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по авторскому НПС — подойти и взаимодействовать (квест/торговля/разговор)
@@ -190,7 +190,7 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'npc', x: t.x, y: t.y };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по станции (плавильня/наковальня) — подойти и открыть крафт
@@ -199,7 +199,7 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'station', x: t.x, y: t.y, station: st.station };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по админ-сундуку — подойти и открыть творческое окно (взять любой предмет)
@@ -207,7 +207,7 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'creative', x: t.x, y: t.y };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по сундуку — подойти и открыть хранилище
@@ -215,7 +215,7 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'chest', x: t.x, y: t.y };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по табличке — подойти и прочитать сообщение
@@ -224,7 +224,7 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'sign', text: sign.text };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по колодцу — подойти и наполнить колбы водой
@@ -232,7 +232,7 @@ export function setupInput() {
       const ap = approachTo(t.x, t.y);
       if (!ap) return;
       S.pendingAction = { kind: 'well', x: t.x, y: t.y };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по ресурсу (дерево/камень/руда) — добывать (нужен правильный инструмент в руке)
@@ -243,7 +243,7 @@ export function setupInput() {
       // нет нужного инструмента — подойти, затем сообщить; иначе подойти и добывать
       if (activeTool() !== node.tool) S.pendingAction = { kind: 'notice', text: node.need, color: '#fff' };
       else S.pendingAction = { kind: 'gather', x: t.x, y: t.y };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Клик по рыбному месту — подойти и рыбачить (нужна удочка «в руке»). Ловля идёт по тому же gather.
@@ -253,7 +253,7 @@ export function setupInput() {
       if (!ap) return;
       if (activeTool() !== 'fishingRod') S.pendingAction = { kind: 'notice', text: 'Нужна удочка', color: '#fff' };
       else S.pendingAction = { kind: 'gather', x: t.x, y: t.y };
-      S.path = ap.path; S.targetTile = null;
+      S.path = ap.path; S.targetTile = t;
       return;
     }
     // Иначе — обычный ход
