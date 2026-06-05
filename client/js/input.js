@@ -98,8 +98,8 @@ function approachTo(tx, ty) {
   return bestPath ? { path: bestPath } : null;
 }
 
-// Активный инструмент (id «в руке») — сервер уже разрешил: слот хотбара или выбор из рюкзака.
-function activeTool() { return S.activeTool; }
+// Активный инструмент (id в правой руке) — сервер уже разрешил: слот хотбара или выбор из рюкзака.
+function activeTool() { return S.handR; }
 // Узел-ресурс под клеткой: {kind, tool, name} или null
 function nodeAt(x, y) {
   if (!S.MAP || !S.MAP[y] || S.depletedNodes.has(`${x},${y}`)) return null;

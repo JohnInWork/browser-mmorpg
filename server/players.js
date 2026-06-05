@@ -47,10 +47,11 @@ function create(id) {
     // стартовый инвентарь пуст — всё берётся из Админ-сундука (для тестов)
     inventory: [],
     hotbar: [null, null, null, null, null, null], // 6 слотов: id предмета или null
-    activeSlot: null,  // индекс активного слота хотбара (предмет «в руке»)
-    activeInvId: null, // id инструмента, активированного прямо из рюкзака (без переноса в слот)
-    // надетая экипировка (id предмета или null) — задел: статы/характеристики добавим позже
-    equipment: { helmet: null, chest: null, gloves: null, pants: null, boots: null, cloak: null, mainHand: null, offHand: null },
+    // Предметы «в руке» (id предмета или null). Правая: оружие/инструмент. Левая: щит. Предмет остаётся в хотбаре/рюкзаке.
+    handR: null,
+    handL: null,
+    // надетая экипировка — ТОЛЬКО броня (оружие/щит теперь берутся «в руку», см. handR/handL)
+    equipment: { helmet: null, chest: null, gloves: null, pants: null, boots: null, cloak: null },
     target: null,      // id моба, которого бьём
     turn: null,        // 'player' | 'mob' — чей удар
     engaging: null,    // id моба, на которого игрок сам идёт драться (он не бьёт первым)
@@ -101,23 +102,56 @@ function craft(p, recipe) {
   return true;
 }
 
-// id предмета «в руке»: из активного слота хотбара ИЛИ инструмент, выбранный прямо в рюкзаке.
-function activeTool(p) {
-  if (p.activeSlot != null && p.hotbar[p.activeSlot]) return p.hotbar[p.activeSlot].id;
-  if (p.activeInvId && hasItem(p, p.activeInvId)) return p.activeInvId;
+// Есть ли предмет в распоряжении игрока (хотбар или рюкзак) — для валидации «в руке».
+function ownsItem(p, id) { return p.hotbar.some(s => s && s.id === id) || hasItem(p, id); }
+
+// Какая рука для предмета: 'L' для щита (offHand), иначе 'R' (оружие/инструмент). null — нельзя взять в руку.
+function handFor(def) {
+  if (!def) return null;
+  if (def.type === 'shield' || def.slot === 'offHand') return 'L';
+  if (def.type === 'weapon' || def.type === 'tool') return 'R';
   return null;
 }
 
-// Активировать инструмент прямо из рюкзака (не переносит в слот, только «берёт в руку»). Повторно — снять.
+// Предмет в руке (валидируется владением; иначе очищается). side: 'R' | 'L'.
+function handItem(p, side) {
+  const key = side === 'L' ? 'handL' : 'handR';
+  const id = p[key];
+  if (id && ownsItem(p, id)) return id;
+  p[key] = null;
+  return null;
+}
+
+// id предмета «в руке» для добычи/совместимости = правая рука (инструменты держат правой).
+function activeTool(p) { return handItem(p, 'R'); }
+
+// Взять предмет «в руку» (по id). Сам предмет остаётся в хотбаре/рюкзаке. Повторно тем же — снять.
+// Щит → левая рука; оружие/инструмент → правая; двуручное оружие → правая + освобождает левую.
+function wieldId(p, id) {
+  const def = ITEMS[id];
+  const hand = handFor(def);
+  if (!hand || !ownsItem(p, id)) return false;
+  if (hand === 'L') {
+    const rDef = ITEMS[p.handR];
+    if (rDef && rDef.hands === 2) return false;            // двуручное занимает обе руки — щит нельзя
+    p.handL = (p.handL === id) ? null : id;
+  } else {
+    p.handR = (p.handR === id) ? null : id;
+    if (p.handR && def.hands === 2) p.handL = null;        // взяли двуручное — освободить левую
+  }
+  return true;
+}
+// Взять «в руку» предмет из слота хотбара
+function wieldHotbar(p, slot) {
+  if (!Number.isInteger(slot) || slot < 0 || slot >= p.hotbar.length) return false;
+  const it = p.hotbar[slot];
+  return it ? wieldId(p, it.id) : false;
+}
+// Взять «в руку» предмет прямо из рюкзака (по индексу)
 function activateInv(p, invIndex) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
   const item = p.inventory[invIndex];
-  if (!item) return false;
-  const def = ITEMS[item.id];
-  if (!def || def.type !== 'tool') return false;          // «в руку» из рюкзака — только инструмент
-  p.activeInvId = (p.activeInvId === item.id) ? null : item.id;
-  if (p.activeInvId != null) p.activeSlot = null;          // выбор из рюкзака снимает выбор хотбара
-  return true;
+  return item ? wieldId(p, item.id) : false;
 }
 
 // Перенести предмет из рюкзака в слот хотбара (исчезает из рюкзака). Занятый слот — обмен.
@@ -129,8 +163,7 @@ function invToHotbar(p, invIndex, slot) {
   const prev = p.hotbar[slot];
   p.hotbar[slot] = item;
   p.inventory[invIndex] = prev || null;          // то, что лежало в слоте, кладём на освободившуюся клетку
-  if (p.activeInvId === item.id) p.activeInvId = null; // активный инструмент уехал в слот — снять «рюкзачную» активность
-  return true;
+  return true;                                    // руки хранятся по id — остаются валидными при перемещении предмета
 }
 
 // Вернуть предмет из слота хотбара в рюкзак (в выбранную клетку, иначе в первую свободную).
@@ -142,7 +175,7 @@ function hotbarToInv(p, slot, invIndex = null) {
   if (dest < 0) return false;                     // рюкзак полон
   const occ = p.inventory[dest];
   if (occ) { p.hotbar[slot] = occ; }              // занятая клетка — обмен с хотбаром
-  else { p.hotbar[slot] = null; if (p.activeSlot === slot) p.activeSlot = null; }
+  else { p.hotbar[slot] = null; }
   p.inventory[dest] = item;
   return true;
 }
@@ -220,7 +253,7 @@ function eatHotbar(p, slot) {
   const before = p.hp;
   p.hp = Math.min(p.maxHp, p.hp + def.heal);
   item.qty -= 1;
-  if (item.qty <= 0) { p.hotbar[slot] = null; if (p.activeSlot === slot) p.activeSlot = null; }
+  if (item.qty <= 0) { p.hotbar[slot] = null; }
   return p.hp - before;
 }
 
@@ -247,64 +280,56 @@ function bindReturnStone(p, point) {
   if (existing) {
     if (existing.store === 'inv') p.inventory[existing.index] = null;
     else if (existing.store === 'bank') p.bank.slots[existing.index] = null;
-    else if (existing.store === 'hotbar') { p.hotbar[existing.index] = null; if (p.activeSlot === existing.index) p.activeSlot = null; }
+    else if (existing.store === 'hotbar') { p.hotbar[existing.index] = null; }
   }
   addItem(p, RETURN_STONE_ID, 1);                          // не стакается → в первую свободную клетку рюкзака
   p.returnPoint = { location: point.location, x: point.x, y: point.y, name: String(point.name || 'Точка возврата') };
   return { ok: true };
 }
 
-// Суммарная защита от надетой брони
+// Суммарная защита: надетая броня + щит в левой руке
 function armorValue(p) {
   let a = 0;
   for (const slot in p.equipment) {
     const id = p.equipment[slot];
     if (id && ITEMS[id]) a += ITEMS[id].armor || 0;
   }
+  const sh = handItem(p, 'L');                    // щит в левой руке тоже даёт защиту
+  if (sh && ITEMS[sh]) a += ITEMS[sh].armor || 0;
   return a;
 }
 
-// Надеть броню/оружие/щит из рюкзака (по индексу). Занятый слот — обмен. Двуручное оружие занимает обе руки.
+// Надеть БРОНЮ из рюкзака (по индексу). Занятый слот — обмен. (Оружие/щит теперь «в руку», см. wieldId.)
 function equipItem(p, invIndex) {
   if (!Number.isInteger(invIndex) || invIndex < 0 || invIndex >= p.inventory.length) return false;
   const item = p.inventory[invIndex];
   if (!item) return false;
   const def = ITEMS[item.id];
-  if (!def || !def.slot || !['armor', 'weapon', 'shield'].includes(def.type)) return false;
-  if (!(def.slot in p.equipment)) return false;
+  if (!def || def.type !== 'armor' || !def.slot || !(def.slot in p.equipment)) return false;
   p.inventory[invIndex] = null;                  // освободить клетку (снятое вернётся в неё или в свободную)
-  const back = (id) => { if (id) { const e = firstEmpty(p); if (e >= 0) p.inventory[e] = { id, qty: 1 }; } };
-  // Двуручное оружие — освободить вторую руку; щит/одноручное — снять двуручное, если оно надето
-  if (def.slot === 'mainHand' && def.hands === 2) { back(p.equipment.offHand); p.equipment.offHand = null; }
-  if (def.slot === 'offHand') { const mh = ITEMS[p.equipment.mainHand]; if (mh && mh.hands === 2) { back(p.equipment.mainHand); p.equipment.mainHand = null; } }
   const prev = p.equipment[def.slot];
   p.equipment[def.slot] = item.id;
-  back(prev);
+  if (prev) { const e = firstEmpty(p); if (e >= 0) p.inventory[e] = { id: prev, qty: 1 }; }
   return true;
 }
 
-// Надеть броню/оружие/щит прямо из слота хотбара (по номеру слота). Снятое возвращается в тот же слот (свап).
+// Надеть БРОНЮ прямо из слота хотбара (по номеру слота). Снятое возвращается в тот же слот (свап).
 function equipHotbar(p, slot) {
   if (!Number.isInteger(slot) || slot < 0 || slot >= p.hotbar.length) return false;
   const item = p.hotbar[slot];
   if (!item) return false;
   const def = ITEMS[item.id];
-  if (!def || !def.slot || !['armor', 'weapon', 'shield'].includes(def.type)) return false;
-  if (!(def.slot in p.equipment)) return false;
-  const back = (id) => { if (id) { const e = firstEmpty(p); if (e >= 0) p.inventory[e] = { id, qty: 1 }; } };
-  if (def.slot === 'mainHand' && def.hands === 2) { back(p.equipment.offHand); p.equipment.offHand = null; }
-  if (def.slot === 'offHand') { const mh = ITEMS[p.equipment.mainHand]; if (mh && mh.hands === 2) { back(p.equipment.mainHand); p.equipment.mainHand = null; } }
+  if (!def || def.type !== 'armor' || !def.slot || !(def.slot in p.equipment)) return false;
   const prev = p.equipment[def.slot];
   p.equipment[def.slot] = item.id;
   p.hotbar[slot] = prev ? { id: prev, qty: 1 } : null;   // снятое — обратно в этот слот хотбара (свап)
-  if (p.activeSlot === slot && !p.hotbar[slot]) p.activeSlot = null;
   return true;
 }
 
-// Бонус урона от оружия в правой руке
+// Бонус урона от оружия в правой руке (инструмент урона не даёт)
 function weaponDamage(p) {
-  const w = p.equipment.mainHand;
-  return (w && ITEMS[w] && ITEMS[w].damage) || 0;
+  const w = handItem(p, 'R');
+  return (w && ITEMS[w] && ITEMS[w].type === 'weapon' && ITEMS[w].damage) || 0;
 }
 
 // Снять предмет из слота брони в рюкзак (в первую свободную клетку)
@@ -361,8 +386,8 @@ function destroyStack(p, invIndex) {
 // Снимок инвентаря/экипировки/статов для клиента
 function invState(p) {
   return {
-    inventory: p.inventory, hotbar: p.hotbar, activeSlot: p.activeSlot,
-    activeInvId: p.activeInvId, activeTool: activeTool(p), gold: p.gold,
+    inventory: p.inventory, hotbar: p.hotbar,
+    handR: handItem(p, 'R'), handL: handItem(p, 'L'), gold: p.gold,
     equipment: p.equipment, armor: armorValue(p), hp: p.hp, maxHp: p.maxHp,
     returnPoint: p.returnPoint, returnCdUntil: p.returnCdUntil,
   };
@@ -391,9 +416,7 @@ function applyDeathPenalty(p) {
       lostHotbar = (ITEMS[id] && ITEMS[id].name) || id;
     }
   }
-  // подчистить «в руке», если активное исчезло
-  if (p.activeSlot != null && !p.hotbar[p.activeSlot]) p.activeSlot = null;
-  if (p.activeInvId && !hasItem(p, p.activeInvId)) p.activeInvId = null;
+  handItem(p, 'R'); handItem(p, 'L');   // подчистят руку, если предмет исчез
   return { lostArmor, lostHotbar };
 }
 
@@ -406,10 +429,10 @@ function respawn(io, p) {
   io.emit('playerRespawn', { id: p.id, x: p.x, y: p.y, hp: p.hp, location: p.location });
   io.to(p.id).emit('inventoryUpdate', invState(p));                 // обновить рюкзак/хотбар/броню владельцу
   io.emit('playerEquipment', { id: p.id, equipment: p.equipment }); // другие видят изменившуюся броню
-  io.emit('playerHeld', { id: p.id, held: activeTool(p) });         // и предмет в руке
+  io.emit('playerHands', { id: p.id, right: handItem(p, 'R'), left: handItem(p, 'L') }); // предметы в руках
   io.to(p.id).emit('youDied', { lostArmor, lostHotbar });           // окно смерти у погибшего
 }
 
-module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, activateInv, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
+module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, handItem, activateInv, wieldId, wieldHotbar, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
   bankMove, bankQuick, upgradeBank, bankStateOf, pourFlask, fillFlasks, invState, ITEMS,
   ownsReturnStone, bindReturnStone, RETURN_STONE_ID, eatHotbar, moveHotbar, equipHotbar };

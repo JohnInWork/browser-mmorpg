@@ -127,14 +127,14 @@ function setupUi() {
       if (src.from === 'hot') S.socket.emit('hotbarToInv', { slot: src.index, invIndex: i });   // в выбранную клетку
       else if (src.from === 'inv' && src.index !== i) S.socket.emit('moveItem', { from: src.index, to: i }); // перенос внутри рюкзака
     });
-    // Клик по предмету: броню — надеть; инструмент — взять «в руку» (без переноса в слот)
+    // Клик по предмету: броню — надеть; оружие/щит/инструмент — взять «в руку»; еду — съесть
     slot.addEventListener('click', () => {
       const stack = S.inventory[i];
       if (!stack) return;
       if (stack.id === 'returnStone') { openReturnTeleport(() => S.socket.emit('useReturnStone', { invIndex: i })); return; }   // камень → окно телепорта
       const t = itemType(stack.id);
-      if (t === 'armor' || t === 'weapon' || t === 'shield') S.socket.emit('equip', i);
-      else if (t === 'tool') S.socket.emit('activateInv', i);
+      if (t === 'armor') S.socket.emit('equip', i);
+      else if (t === 'weapon' || t === 'shield' || t === 'tool') S.socket.emit('activateInv', i);   // в руку (сервер выберет руку)
       else if (t === 'food') S.socket.emit('eat', i);
     });
     // ПКМ по предмету — контекстное меню (разделить / вики / в чат / уничтожить)

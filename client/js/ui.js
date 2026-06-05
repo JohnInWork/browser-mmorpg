@@ -67,8 +67,8 @@ export function renderInventory() {
       slot.dataset.itemId = '';
       slot.style.background = '';
     }
-    // подсветка инструмента, активированного прямо в рюкзаке
-    slot.classList.toggle('active', !!stack && stack.id === S.activeInvId);
+    // подсветка предмета, который сейчас в руке (правой или левой)
+    slot.classList.toggle('active', !!stack && (stack.id === S.handR || stack.id === S.handL));
   }
 }
 
@@ -81,6 +81,9 @@ export function openItemMenu(invIndex, x, y) {
   const def = ITEMS[stack.id] || {};
   const canSplit = def.stackable && stack.qty > 1;
   const items = [];
+  if (def.type === 'armor' && def.slot) items.push({ key: 'equip', label: 'Надеть' });
+  else if (def.type === 'weapon' || def.type === 'tool') items.push({ key: 'wield', label: 'Взять в руку' });
+  else if (def.type === 'shield') items.push({ key: 'wield', label: 'Взять в левую руку' });
   if (canSplit) items.push({ key: 'split', label: 'Разделить' });
   if (def.pourTo) items.push({ key: 'pour', label: 'Вылить' });   // напр. колба с водой → пустая колба
   items.push({ key: 'wiki', label: 'Посмотреть в вики' });
@@ -104,7 +107,9 @@ function ctxAction(act) {
   closeItemMenu();
   const stack = S.inventory[idx];
   if (!stack) return;
-  if (act === 'wiki') showItemInGuide(stack.id);
+  if (act === 'equip') S.socket.emit('equip', idx);
+  else if (act === 'wield') S.socket.emit('activateInv', idx);
+  else if (act === 'wiki') showItemInGuide(stack.id);
   else if (act === 'chat') insertItemLinkToChat(stack.id);
   else if (act === 'split') openSplitDialog(idx);
   else if (act === 'pour') S.socket.emit('pourFlask', { invIndex: idx });
@@ -212,8 +217,8 @@ export function pressHotbar(i) {
   const def = ITEMS[it.id];
   if (it.id === 'returnStone') { openReturnTeleport(() => S.socket.emit('useHotbar', i)); return; }
   if (def && def.type === 'food' && def.heal) { S.socket.emit('useHotbar', i); return; }
-  if (def && def.slot && (def.type === 'armor' || def.type === 'weapon' || def.type === 'shield')) { S.socket.emit('equipHotbar', i); return; } // надеть
-  S.socket.emit('activateSlot', i);   // инструмент/прочее — взять «в руку»
+  if (def && def.type === 'armor' && def.slot) { S.socket.emit('equipHotbar', i); return; } // броню — надеть
+  S.socket.emit('activateSlot', i);   // оружие/щит/инструмент — взять «в руку» (сервер выберет руку)
 }
 
 function openSplitDialog(invIndex) {
@@ -319,16 +324,18 @@ export function renderHotbar() {
       + (stack ? itemIcon(stack.id) + (stack.qty > 1 ? `<span class="qty">${stack.qty}</span>` : '') + cd : '');
     slot.draggable = !!stack;
     slot.style.background = stack ? rarityBg(stack.id) : '';
-    slot.classList.toggle('active', S.activeSlot === i);
+    const inHand = stack && (stack.id === S.handR || stack.id === S.handL);   // предмет сейчас в руке
+    slot.classList.toggle('active', !!inHand);
   }
 }
 
-// Панель экипировки (слоты брони) + клик по слоту = снять
+// Панель экипировки (только броня) + клик по слоту = снять. Оружие/щит теперь «в руке», не здесь.
+const ARMOR_SLOTS = ['helmet', 'chest', 'gloves', 'pants', 'boots', 'cloak'];
 export function renderEquipment() {
   const grid = document.getElementById('equipGrid');
   if (!grid) return;
   grid.innerHTML = '';
-  SLOTS.forEach(slot => {
+  ARMOR_SLOTS.forEach(slot => {
     const id = S.equipment[slot];
     const row = document.createElement('div');
     row.className = 'equip-row';

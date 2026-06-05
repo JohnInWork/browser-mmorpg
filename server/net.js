@@ -78,7 +78,7 @@ function setup(io) {
     // --- Обычный игрок ---
     const player = playersMod.create(socket.id);
 
-    socket.emit('init', { ...world.locState(player.location), you: { ...player, activeTool: playersMod.activeTool(player) }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, skills: skillsMod.clientSkills(player), questDefs: quests.clientDefs() });
+    socket.emit('init', { ...world.locState(player.location), you: { ...player, handR: playersMod.handItem(player, 'R'), handL: playersMod.handItem(player, 'L') }, players: playersMod.players, mobs: mobsMod.publicMobs(), depleted: resources.depletedList(), recipes: RECIPES, mobTypes: mobsMod.TYPES, items: playersMod.ITEMS, skills: skillsMod.clientSkills(player), questDefs: quests.clientDefs() });
     socket.broadcast.emit('playerJoined', player);
     io.emit('count', playersMod.count());
 
@@ -307,14 +307,14 @@ function setup(io) {
       }
     });
 
-    // Предмет «в руке» (для отрисовки на персонаже у всех игроков)
-    const sendHeld = () => io.emit('playerHeld', { id: socket.id, held: playersMod.activeTool(player) });
+    // Предметы «в руках» (правая/левая) — для отрисовки на персонаже у всех игроков
+    const sendHands = () => io.emit('playerHands', { id: socket.id, right: playersMod.handItem(player, 'R'), left: playersMod.handItem(player, 'L') });
 
     // Перенос предмета из рюкзака в слот хотбара (предмет уходит из рюкзака)
     socket.on('invToHotbar', ({ invIndex, slot }) => {
       if (playersMod.invToHotbar(player, invIndex, slot)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
-        sendHeld();
+        sendHands();
       }
     });
 
@@ -322,7 +322,7 @@ function setup(io) {
     socket.on('hotbarToInv', ({ slot, invIndex } = {}) => {
       if (playersMod.hotbarToInv(player, slot, invIndex)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
-        sendHeld();
+        sendHands();
       }
     });
 
@@ -330,7 +330,7 @@ function setup(io) {
     socket.on('moveHotbar', ({ from, to } = {}) => {
       if (playersMod.moveHotbar(player, from, to)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
-        sendHeld();
+        sendHands();
       }
     });
 
@@ -339,7 +339,7 @@ function setup(io) {
       if (playersMod.equipHotbar(player, slot)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
         io.emit('playerEquipment', { id: socket.id, equipment: player.equipment });
-        sendHeld();
+        sendHands();
       }
     });
 
@@ -409,21 +409,19 @@ function setup(io) {
       }
     });
 
-    // Активация слота хотбара (взять предмет «в руки») — в т.ч. по клавишам 1–6
+    // Взять «в руку» предмет из слота хотбара (оружие/инструмент → правая, щит → левая) — в т.ч. по клавишам 1–6
     socket.on('activateSlot', (slot) => {
-      if (!Number.isInteger(slot) || slot < 0 || slot >= player.hotbar.length) return;
-      player.activeInvId = null;                          // выбор хотбара снимает «рюкзачную» активность
-      if (!player.hotbar[slot]) { player.activeSlot = null; }
-      else { player.activeSlot = (player.activeSlot === slot) ? null : slot; }
-      socket.emit('inventoryUpdate', playersMod.invState(player));
-      sendHeld();
+      if (playersMod.wieldHotbar(player, slot)) {
+        socket.emit('inventoryUpdate', playersMod.invState(player));
+        sendHands();
+      }
     });
 
-    // Активировать инструмент прямо из рюкзака (без переноса в слот — просто «в руку» + подсветка)
+    // Взять «в руку» предмет прямо из рюкзака (без переноса в слот)
     socket.on('activateInv', (invIndex) => {
       if (playersMod.activateInv(player, invIndex)) {
         socket.emit('inventoryUpdate', playersMod.invState(player));
-        sendHeld();
+        sendHands();
       }
     });
 

@@ -704,12 +704,12 @@ function drawPlayer(cx, cy, p, isMe) {
   ctx.beginPath(); ctx.ellipse(cx, cy + 2, 12 * (SCALE / 1.6), 5 * (SCALE / 1.6), 0, 0, Math.PI * 2); ctx.fill();
   if (isMe) { ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.stroke(); }
 
-  // фигура персонажа из внешности (ступни у точки клетки)
-  const ent = getCharImage(p.appearance || DEFAULT_APPEARANCE, p.equipment, p.held);
+  // фигура персонажа из внешности (ступни у точки клетки) + предметы в руках (правая/левая)
+  const ent = getCharImage(p.appearance || DEFAULT_APPEARANCE, p.equipment, p.handR, p.handL);
   const H = CHAR_H, W = H * CHAR_RATIO;
   const topY = cy + 5 - H * CHAR_FEET;
   if (ent.ready) drawCharRim(ent.img, cx - W / 2, topY, W, H);
-  if (p.held && HELD_ITEMS[p.held]) drawHeldItem(cx, topY, W, H, p.held);   // предмет в руке (слой поверх)
+  if (p.handR && HELD_ITEMS[p.handR]) drawHeldItem(cx, topY, W, H, p.handR);   // инструмент в правой руке (слой поверх)
 
   // HP над головой НЕ рисуем — здоровье показывается в интерфейсе (своя панель слева сверху).
 }

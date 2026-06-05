@@ -26,10 +26,9 @@ export const S = {
   // инвентарь / снаряжение
   inventory: [],          // [{ id, qty }]
   hotbar: [null, null, null, null, null, null],
-  activeSlot: null,
-  activeInvId: null,      // id инструмента, активированного прямо в рюкзаке (подсветка)
-  activeTool: null,       // id предмета «в руке» (с сервера: из слота или из рюкзака)
-  equipment: { helmet:null, chest:null, gloves:null, pants:null, boots:null, cloak:null, mainHand:null, offHand:null },
+  handR: null,            // id предмета в правой руке (оружие/инструмент)
+  handL: null,            // id предмета в левой руке (щит)
+  equipment: { helmet:null, chest:null, gloves:null, pants:null, boots:null, cloak:null },
   armor: 0,
   location: 'surface',    // текущая локация игрока (рендерим только объекты/мобов/игроков этой локации)
   FLOOR: [],              // слой пола (трава/тропа/вода) под объектами; MAP — «эффективный» тайл

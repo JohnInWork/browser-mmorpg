@@ -21,15 +21,14 @@ export function setupNet() {
     S.stones = data.stones || [];
     for (const id in data.players) {
       const p = data.players[id];
-      S.players[id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null };
+      S.players[id] = { ...p, rx: p.x, ry: p.y };   // handR/handL приходят в объекте игрока
     }
     for (const id in (data.mobs || {})) S.mobs[id] = { ...data.mobs[id], flash: 0 };
     // инвентарь/снаряжение свои
     S.inventory = data.you.inventory || [];
     S.hotbar = data.you.hotbar || S.hotbar;
-    S.activeSlot = data.you.activeSlot ?? null;
-    S.activeInvId = data.you.activeInvId ?? null;
-    S.activeTool = data.you.activeTool ?? null;
+    S.handR = data.you.handR ?? null;
+    S.handL = data.you.handL ?? null;
     if (data.you.equipment) S.equipment = data.you.equipment;
     S.returnPoint = data.you.returnPoint ?? null;
     S.returnCdUntil = data.you.returnCdUntil ?? 0;
@@ -88,9 +87,9 @@ export function setupNet() {
 
   // Инвентарь обновился (рубка, перенос в хотбар, активация)
   socket.on('inventoryUpdate', (st) => {
-    S.inventory = st.inventory; S.hotbar = st.hotbar; S.activeSlot = st.activeSlot;
-    if (st.activeInvId !== undefined) S.activeInvId = st.activeInvId;
-    if (st.activeTool !== undefined) S.activeTool = st.activeTool;
+    S.inventory = st.inventory; S.hotbar = st.hotbar;
+    if (st.handR !== undefined) S.handR = st.handR;
+    if (st.handL !== undefined) S.handL = st.handL;
     if (st.equipment) { S.equipment = st.equipment; if (S.players[S.myId]) S.players[S.myId].equipment = st.equipment; }
     if (st.armor != null) S.armor = st.armor;
     if (st.gold != null && S.players[S.myId]) S.players[S.myId].gold = st.gold;
@@ -144,7 +143,7 @@ export function setupNet() {
   socket.on('questUpdate', (st) => { S.quests = st; renderQuests(); });
   socket.on('questDone', ({ title, reward }) => { chatLoot(`Квест выполнен: ${title} (+${reward} золота)`); });
 
-  socket.on('playerJoined', (p) => { S.players[p.id] = { ...p, rx: p.x, ry: p.y, held: (p.activeSlot != null && p.hotbar) ? p.hotbar[p.activeSlot] : null }; });
+  socket.on('playerJoined', (p) => { S.players[p.id] = { ...p, rx: p.x, ry: p.y }; });
   socket.on('playerMoved', ({ id, x, y }) => { const p = S.players[id]; if (p) { p.x = x; p.y = y; } });
   socket.on('playerUpdated', ({ id, name }) => {
     if (S.players[id]) S.players[id].name = name;
@@ -152,7 +151,7 @@ export function setupNet() {
   });
   socket.on('playerAppearance', ({ id, appearance }) => { if (S.players[id]) S.players[id].appearance = appearance; });
   socket.on('playerEquipment', ({ id, equipment }) => { if (S.players[id]) S.players[id].equipment = equipment; });
-  socket.on('playerHeld', ({ id, held }) => { if (S.players[id]) S.players[id].held = held; });
+  socket.on('playerHands', ({ id, right, left }) => { if (S.players[id]) { S.players[id].handR = right; S.players[id].handL = left; } });
   socket.on('playerLeft', (id) => { delete S.players[id]; });
   socket.on('count', (n) => { if (onlineEl) onlineEl.textContent = 'Онлайн: ' + n; });
 

@@ -102,26 +102,20 @@ export function buildCharacterSVG(app, equipment, opts = {}){
     const art = ARMOR_ART_CACHE[id] || ITEM_ART[id] || ARMOR_PARTS[slot]; // файл-текстура → конкретный предмет → стандарт по слоту
     if (art) armor += art;
   }
-  // Руки: двуручное оружие перекрывает всё; иначе щит (левая) + инструмент или оружие (правая).
-  // Предметы из реестра held-items рисуются ОТДЕЛЬНЫМ слоем в render (overlay), здесь их пропускаем.
-  const mh = equipment && equipment.mainHand, oh = equipment && equipment.offHand;
-  // Активный инструмент в руке (удочка/топор/кирка/лопата) рисуется ОТДЕЛЬНЫМ слоем (overlay в render)
-  // и на время работы ПЕРЕКРЫВАЕТ оружие/щит — иначе видно и инструмент, и меч сразу.
-  const heldOverlayActive = opts.held && HELD_OVERLAY_IDS.has(opts.held);
+  // Руки: правая (hr) — оружие или инструмент; левая (hl) — щит. Источник: opts.handR/handL (игрок),
+  // либо equipment.mainHand/offHand (НПС/мобы — у них нет хотбара). Инструменты (held-items) рисуются
+  // ОТДЕЛЬНЫМ слоем-оверлеем в render → в композите их пропускаем.
+  const hr = opts.handR !== undefined ? opts.handR : ((equipment && equipment.mainHand) || null);
+  const hl = opts.handL !== undefined ? opts.handL : ((equipment && equipment.offHand) || null);
+  const twoH = hr && TWO_HANDED.has(hr);
   let hands = '';
-  if (heldOverlayActive) {
-    hands = '';                                          // инструмент рисует render-оверлей; оружие/щит прячем
-  } else if (mh && TWO_HANDED.has(mh) && WEAPON_ART[mh] && !HELD_OVERLAY_IDS.has(mh)) {
-    hands = WEAPON_ART[mh];
-  } else {
-    if (oh && SHIELD_ART[oh] && !HELD_OVERLAY_IDS.has(oh)) hands += SHIELD_ART[oh];
-    if (opts.held && HELD_TOOLS[opts.held] && !HELD_OVERLAY_IDS.has(opts.held)) hands += HELD_TOOLS[opts.held];
-    else if (mh && WEAPON_ART[mh] && !HELD_OVERLAY_IDS.has(mh)) hands += WEAPON_ART[mh];
-  }
+  if (!twoH && hl && SHIELD_ART[hl] && !HELD_OVERLAY_IDS.has(hl)) hands += SHIELD_ART[hl];   // щит (левая), если не двуручное
+  if (twoH && WEAPON_ART[hr]) hands += WEAPON_ART[hr];                                        // двуручное — обе руки, без щита
+  else if (hr && WEAPON_ART[hr] && !HELD_OVERLAY_IDS.has(hr)) hands += WEAPON_ART[hr];        // одноручное оружие (правая)
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${back}${body}${hair}${armor}${hands}</svg>`;
 }
 
-// Сигнатура надетых слотов (для ключа кэша)
+// Сигнатура надетой брони (для ключа кэша). Оружие/щит в руках учитываются отдельно (handR/handL).
 function equipKey(equipment){
   if(!equipment) return '';
   return ['cloak', 'mainHand', 'offHand', ...ARMOR_ORDER].filter(s => equipment[s]).map(s => s + ':' + equipment[s]).join(',');
@@ -139,10 +133,11 @@ const imgCache = new Map();
     }).catch(() => {});
   }
 })();
-export function getCharImage(app, equipment, held){
-  const opts = { held };
+// handR/handL — предметы в руках (для игрока). Если не переданы — берутся из equipment.mainHand/offHand (НПС).
+export function getCharImage(app, equipment, handR, handL){
+  const opts = (handR !== undefined || handL !== undefined) ? { handR: handR || null, handL: handL || null } : {};
   const a = app || {};
-  const key = (a.skin || DEFAULT_APPEARANCE.skin) + '|' + (a.hairStyle || '') + '|' + (a.hair || '') + '|' + equipKey(equipment) + '|' + (held || '');
+  const key = (a.skin || DEFAULT_APPEARANCE.skin) + '|' + (a.hairStyle || '') + '|' + (a.hair || '') + '|' + equipKey(equipment) + '|R:' + (opts.handR || '') + '|L:' + (opts.handL || '');
   if(imgCache.has(key)) return imgCache.get(key);
   const ent = { img: new Image(), ready:false };
   ent.img.onload = ()=>{ ent.ready=true; };
