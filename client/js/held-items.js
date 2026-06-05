@@ -5,12 +5,12 @@
 // ДОБАВИТЬ ПРЕДМЕТ = положить файл в client/assets/ и дописать строку (ключ = id предмета в игре).
 // src берётся из единого манифеста client/js/textures.js — тот же файл, что в инвентаре/навыке.
 import { ITEM_TEX } from './textures.js';
-// size — ширина инструмента в координатах тела (увеличены ×2 — крупнее на персонаже). Оверлей не обрезается.
+// size — ширина инструмента в координатах тела (увеличены ×1.5 — крупнее на персонаже). Оверлей не обрезается.
 export const HELD_ITEMS = {
-  pickaxe: { src: ITEM_TEX.pickaxe, hand: 'right', size: 600, grip: { x: 0.18, y: 0.82 }, rot: 0 },
-  axe:     { src: ITEM_TEX.axe,     hand: 'right', size: 600, grip: { x: 0.18, y: 0.82 }, rot: 0 },
-  shovel:  { src: ITEM_TEX.shovel,  hand: 'right', size: 800, grip: { x: 0.46, y: 0.82 }, rot: 0 },
-  fishingRod: { src: ITEM_TEX.fishingRod, hand: 'right', size: 556, grip: { x: 0.147, y: 0.867 }, rot: 0 },
+  pickaxe: { src: ITEM_TEX.pickaxe, hand: 'right', size: 450, grip: { x: 0.18, y: 0.82 }, rot: 0 },
+  axe:     { src: ITEM_TEX.axe,     hand: 'right', size: 450, grip: { x: 0.18, y: 0.82 }, rot: 0 },
+  shovel:  { src: ITEM_TEX.shovel,  hand: 'right', size: 600, grip: { x: 0.46, y: 0.82 }, rot: 0 },
+  fishingRod: { src: ITEM_TEX.fishingRod, hand: 'right', size: 417, grip: { x: 0.147, y: 0.867 }, rot: 0 },
 };
 export const HELD_OVERLAY_IDS = new Set(Object.keys(HELD_ITEMS));
 // Точка ладони в координатах тела 512×512
