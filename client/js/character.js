@@ -22,7 +22,7 @@ const ARMOR_ORDER = ['pants','chest','gloves','boots','helmet'];
 // Холст персонажа: тело в координатах 0..512, viewBox РАСШИРЕН — чтобы крупное оружие (×WEAPON_SCALE)
 // не обрезалось краем. Тело при этом остаётся прежнего размера (см. маппинг в render.js по CHAR_VB).
 export const CHAR_VB = { x: -288, y: -288, w: 1088, h: 800 };   // x:-288..800, y:-288..512 (пол у низа, центр тела=256)
-const WEAPON_SCALE = 1.5;   // во сколько раз крупнее оружие/щит на персонаже
+const WEAPON_SCALE = 1.3;   // во сколько раз крупнее оружие/щит на персонаже
 // Масштабировать SVG-арт вокруг точки (px,py) в координатах тела
 function scaleAround(art, px, py, s) {
   return s === 1 ? art : `<g transform="translate(${px} ${py}) scale(${s}) translate(${-px} ${-py})">${art}</g>`;
