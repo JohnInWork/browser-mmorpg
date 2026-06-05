@@ -305,25 +305,33 @@ function drawFlowers(cx, cy, x, y) {
   }
 }
 
-// Вода: плоские тона (cel-стиль, БЕЗ градиентов) — светлый верх + тёмный низ + анимированные блики
+// Вода: плоский cel-стиль (БЕЗ градиентов). Лёгкая вариация оттенка + мягкие овалы глубины + разнесённые блики.
+const WATER_TONES = ['#3f86c6', '#3c82c2', '#4189c8'];   // близкие плоские оттенки — гладь «дышит», но без пёстрой сетки
 function drawWater(cx, cy, x, y) {
-  const ctx = S.ctx, z = SCALE;
-  fillDiamond(cx, cy, '#4a90cf', 'rgba(0,0,0,.12)');     // верхняя половина (светлее)
-  ctx.fillStyle = '#2f6aa8';                             // нижняя половина темнее — ощущение глубины
-  ctx.beginPath();
-  ctx.moveTo(cx - TW / 2, cy); ctx.lineTo(cx, cy + TH / 2); ctx.lineTo(cx + TW / 2, cy);
-  ctx.closePath(); ctx.fill();
-  const ph = performance.now() / 850 + x * 0.6 + y * 1.1;
-  ctx.lineCap = 'round';
-  for (let i = 0; i < 2; i++) {
-    const yo = (-4 + i * 8) * z + Math.sin(ph + i * 1.7) * 1.6 * z;
-    ctx.strokeStyle = i === 0 ? 'rgba(255,255,255,.30)' : 'rgba(255,255,255,.16)';
-    ctx.lineWidth = 1.5 * z;
-    ctx.beginPath();
-    ctx.moveTo(cx - 11 * z, cy + yo);
-    ctx.quadraticCurveTo(cx, cy + yo - 2.6 * z, cx + 11 * z, cy + yo);
-    ctx.stroke();
+  const ctx = S.ctx, z = SCALE, hw = TW / 2, hh = TH / 2;
+  const seed = tileSeed(x, y), rnd = mulberry32(seed ^ 0x2b1d);
+  fillDiamond(cx, cy, WATER_TONES[seed % WATER_TONES.length], 'rgba(12,40,76,.16)');  // плоская заливка + еле заметная тёмная грань
+  ctx.save();
+  ctx.beginPath(); ctx.moveTo(cx, cy - hh); ctx.lineTo(cx + hw, cy); ctx.lineTo(cx, cy + hh); ctx.lineTo(cx - hw, cy); ctx.closePath(); ctx.clip();
+  // мягкое пятно глубины: округлый тёмный овал (не повторяет форму тайла), не в каждой клетке
+  if (rnd() < 0.7) {
+    ctx.fillStyle = 'rgba(30,74,124,.26)';
+    const px = cx + (rnd() - 0.5) * TW * 0.34, py = cy + (rnd() - 0.5) * TH * 0.34;
+    ctx.beginPath(); ctx.ellipse(px, py, (7 + rnd() * 5) * z, (4 + rnd() * 3) * z, 0, 0, Math.PI * 2); ctx.fill();
   }
+  // блики: короткие плоские штрихи, позиции из сида (не одинаковые «улыбки»), мягкая анимация
+  const ph = performance.now() / 900;
+  ctx.lineCap = 'round';
+  const sparks = 1 + Math.floor(rnd() * 2);
+  for (let i = 0; i < sparks; i++) {
+    const bx = cx + (rnd() - 0.5) * TW * 0.46;
+    const by = cy + (rnd() - 0.5) * TH * 0.44 + Math.sin(ph + i * 1.9 + seed * 0.0007) * 1.3 * z;
+    const len = (4 + rnd() * 4) * z;
+    ctx.strokeStyle = i % 2 ? 'rgba(206,232,255,.30)' : 'rgba(232,245,255,.5)';
+    ctx.lineWidth = 1.4 * z;
+    ctx.beginPath(); ctx.moveTo(bx - len / 2, by); ctx.quadraticCurveTo(bx, by - 1.5 * z, bx + len / 2, by); ctx.stroke();
+  }
+  ctx.restore();
 }
 
 function drawCube(cx, cy, h, c) {
