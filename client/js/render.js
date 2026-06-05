@@ -2,7 +2,7 @@
 import { S } from './state.js';
 import { SCALE, TW, TH, WALL_H, TREE_H, TILE } from './config.js';
 import { isoX, isoY, screenToTile } from './iso.js';
-import { getCharImage, CHAR_RATIO, CHAR_FEET, DEFAULT_APPEARANCE, CHAR_VB } from './character.js';
+import { getCharImage, CHAR_RATIO, CHAR_FEET, DEFAULT_APPEARANCE } from './character.js';
 import { MOB_TEX_BY_ID } from './mob-textures.js';
 import { HELD_ITEMS, HAND_POS } from './held-items.js';
 import { FLOOR_TEX } from './floor-textures.js';
@@ -640,10 +640,10 @@ function drawCharacterMob(cx, cy, m) {
   ctx.fillStyle = 'rgba(255,70,70,.30)';   // красная «опасная» тень под ногами
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 13 * (z / 1.6), 6 * (z / 1.6), 0, 0, Math.PI * 2); ctx.fill();
   const ent = getCharImage(m.appearance || DEFAULT_APPEARANCE, m.equipment || {});
-  const r = charImgRect(cx, cy), bodyTop = cy + 5 - CHAR_H;
-  if (ent.ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; drawCharRim(ent.img, r.x, r.y, r.W, r.H); ctx.restore(); }
+  const H = CHAR_H, W = H * CHAR_RATIO, topY = cy + 5 - H * CHAR_FEET;
+  if (ent.ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; drawCharRim(ent.img, cx - W / 2, topY, W, H); ctx.restore(); }
   ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(15 * (z / 1.6))}px sans-serif`; ctx.textAlign = 'center';
-  ctx.fillText('!', cx, bodyTop - 3);
+  ctx.fillText('!', cx, topY - 3);
 }
 
 function drawMob(cx, cy, m) {
@@ -696,15 +696,7 @@ function drawCharRim(img, x, y, w, h) {
   ctx.drawImage(img, x, y, w, h);                            // сама фигура поверх (без тени)
 }
 
-const CHAR_H = 59 * (SCALE / 1.6); // высота ТЕЛА на экране
-// Прямоугольник всего изображения персонажа (расширенный холст CHAR_VB), при котором тело сохраняет размер CHAR_H.
-function charImgRect(cx, cy) {
-  const sc = CHAR_H / 512;                         // 512 ед. тела = CHAR_H px
-  const W = CHAR_VB.w * sc, H = CHAR_VB.h * sc;
-  const fxc = (256 - CHAR_VB.x) / CHAR_VB.w;       // доля центра тела по X в холсте
-  const fyf = (512 - CHAR_VB.y) / CHAR_VB.h;       // доля «пола» (низ тела) по Y
-  return { x: cx - fxc * W, y: (cy + 5) - fyf * H, W, H };
-}
+const CHAR_H = 59 * (SCALE / 1.6); // высота фигуры на экране (уменьшено в 2 раза)
 function drawPlayer(cx, cy, p, isMe) {
   const ctx = S.ctx;
   // тень под ногами
@@ -714,9 +706,10 @@ function drawPlayer(cx, cy, p, isMe) {
 
   // фигура персонажа из внешности (ступни у точки клетки) + предметы в руках (правая/левая)
   const ent = getCharImage(p.appearance || DEFAULT_APPEARANCE, p.equipment, p.handR, p.handL);
-  const r = charImgRect(cx, cy), bodyTop = cy + 5 - CHAR_H;
-  if (ent.ready) drawCharRim(ent.img, r.x, r.y, r.W, r.H);
-  if (p.handR && HELD_ITEMS[p.handR]) drawHeldItem(cx, bodyTop, CHAR_H, CHAR_H, p.handR);   // инструмент в правой руке (слой поверх, в коорд. тела)
+  const H = CHAR_H, W = H * CHAR_RATIO;
+  const topY = cy + 5 - H * CHAR_FEET;
+  if (ent.ready) drawCharRim(ent.img, cx - W / 2, topY, W, H);
+  if (p.handR && HELD_ITEMS[p.handR]) drawHeldItem(cx, topY, W, H, p.handR);   // инструмент в правой руке (слой поверх)
 
   // HP над головой НЕ рисуем — здоровье показывается в интерфейсе (своя панель слева сверху).
 }
@@ -740,14 +733,14 @@ function drawNpc(cx, cy, appearance, equipment, marker) {
   ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 2, 12 * (SCALE / 1.6), 5 * (SCALE / 1.6), 0, 0, Math.PI * 2); ctx.fill();
   const ent = getCharImage(appearance || DEFAULT_APPEARANCE, equipment);
-  const r = charImgRect(cx, cy), bodyTop = cy + 5 - CHAR_H;
-  if (ent.ready) drawCharRim(ent.img, r.x, r.y, r.W, r.H);
+  const H = CHAR_H, W = H * CHAR_RATIO, topY = cy + 5 - H * CHAR_FEET;
+  if (ent.ready) drawCharRim(ent.img, cx - W / 2, topY, W, H);
   // Имя НЕ рисуем (по наведению). Маркер квеста — рисуем.
   if (marker) {
     ctx.fillStyle = '#f1c40f';
     ctx.font = `bold ${Math.round(17 * (SCALE / 1.6))}px sans-serif`;
     ctx.textAlign = 'center';
-    ctx.fillText(marker, cx, bodyTop - 3);
+    ctx.fillText(marker, cx, topY - 3);
   }
 }
 

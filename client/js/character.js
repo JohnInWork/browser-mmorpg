@@ -19,15 +19,6 @@ export const DEFAULT_APPEARANCE = { skin:'#f3cfa6', hair:'#4a3525', hairStyle:'h
 // Порядок отрисовки брони ПОВЕРХ тела (низ→верх). Плащ рисуется ОТДЕЛЬНО — позади тела.
 const ARMOR_ORDER = ['pants','chest','gloves','boots','helmet'];
 
-// Холст персонажа: тело в координатах 0..512, viewBox РАСШИРЕН — чтобы крупное оружие (×WEAPON_SCALE)
-// не обрезалось краем. Тело при этом остаётся прежнего размера (см. маппинг в render.js по CHAR_VB).
-export const CHAR_VB = { x: -288, y: -288, w: 1088, h: 800 };   // x:-288..800, y:-288..512 (пол у низа, центр тела=256)
-const WEAPON_SCALE = 1.3;   // во сколько раз крупнее оружие/щит на персонаже
-// Масштабировать SVG-арт вокруг точки (px,py) в координатах тела
-function scaleAround(art, px, py, s) {
-  return s === 1 ? art : `<g transform="translate(${px} ${py}) scale(${s}) translate(${-px} ${-py})">${art}</g>`;
-}
-
 // Плащ (нарисован вручную в координатах тела 512×512) — слой ЗА телом
 const CLOAK_BACK = `<path d="M180 176 L120 480 Q256 510 392 480 L332 176 Q256 200 180 176 Z" fill="#8e2f3a"/><path d="M256 190 L392 480 Q256 510 256 510 Z" fill="#6f2530" opacity="0.45"/>`;
 
@@ -122,10 +113,10 @@ export function buildCharacterSVG(app, equipment, opts = {}){
   const hl = opts.handL !== undefined ? opts.handL : ((equipment && equipment.offHand) || null);
   const twoH = hr && TWO_HANDED.has(hr);
   let hands = '';
-  if (!twoH && hl && SHIELD_ART[hl] && !HELD_OVERLAY_IDS.has(hl)) hands += scaleAround(SHIELD_ART[hl], 120, 352, WEAPON_SCALE);   // щит (левая), если не двуручное
-  if (twoH && WEAPON_ART[hr]) hands += scaleAround(WEAPON_ART[hr], 256, 330, WEAPON_SCALE);                                       // двуручное — обе руки (масштаб вокруг центра)
-  else if (hr && WEAPON_ART[hr] && !HELD_OVERLAY_IDS.has(hr)) hands += scaleAround(WEAPON_ART[hr], 390, 388, WEAPON_SCALE);       // одноручное оружие (вокруг правой руки)
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${CHAR_VB.x} ${CHAR_VB.y} ${CHAR_VB.w} ${CHAR_VB.h}">${back}${body}${hair}${armor}${hands}</svg>`;
+  if (!twoH && hl && SHIELD_ART[hl] && !HELD_OVERLAY_IDS.has(hl)) hands += SHIELD_ART[hl];   // щит (левая), если не двуручное
+  if (twoH && WEAPON_ART[hr]) hands += WEAPON_ART[hr];                                        // двуручное — обе руки, без щита
+  else if (hr && WEAPON_ART[hr] && !HELD_OVERLAY_IDS.has(hr)) hands += WEAPON_ART[hr];        // одноручное оружие (правая)
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">${back}${body}${hair}${armor}${hands}</svg>`;
 }
 
 // Сигнатура надетой брони (для ключа кэша). Оружие/щит в руках учитываются отдельно (handR/handL).
