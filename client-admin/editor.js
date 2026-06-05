@@ -57,7 +57,7 @@ const EQUIP_ITEMS = {
   pants: ['', 'leatherLegs', 'silverLegs', 'goldLegs', 'goldPants', 'brownPants', 'redPants', 'monkPants', 'farmerLegs'],
   boots: ['', 'leatherShoes', 'silverBoots', 'goldBoots', 'leatherBoots'],
   cloak: ['', 'cloak'],
-  mainHand: ['', 'ironSword', 'ironGreatsword'],
+  mainHand: ['', 'woodClub', 'ironSword', 'ironGreatsword'],
   offHand: ['', 'ironShield'],
 };
 // Имя предмета из реестра (или '— нет —' для пустого id) — единый источник, меняется при переименовании.
@@ -998,7 +998,7 @@ const SELL_ITEMS = [
   ['leather', 'Кожа'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'],
   ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['leatherMitts', 'Кожаные перчатки'], ['leatherLegs', 'Кожаные поножи'], ['leatherShoes', 'Кожаные сапоги'],
   ['silverHelmet', 'Серебряный шлем'], ['silverChest', 'Серебряный нагрудник'], ['silverGloves', 'Серебряные перчатки'], ['silverLegs', 'Серебряные поножи'], ['silverBoots', 'Серебряные сапоги'],
-  ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['ironGreatsword', 'Двуручный меч'],
+  ['woodClub', 'Деревянная дубина'], ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['ironGreatsword', 'Двуручный меч'],
 ];
 function npcDefaults() { return { name: 'НПС', link: '', description: '', appearance: { skin: PALETTES.skin[0] }, equipment: {}, trader: false, sells: [], dialogue: '', talkText: '', quests: [], enemy: false, hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, loot: [] }; }
 function questDefaults() { return { title: 'Задание', desc: '', type: 'gather', target: 'wood', count: 5, reward: 50, rewardItem: null, thanks: 'Спасибо!', repeatable: false }; }
@@ -1178,7 +1178,7 @@ function openNpcEditor(x, y, existing) {
 }
 
 // --- Конструктор моба ---
-const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['rawWildMeat', 'Мясо дикого животного'], ['cookedWildMeat', 'Жареное мясо'], ['leather', 'Кожа'], ['wood', 'Древесина'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['wolfHelmet', 'Волчий шлем'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток']];
+const LOOT_ITEMS = [['rawChicken', 'Сырая курица'], ['cookedChicken', 'Жареная курица'], ['rawWildMeat', 'Мясо дикого животного'], ['cookedWildMeat', 'Жареное мясо'], ['leather', 'Кожа'], ['wood', 'Древесина'], ['ore', 'Железная руда'], ['ingot', 'Слиток'], ['sand', 'Песок'], ['emptyFlask', 'Колба'], ['bearHelmet', 'Медвежий шлем'], ['wolfHelmet', 'Волчий шлем'], ['woodClub', 'Деревянная дубина'], ['ironSword', 'Железный меч'], ['ironGreatsword', 'Двуручный меч'], ['ironShield', 'Железный щит'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток']];
 const MOB_SPRITE_OPTS = MOB_TEXTURES.map(t => [t.id, t.name]);
 function mobTexSize(id) { return (MOB_TEX_BY_ID[id] && MOB_TEX_BY_ID[id].size) || 46; }
 function mobDefaults() { return { name: '', sprite: 'wolf', aggro: 'aggressive', hp: 24, armor: 0, dmgMin: 2, dmgMax: 5, respawn: 10, size: 0, loot: [] }; }

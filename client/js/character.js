@@ -34,7 +34,9 @@ const SWORD = `<line x1="392" y1="402" x2="392" y2="322" stroke="#7a5230" stroke
 const GREATSWORD = `<line x1="392" y1="388" x2="120" y2="400" stroke="#7a5230" stroke-width="15" stroke-linecap="round"/><circle cx="116" cy="401" r="8" fill="#5e3c1e"/><line x1="378" y1="400" x2="408" y2="372" stroke="#6b7480" stroke-width="12" stroke-linecap="round"/><path d="M384 386 L408 376 L422 175 L406 150 L390 178 Z" fill="#dfe6ee" stroke="#9aa4b0" stroke-width="2"/><path d="M406 168 L397 360" stroke="#9aa4b0" stroke-width="2" opacity="0.45"/>`;
 // Щит в ЛЕВОЙ руке (~x120,y350)
 const SHIELD = `<path d="M70 300 Q120 288 170 300 L162 372 Q120 408 78 372 Z" fill="#8a939e" stroke="#5e6670" stroke-width="4"/><path d="M70 302 Q120 290 170 302 L166 336 Q120 350 74 336 Z" fill="#9aa6b2"/><circle cx="120" cy="345" r="11" fill="#b9c2cd" stroke="#5e6670" stroke-width="3"/>`;
-const WEAPON_ART = { ironSword: SWORD, ironGreatsword: GREATSWORD };
+// Деревянная дубина в ПРАВОЙ руке (кисть ~x392,y395), утолщается к навершию вверх-вправо
+const CLUB = `<line x1="390" y1="404" x2="462" y2="172" stroke="#8C5E53" stroke-width="18" stroke-linecap="round"/><circle cx="470" cy="158" r="25" fill="#8C5E53"/><circle cx="470" cy="158" r="25" fill="none" stroke="#6D4B41" stroke-width="3"/><circle cx="392" cy="406" r="8" fill="#6D4B41"/><line x1="430" y1="302" x2="448" y2="308" stroke="#6D4B41" stroke-width="5" stroke-linecap="round" opacity="0.55"/><line x1="448" y1="248" x2="468" y2="254" stroke="#6D4B41" stroke-width="5" stroke-linecap="round" opacity="0.55"/>`;
+const WEAPON_ART = { ironSword: SWORD, ironGreatsword: GREATSWORD, woodClub: CLUB };
 const SHIELD_ART = { ironShield: SHIELD };
 const TWO_HANDED = new Set(['ironGreatsword']);
 

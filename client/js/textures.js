@@ -15,6 +15,7 @@ export const ITEM_TEX = {
   goldOre: '/assets/gold-ore.svg',
   goldIngot: '/assets/gold-ingot.svg',
   wolfHelmet: '/assets/wolf-helmet.svg',   // легендарный шлем — полная иконка в инвентаре (на теле берётся из ARMOR_TEX)
+  woodClub: '/assets/wood-club.svg',       // деревянная дубина — иконка в инвентаре (на теле берётся из WEAPON_ART)
   // Рыба сырая (14 предсозданных видов)
   fish1: '/assets/fish-1.svg', fish2: '/assets/fish-2.svg', fish3: '/assets/fish-3.svg',
   fish4: '/assets/fish-4.svg', fish5: '/assets/fish-5.svg', fish6: '/assets/fish-6.svg',

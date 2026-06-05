@@ -392,6 +392,15 @@
   ],
   "workbench": [
     {
+      "out": "woodClub",
+      "in": [
+        {
+          "id": "wood",
+          "qty": 80
+        }
+      ]
+    },
+    {
       "out": "fishingRod",
       "in": [
         {
