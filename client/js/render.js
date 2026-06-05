@@ -114,7 +114,7 @@ function drawHeldItem(cx, topY, W, H, id) {
   ctx.save();
   ctx.translate(hx, hy);
   if (def.rot) ctx.rotate(def.rot * Math.PI / 180);
-  ctx.drawImage(img, -(def.grip.x || 0.5) * dw, -(def.grip.y || 0.5) * dh, dw, dh);
+  blit(img, -(def.grip.x || 0.5) * dw, -(def.grip.y || 0.5) * dh, dw, dh);   // через blit — чтобы инструмент тоже получал обводку
   ctx.restore();
 }
 // --- Обводка спрайтов (вкл/выкл в настройках) ----------------------------------------------

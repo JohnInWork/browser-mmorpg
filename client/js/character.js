@@ -105,8 +105,13 @@ export function buildCharacterSVG(app, equipment, opts = {}){
   // Руки: двуручное оружие перекрывает всё; иначе щит (левая) + инструмент или оружие (правая).
   // Предметы из реестра held-items рисуются ОТДЕЛЬНЫМ слоем в render (overlay), здесь их пропускаем.
   const mh = equipment && equipment.mainHand, oh = equipment && equipment.offHand;
+  // Активный инструмент в руке (удочка/топор/кирка/лопата) рисуется ОТДЕЛЬНЫМ слоем (overlay в render)
+  // и на время работы ПЕРЕКРЫВАЕТ оружие/щит — иначе видно и инструмент, и меч сразу.
+  const heldOverlayActive = opts.held && HELD_OVERLAY_IDS.has(opts.held);
   let hands = '';
-  if (mh && TWO_HANDED.has(mh) && WEAPON_ART[mh] && !HELD_OVERLAY_IDS.has(mh)) {
+  if (heldOverlayActive) {
+    hands = '';                                          // инструмент рисует render-оверлей; оружие/щит прячем
+  } else if (mh && TWO_HANDED.has(mh) && WEAPON_ART[mh] && !HELD_OVERLAY_IDS.has(mh)) {
     hands = WEAPON_ART[mh];
   } else {
     if (oh && SHIELD_ART[oh] && !HELD_OVERLAY_IDS.has(oh)) hands += SHIELD_ART[oh];
