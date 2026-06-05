@@ -123,7 +123,7 @@ function drawHeldItem(cx, topY, W, H, id) {
 const OUTLINE = { dark: '#171210', light: '#ffffff', darkR: 1.3, lightR: 2.2, darkA: 0.9, lightA: 0.35 };
 const _silCache = new Map();
 function _silhouette(img, w, h, color) {
-  const key = (img.src || '') + '|' + Math.round(w) + 'x' + Math.round(h) + '|' + color;
+  const key = (img.src || img._okey || '') + '|' + Math.round(w) + 'x' + Math.round(h) + '|' + color;
   let c = _silCache.get(key);
   if (c) return c;
   c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h));
@@ -138,7 +138,7 @@ function outlineOn() { return !!(S.settings && S.settings.outline); }
 // Нарисовать любой спрайт: с обводкой (если включена) либо обычным drawImage. Уважает текущую globalAlpha (мигание при ударе).
 function blit(img, x, y, w, h) {
   const ctx = S.ctx;
-  if (outlineOn() && img && (img._ready || img.complete)) {
+  if (outlineOn() && img && (img._ready || img.complete || img._okey)) {
     const base = ctx.globalAlpha;
     const ds = _silhouette(img, w, h, OUTLINE.dark), ls = _silhouette(img, w, h, OUTLINE.light);
     ctx.save();
@@ -147,6 +147,32 @@ function blit(img, x, y, w, h) {
     ctx.restore();
   }
   ctx.drawImage(img, x, y, w, h);
+}
+// Обводка ПРОЦЕДУРНЫХ фигур (стены, горы — рисуются многоугольниками, не картинкой).
+// Рендерим фигуру один раз в офскрин-канвас (кэш по ключу), затем выводим через blit() —
+// тот же двойной контур, что и у спрайтов. При выключенной обводке рисуем напрямую (ноль накладных).
+const _procCache = new Map();
+function procBlit(key, cx, cy, W, H, bx, by, drawFn) {
+  if (!outlineOn()) { drawFn(cx, cy); return; }
+  let cv = _procCache.get(key);
+  if (!cv) {
+    cv = document.createElement('canvas'); cv.width = Math.ceil(W); cv.height = Math.ceil(H);
+    const prev = S.ctx; S.ctx = cv.getContext('2d');
+    try { drawFn(bx, by); } finally { S.ctx = prev; }   // перенаправляем отрисовку фигуры в офскрин
+    cv._okey = key; cv._ready = true;
+    _procCache.set(key, cv);
+  }
+  blit(cv, cx - bx, cy - by, cv.width, cv.height);
+}
+// Куб-стена (drawCube/drawWoodWall): вершина на h+hh выше cy, низ на hh ниже
+function blitWall(cx, cy, key, drawFn) {
+  const p = 4 * SCALE, hh = TH / 2, W = TW + 2 * p, H = WALL_H + TH + 2 * p, bx = TW / 2 + p, by = WALL_H + hh + p;
+  procBlit(key, cx, cy, W, H, bx, by, drawFn);
+}
+// Высокая фигура (гора/пещерная скала): topExtent — насколько поднимается над cy
+function blitTall(cx, cy, topExtent, key, drawFn) {
+  const p = 4 * SCALE, hh = TH / 2, W = TW + 2 * p, H = topExtent + hh + 2 * p, bx = TW / 2 + p, by = topExtent + p;
+  procBlit(key, cx, cy, W, H, bx, by, drawFn);
 }
 // Нарисовать спрайт объекта по центру клетки (как сундук/наковальня)
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * SCALE, H = sz * SCALE; blit(im, cx - W / 2, cy - H / 2 - 5 * SCALE, W, H); } }
@@ -819,9 +845,9 @@ export function render() {
   drawables.sort((a, b) => a.d - b.d);
 
   for (const o of drawables) {
-    if (o.kind === 'wall') drawCube(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), WALL_H, TILE[2]);
-    else if (o.kind === 'woodWall') drawWoodWall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
-    else if (o.kind === 'caveWall') drawCaveWall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
+    if (o.kind === 'wall') blitWall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 'wall', (x, y) => drawCube(x, y, WALL_H, TILE[2]));
+    else if (o.kind === 'woodWall') blitWall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 'woodWall', (x, y) => drawWoodWall(x, y));
+    else if (o.kind === 'caveWall') blitTall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 59 * SCALE, `cw:${S.location}:${o.x},${o.y}`, (x, y) => drawCaveWall(x, y, o.x, o.y));
     else if (o.kind === 'tree') drawTree(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), S.depletedNodes.has(`${o.x},${o.y}`), o.x, o.y);
     else if (o.kind === 'rock') drawRock(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.ore, S.depletedNodes.has(`${o.x},${o.y}`));
     else if (o.kind === 'anvil') drawAnvil(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y));
@@ -833,7 +859,7 @@ export function render() {
     else if (o.kind === 'stairsDown') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), true);
     else if (o.kind === 'stairsUp') drawStairs(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), false);
     else if (o.kind === 'portal') drawPortal(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.t);
-    else if (o.kind === 'mountain') drawMountain(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), o.x, o.y);
+    else if (o.kind === 'mountain') blitTall(ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 86 * SCALE, `mt:${S.location}:${o.x},${o.y}`, (x, y) => drawMountain(x, y, o.x, o.y));
     else if (o.kind === 'bush') objSprite(bushImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 34);
     else if (o.kind === 'boulder') objSprite(boulderImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 38);
     else if (o.kind === 'fence') objSprite(fenceImg, ox + isoX(o.x, o.y), oy + isoY(o.x, o.y), 42);
