@@ -49,6 +49,9 @@ export const S = {
   questDefs: { story: [], side: [] }, // определения квестов (с сервера)
   quests: { story: 0, progress: 0, completed: [], active: {} }, // прогресс игрока (story + npc active id→прогресс)
 
+  // настройки клиента (хранятся в localStorage)
+  settings: { outline: (() => { try { return localStorage.getItem('opt_outline') === '1'; } catch (e) { return false; } })() },
+
   // ввод
   keys: {},
   touchDir: { dx: 0, dy: 0 },

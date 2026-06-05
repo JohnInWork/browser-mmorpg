@@ -117,8 +117,39 @@ function drawHeldItem(cx, topY, W, H, id) {
   ctx.drawImage(img, -(def.grip.x || 0.5) * dw, -(def.grip.y || 0.5) * dh, dw, dh);
   ctx.restore();
 }
+// --- Обводка спрайтов (вкл/выкл в настройках) ----------------------------------------------
+// Двойной контур (тёмный + светлый ореол) по силуэту спрайта. Включается S.settings.outline.
+// Силуэты кэшируются по (src+размер+цвет), поэтому на FPS не влияет.
+const OUTLINE = { dark: '#171210', light: '#ffffff', darkR: 1.3, lightR: 2.2, darkA: 0.9, lightA: 0.35 };
+const _silCache = new Map();
+function _silhouette(img, w, h, color) {
+  const key = (img.src || '') + '|' + Math.round(w) + 'x' + Math.round(h) + '|' + color;
+  let c = _silCache.get(key);
+  if (c) return c;
+  c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w)); c.height = Math.max(1, Math.ceil(h));
+  const x = c.getContext('2d');
+  x.drawImage(img, 0, 0, w, h);
+  x.globalCompositeOperation = 'source-in'; x.fillStyle = color; x.fillRect(0, 0, c.width, c.height);
+  _silCache.set(key, c);
+  return c;
+}
+function _ring(ctx, sil, x, y, w, h, r) { const n = 16; for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2; ctx.drawImage(sil, x + Math.cos(a) * r, y + Math.sin(a) * r, w, h); } }
+function outlineOn() { return !!(S.settings && S.settings.outline); }
+// Нарисовать любой спрайт: с обводкой (если включена) либо обычным drawImage. Уважает текущую globalAlpha (мигание при ударе).
+function blit(img, x, y, w, h) {
+  const ctx = S.ctx;
+  if (outlineOn() && img && (img._ready || img.complete)) {
+    const base = ctx.globalAlpha;
+    const ds = _silhouette(img, w, h, OUTLINE.dark), ls = _silhouette(img, w, h, OUTLINE.light);
+    ctx.save();
+    ctx.globalAlpha = base * OUTLINE.lightA; _ring(ctx, ls, x, y, w, h, OUTLINE.lightR);
+    ctx.globalAlpha = base * OUTLINE.darkA;  _ring(ctx, ds, x, y, w, h, OUTLINE.darkR);
+    ctx.restore();
+  }
+  ctx.drawImage(img, x, y, w, h);
+}
 // Нарисовать спрайт объекта по центру клетки (как сундук/наковальня)
-function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * SCALE, H = sz * SCALE; S.ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * SCALE, W, H); } }
+function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * SCALE, H = sz * SCALE; blit(im, cx - W / 2, cy - H / 2 - 5 * SCALE, W, H); } }
 
 // Деревья: 2 текстуры одного дерева (для разнообразия), вариант стабилен по координатам клетки
 const treeImgs = ['/assets/tree1.svg', '/assets/tree2.svg'].map(src => { const im = new Image(); im._ready = false; im.onload = () => { im._ready = true; }; im.src = src; return im; });
@@ -358,7 +389,7 @@ function drawTree(cx, cy, depleted, x, y) {
   // спрайт дерева из SVG (один из 2 вариантов, стабильно по клетке), ствол у точки клетки
   const img = treeImgs[treeVariant(x, y)];
   const W = 56 * z, H = 56 * z, top = cy + 6 * z - H;
-  if (img._ready) ctx.drawImage(img, cx - W / 2, top, W, H);
+  if (img._ready) blit(img, cx - W / 2, top, W, H);
 }
 
 // Камень / железная руда (фасеточный валун в cel-стиле). ore — вкрапления руды; depleted — обломки.
@@ -377,7 +408,7 @@ function drawRock(cx, cy, ore, depleted) {
 function drawAnvil(cx, cy) {
   const ctx = S.ctx, z = SCALE;
   const W = 32 * z, H = 32 * z, top = cy - H / 2 - 5 * z;   // по центру клетки, чуть приподнят
-  if (anvilReady) ctx.drawImage(anvilImg, cx - W / 2, top, W, H);
+  if (anvilReady) blit(anvilImg, cx - W / 2, top, W, H);
 }
 
 // Плавильня — спрайт из SVG (client/assets/smelter.svg)
@@ -387,14 +418,14 @@ function drawSmelter(cx, cy) { objSprite(smelterImg, cx, cy, 40); }
 function drawCampfire(cx, cy) {
   const ctx = S.ctx, z = SCALE;
   const W = 34 * z, H = 34 * z, top = cy - H / 2 - 5 * z;   // по центру клетки, чуть приподнят
-  if (campfireReady) ctx.drawImage(campfireImg, cx - W / 2, top, W, H);
+  if (campfireReady) blit(campfireImg, cx - W / 2, top, W, H);
 }
 
 // Сундук-хранилище — спрайт из SVG пользователя (client/assets/chest.svg)
 function drawChest(cx, cy) {
   const ctx = S.ctx, z = SCALE;
   const W = 32 * z, H = 32 * z, top = cy - H / 2 - 5 * z;   // по центру клетки, чуть приподнят
-  if (chestReady) ctx.drawImage(chestImg, cx - W / 2, top, W, H);
+  if (chestReady) blit(chestImg, cx - W / 2, top, W, H);
 }
 
 // Песочная куча — спрайт из SVG; depleted — выкопана (плоское пятно)
@@ -513,7 +544,7 @@ function drawChicken(cx, cy, m, s = 1) {
   if (chickenReady) {
     ctx.save();
     if (m.flash > 0) ctx.globalAlpha = 0.6; // мигание при ударе (как у волка/медведя)
-    ctx.drawImage(chickenImg, cx - 20 * z, cy - 27 * z, 38 * z, 31 * z);
+    blit(chickenImg, cx - 20 * z, cy - 27 * z, 38 * z, 31 * z);
     ctx.restore();
   }
   // HP над головой не рисуем — здоровье показывается в интерфейсе
@@ -529,7 +560,7 @@ function drawWolf(cx, cy, m, s = 1) {
   if (wolfReady) {
     ctx.save();
     if (m.flash > 0) ctx.globalAlpha = 0.6; // лёгкое мигание при ударе
-    ctx.drawImage(wolfImg, cx - W / 2, top, W, H);
+    blit(wolfImg, cx - W / 2, top, W, H);
     ctx.restore();
   }
   // маркер агрессии + полоса HP (над картинкой)
@@ -548,7 +579,7 @@ function drawBear(cx, cy, m, s = 1) {
   if (bearReady) {
     ctx.save();
     if (m.flash > 0) ctx.globalAlpha = 0.6; // лёгкое мигание при ударе
-    ctx.drawImage(bearImg, cx - W / 2, top, W, H);
+    blit(bearImg, cx - W / 2, top, W, H);
     ctx.restore();
   }
   // маркер агрессии + полоса HP (над картинкой)
@@ -564,7 +595,7 @@ function drawSpriteMob(cx, cy, m) {
   const sz = (m.size || (tex && tex.size) || 46) * z, top = cy + 7 * z - sz;
   ctx.fillStyle = 'rgba(0,0,0,.28)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, sz * 0.4, sz * 0.16, 0, 0, Math.PI * 2); ctx.fill();
-  if (img && img._ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; ctx.drawImage(img, cx - sz / 2, top, sz, sz); ctx.restore(); }
+  if (img && img._ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; blit(img, cx - sz / 2, top, sz, sz); ctx.restore(); }
   if (m.aggressive) { ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('!', cx, top + 4 * z); }
   // HP над головой не рисуем — здоровье показывается в интерфейсе (своё слева, цель боя справа)
 }
@@ -621,6 +652,7 @@ function roundRect(x, y, w, h, r) {
 // Тёмный ореол-подложка по контуру фигуры: отделяет персонажа от фона, чтобы он не сливался
 // и не казался плоской картонкой. Силуэт следует за прозрачностью спрайта (рисуем картинку как «тень»).
 function drawCharRim(img, x, y, w, h) {
+  if (outlineOn()) { blit(img, x, y, w, h); return; }        // режим обводки — общий двойной контур (как у всех объектов)
   const ctx = S.ctx, z = SCALE / 1.6;
   ctx.save();
   ctx.shadowColor = 'rgba(0,0,0,.3)';

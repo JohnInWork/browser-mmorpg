@@ -218,6 +218,16 @@ function setupChat() {
     cb.addEventListener('change', () => { chatFilters[cb.dataset.cat] = cb.checked; renderChatLog(); });
   });
 
+  // Настройка «Обводка объектов» (меню) — вкл/выкл двойной контур у спрайтов, хранится в localStorage
+  const outlineCb = document.getElementById('optOutline');
+  if (outlineCb) {
+    outlineCb.checked = !!(S.settings && S.settings.outline);
+    outlineCb.addEventListener('change', () => {
+      S.settings.outline = outlineCb.checked;
+      try { localStorage.setItem('opt_outline', outlineCb.checked ? '1' : '0'); } catch (e) {}
+    });
+  }
+
   // Ввод: Enter — отправить и вернуться к игре; Esc — закрыть поле
   input.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {

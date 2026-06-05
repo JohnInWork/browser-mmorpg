@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>MMORPG — Этап 1</title>
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
 </head>
 <body>
   <!-- Экран создания персонажа -->
@@ -140,6 +140,7 @@
     </div>
     <div class="popup hidden" id="menuPanel">
       <h3>Меню</h3>
+      <label class="menu-opt"><input type="checkbox" id="optOutline"> Обводка объектов</label>
       <button id="logoutBtn">Выход</button>
     </div>
 
@@ -214,6 +215,6 @@
   </div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="js/main.js?v=58"></script>
+  <script type="module" src="js/main.js?v=59"></script>
 </body>
 </html>
