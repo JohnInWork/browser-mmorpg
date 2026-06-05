@@ -176,7 +176,14 @@ function setup(io) {
       }
       return false;
     };
-    const priceOf = (id) => (playersMod.ITEMS[id] && playersMod.ITEMS[id].price) || 0;
+    // Цена продажи игроком торговцу — % от стоимости по КАТЕГОРИИ (см. BALANCE.md):
+    // сырьё 5%, переработка/еда 12%, снаряжение 20%, трофей 30%, спец 0%. Продажа = медленный доход.
+    const sellPrice = (id) => {
+      const d = playersMod.ITEMS[id];
+      if (!d) return 0;
+      const pct = playersMod.SELL_PCT[playersMod.sellCatOf(id)];
+      return Math.floor((d.price || 0) * (pct || 0));
+    };
 
     // Продать выделенные предметы (массив индексов рюкзака)
     socket.on('sellItems', (indices) => {
@@ -186,7 +193,7 @@ function setup(io) {
       player.inventory.forEach((it, i) => {
         if (!it || !set.has(i)) return;
         if (playersMod.ITEMS[it.id] && playersMod.ITEMS[it.id].nosell) return;   // непродаваемое (камень возвращения) — пропускаем
-        g += priceOf(it.id) * (it.qty || 1); player.inventory[i] = null;
+        g += sellPrice(it.id) * (it.qty || 1); player.inventory[i] = null;
       });
       if (g <= 0) return;
       player.gold += g;
@@ -194,8 +201,8 @@ function setup(io) {
       socket.emit('loot', { gold: g });
     });
 
-    // Цена покупки у НПС-продавца — с наценкой ×2 от базовой
-    const buyPrice = (id) => Math.max(1, ((playersMod.ITEMS[id] && playersMod.ITEMS[id].price) || 0) * 2);
+    // Цена покупки у НПС-продавца = стоимость предмета (price). Это золото, которое платит игрок.
+    const buyPrice = (id) => Math.max(1, (playersMod.ITEMS[id] && playersMod.ITEMS[id].price) || 0);
     // НПС-продавец рядом, у которого товар id (Купить)
     const sellerNear = (id) => {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -430,6 +437,24 @@ function setup(io) {
       if (typeof id === 'string' && quests.acceptNpc(player, id)) {
         socket.emit('questUpdate', quests.clientState(player));
       }
+    });
+
+    // Сдать НПС-квест: игрок должен стоять вплотную к НПС, который его выдал, и квест — готов к сдаче.
+    socket.on('turnInQuest', (id) => {
+      if (typeof id !== 'string') return;
+      let giver = null;                                       // НПС с этим квестом рядом?
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = world.npcAt(player.location, player.x + dx, player.y + dy);
+        if (n && (n.quests || []).some(q => q.id === id)) { giver = n; break; }
+      }
+      if (!giver) return;
+      const r = quests.turnIn(player, id, playersMod.removeItems);   // gather → заберёт предметы; выдаст золото
+      if (!r) return;
+      if (r.rewardItem) playersMod.addItem(player, r.rewardItem.id, r.rewardItem.qty);
+      socket.emit('inventoryUpdate', playersMod.invState(player));
+      socket.emit('questUpdate', quests.clientState(player));
+      socket.emit('questDone', { title: r.quest.title, reward: r.reward });
+      if (giver.talkText || r.quest.thanks) socket.emit('talkResult', { x: giver.x, y: giver.y, completed: true, text: giver.talkText || r.quest.thanks });
     });
 
     // Поговорить с НПС (подошёл вплотную) — завершает активный talk-квест, если этот НПС его цель

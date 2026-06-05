@@ -12,10 +12,12 @@ function questProgress(io, pid, p, kind, name) {
   if (!results.length) return;
   let changed = false;
   for (const r of results) {
-    if (r.done) {
+    if (r.done) {                                                   // сюжетная цепочка завершается автоматически
       if (r.rewardItem) addItem(p, r.rewardItem.id, r.rewardItem.qty); // награда-предмет (авторские квесты)
       io.to(pid).emit('questDone', { title: r.quest.title, reward: r.reward });
       changed = true;
+    } else if (r.ready) {                                           // НПС-квест: цель набрана — напомнить вернуться к НПС
+      io.to(pid).emit('chatMessage', { cat: 'system', text: `Цель выполнена: «${r.quest.title}». Вернись к НПС, чтобы сдать квест.` });
     }
   }
   if (changed) io.to(pid).emit('inventoryUpdate', invState(p)); // обновить золото/предметы

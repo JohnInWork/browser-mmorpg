@@ -1,6 +1,6 @@
 // UI/HUD-помощники: панель игрока, панель цели боя, инвентарь/хотбар/экипировка, подсказки, цифры урона.
 import { S } from './state.js';
-import { itemIcon, itemName, itemPrice, SLOTS, SLOT_NAMES, ITEMS, CAT_NAMES, RARITY, itemRarity, rarityColor, UI_SVG } from './items.js';
+import { itemIcon, itemName, itemPrice, buyPrice, sellPrice, SLOTS, SLOT_NAMES, ITEMS, CAT_NAMES, RARITY, itemRarity, rarityColor, UI_SVG } from './items.js';
 import { SKILL_TEX } from './textures.js';
 
 // Фон-плитка по редкости (с альфой) для слота с предметом; '' — сброс к стандартному фону
@@ -368,7 +368,7 @@ export function selectAllTrade() { tradeSel.clear(); S.inventory.forEach((s, i) 
 
 function updateTradeFooter() {
   const me = S.players[S.myId];
-  let sum = 0; tradeSel.forEach(i => { const s = S.inventory[i]; if (s) sum += itemPrice(s.id) * (s.qty || 1); });
+  let sum = 0; tradeSel.forEach(i => { const s = S.inventory[i]; if (s) sum += sellPrice(s.id) * (s.qty || 1); });
   document.getElementById('tradeGold').textContent = (me && me.gold) || 0;
   document.getElementById('tradeSelCount').textContent = tradeSel.size;
   document.getElementById('tradeSelSum').textContent = sum;
@@ -479,6 +479,7 @@ export function closeInteractions() {
   closeCraft();
   closeBank();
   closeBuy();
+  closeTalk();
   closeNpcHub();
   closeCreative();
   const qd = document.getElementById('questDialog'); if (qd) qd.classList.add('hidden');
@@ -661,7 +662,10 @@ function guideItemHtml(id) {
   if (it.bonusVsPassive) stats.push(`${UI_SVG.sword} Урон по мирным существам: <b>+${it.bonusVsPassive}</b>`);
   if (it.heal) stats.push(`${UI_SVG.heart} Лечит: <b>+${it.heal}</b>`);
   if (it.gathers) stats.push(`Добывает: <b>${({ tree: 'древесину', rock: 'камень/руду', sand: 'песок' })[it.gathers] || it.gathers}</b>`);
-  if (it.price) stats.push(`${UI_SVG.coin} Цена продажи: <b>${it.price}</b> зол.`);
+  if (it.price) {
+    stats.push(`${UI_SVG.coin} Купить: <b>${buyPrice(id)}</b> зол.`);
+    if (!it.nosell) stats.push(`${UI_SVG.coin} Продать: <b>${sellPrice(id)}</b> зол.`);
+  }
   if (stats.length) h += `<div class="g-sec">Характеристики</div><div class="g-stats">${stats.map(s => `<div>${s}</div>`).join('')}</div>`;
   const rf = recipeFor(id);
   if (rf) h += `<div class="g-sec">Создаётся · ${STATION_NAMES[rf.station] || rf.station}</div><div class="g-row">`
@@ -742,7 +746,7 @@ export function renderQuests() {
   const qrow = (q, mode) => {
     let tag = '';
     if (mode === 'storyActive') tag = ` <span class="q-prog">${qs.progress}/${q.count}</span>`;
-    else if (mode === 'sideActive') tag = ` <span class="q-prog">${qs.active[q.id]}/${q.count}</span>`;
+    else if (mode === 'sideActive') tag = questStatusOf(q) === 'ready' ? ` <span class="q-ready">готов к сдаче</span>` : ` <span class="q-prog">${questProgress(q)}/${q.count}</span>`;
     else if (mode === 'done') tag = ` <span class="q-done">✓</span>`;
     return `<div class="q-item${mode === 'done' ? ' done' : ''}"><div class="q-title">${q.title}${tag}</div>`
       + `<div class="q-desc">${q.desc}</div><div class="q-reward">${UI_SVG.coin} ${q.reward}</div></div>`;
@@ -755,6 +759,29 @@ export function renderQuests() {
   body.innerHTML = cat('story', 'Сюжетные', storyActive, 'storyActive')
     + cat('side', 'Побочные', sideActive, 'sideActive')
     + cat('done', 'Выполненные', completed, 'done');
+}
+
+// --- Статус и прогресс НПС-квеста на клиенте (зеркалит сервер) ---
+// gather считается по фактическому наличию предметов в рюкзаке, kill — по счётчику убийств с сервера.
+function questTarget(def) { return def.type ? def.target : (def.gather || def.kill || def.talk); }
+function questInvCount(id) { let n = 0; for (const s of (S.inventory || [])) if (s && s.id === id) n += s.qty || 1; return n; }
+function isGather(def) { return def.type === 'gather' || (!def.type && def.gather); }
+function isKill(def) { return def.type === 'kill' || (!def.type && def.kill); }
+function questProgress(def) {
+  const cnt = def.count || 1;
+  if (isGather(def)) return Math.min(questInvCount(questTarget(def)), cnt);
+  if (isKill(def)) return Math.min(((S.quests.active && S.quests.active[def.id]) || 0), cnt);
+  return 0;
+}
+// 'done' | 'ready' (цель достигнута, можно сдать) | 'active' (взят, в процессе) | 'offer' (ещё не взят)
+function questStatusOf(def) {
+  const id = def.id;
+  if ((S.quests.completed || []).includes(id)) return 'done';
+  if (!(S.quests.active && S.quests.active[id] != null)) return 'offer';
+  const cnt = def.count || 1;
+  if (isGather(def)) return questInvCount(questTarget(def)) >= cnt ? 'ready' : 'active';
+  if (isKill(def)) return (((S.quests.active[id]) || 0) >= cnt) ? 'ready' : 'active';
+  return 'active'; // talk — завершается разговором, отдельной сдачи нет
 }
 
 // --- Диалог квеста от НПС (взять / отказаться / спасибо) ---
@@ -785,50 +812,87 @@ export function openQuestDialog(arg) {
   else { const qid = S.mobTypes[arg] && S.mobTypes[arg].quest; def = qid && S.questDefs.npc && S.questDefs.npc[qid]; }
   const panel = document.getElementById('questDialog');
   if (!def || !panel) return;
+  hideNpcHubPanel();                                   // прячем хаб (вернётся по «Назад»), чтобы окна не накладывались
+  const fromHub = !!hubNpc;
   const qid = def.id;
   const rewardLine = `Награда: ${UI_SVG.coin} ${def.reward}` + (def.rewardItem ? ` + ${escHtml(itemName(def.rewardItem.id))}${def.rewardItem.qty > 1 ? ' ×' + def.rewardItem.qty : ''}` : '');
-  const status = (S.quests.completed || []).includes(qid) ? 'done'
-    : (S.quests.active && S.quests.active[qid] != null) ? 'active' : 'offer';
-  let html = `<button class="popup-close" id="qdClose">✕</button><h3>${escHtml(def.title)}</h3>`;
-  const goalOffer = questObjective(def, 0);
+  const status = questStatusOf(def);
+  const backBtn = fromHub ? `<button class="popup-back" id="qdBack" title="Назад">←</button>` : '';
+  let html = `${backBtn}<button class="popup-close" id="qdClose">✕</button><h3>${escHtml(def.title)}</h3>`;
+  const goal = questObjective(def, questProgress(def));
+  html += `<p class="qd-desc">${escHtml(def.desc)}</p>`;
   if (status === 'offer') {
-    html += `<p class="qd-desc">${escHtml(def.desc)}</p>`
-      + (goalOffer ? `<div class="qd-goal">${goalOffer}</div>` : '')
+    html += (goal ? `<div class="qd-goal">${goal}</div>` : '')
       + `<div class="qd-reward">${rewardLine}</div>`
       + `<div class="qd-btns"><button id="qdAccept" class="qd-accept">Взять</button><button id="qdDecline">Отказаться</button></div>`;
+  } else if (status === 'ready') {
+    html += (goal ? `<div class="qd-goal qd-goal-done">${goal} ✓</div>` : '')
+      + `<div class="qd-reward">${rewardLine}</div>`
+      + `<div class="qd-btns"><button id="qdTurnIn" class="qd-accept">Сдать</button><button id="qdDecline">Закрыть</button></div>`;
   } else if (status === 'active') {
-    const goalActive = questObjective(def, S.quests.active[qid] || 0);
-    html += `<p class="qd-desc">${escHtml(def.desc)}</p>`
-      + (goalActive ? `<div class="qd-goal">${goalActive}</div>` : '')
+    html += (goal ? `<div class="qd-goal">${goal}</div>` : '')
       + `<div class="qd-btns"><button id="qdDecline">Закрыть</button></div>`;
   } else {
-    html += `<p class="qd-desc">${def.thanks || 'Спасибо за помощь!'}</p>`
+    html = `${backBtn}<button class="popup-close" id="qdClose">✕</button><h3>${escHtml(def.title)}</h3>`
+      + `<p class="qd-desc">${escHtml(def.thanks || 'Спасибо за помощь!')}</p>`
       + `<div class="qd-btns"><button id="qdDecline">Закрыть</button></div>`;
   }
   panel.innerHTML = html;
   panel.classList.remove('hidden');
-  const close = () => panel.classList.add('hidden');
-  panel.querySelector('#qdClose').addEventListener('click', close);
-  panel.querySelector('#qdDecline').addEventListener('click', close);
+  const hide = () => panel.classList.add('hidden');
+  const backToHub = () => { hide(); if (hubNpc) openNpcHub(hubNpc); };          // вернуться к окну разговора
+  const closeAll = () => { hide(); closeNpcHub(); };
+  panel.querySelector('#qdClose').addEventListener('click', closeAll);
+  panel.querySelector('#qdDecline').addEventListener('click', fromHub ? backToHub : hide);
+  const bk = panel.querySelector('#qdBack'); if (bk) bk.addEventListener('click', backToHub);
   const acc = panel.querySelector('#qdAccept');
-  if (acc) acc.addEventListener('click', () => { S.socket.emit('acceptQuest', qid); close(); });
+  if (acc) acc.addEventListener('click', () => { S.socket.emit('acceptQuest', qid); fromHub ? backToHub() : hide(); });
+  const ti = panel.querySelector('#qdTurnIn');
+  if (ti) ti.addEventListener('click', () => { S.socket.emit('turnInQuest', qid); fromHub ? backToHub() : hide(); });
 }
 
 // --- Окно разговора с НПС: имя, описание, кнопки (Поговорить / Квесты / Купить / Продать) ---
 let hubNpc = null;
-function setHubMsg(text) { const el = document.getElementById('npcMsg'); if (el) { el.textContent = text || ''; el.classList.toggle('show', !!text); } }
-// Сообщение в открытый хаб (для завершения talk-квеста); если хаб закрыт — обычной табличкой
-export function npcHubMessage(text) { if (hubNpc && !document.getElementById('npcDialog').classList.contains('hidden')) setHubMsg(text); else openSign(text); }
+
+// Реплика НПС — отдельное окно с кнопкой «Назад» к хабу. Используется для «Поговорить» и для текста talk-квеста.
+export function openNpcTalk(text) {
+  const panel = document.getElementById('talkPanel');
+  if (!panel || !hubNpc) { openSign(text); return; }   // нет хаба (напр. talk-квест без открытого окна) — показать табличкой
+  hideNpcHubPanel();
+  panel.innerHTML = `<button class="popup-back" id="talkBack" title="Назад">←</button>`
+    + `<button class="popup-close" id="talkClose">✕</button>`
+    + `<h3>${escHtml(hubNpc.name)}</h3>`
+    + `<p class="talk-text">${escHtml(text || '…')}</p>`
+    + `<div class="qd-btns"><button id="talkBackBtn">Назад</button></div>`;
+  panel.classList.remove('hidden');
+  const back = () => { panel.classList.add('hidden'); if (hubNpc) openNpcHub(hubNpc); };
+  panel.querySelector('#talkBack').addEventListener('click', back);
+  panel.querySelector('#talkBackBtn').addEventListener('click', back);
+  panel.querySelector('#talkClose').addEventListener('click', () => { panel.classList.add('hidden'); closeNpcHub(); });
+}
+export function closeTalk() { const p = document.getElementById('talkPanel'); if (p) p.classList.add('hidden'); }
+// Сообщение от НПС (завершение talk-квеста): открыть окно реплики, если есть активный хаб; иначе табличкой
+export function npcHubMessage(text) { if (hubNpc) openNpcTalk(text); else openSign(text); }
+
+// Спрятать DOM окна разговора, НЕ сбрасывая hubNpc (чтобы подокна могли вернуться по «Назад»).
+function hideNpcHubPanel() { const p = document.getElementById('npcDialog'); if (p) p.classList.add('hidden'); }
+// Пересобрать окно разговора, если оно сейчас открыто (после questUpdate/inventoryUpdate — статусы квестов).
+export function refreshNpcHub() {
+  const p = document.getElementById('npcDialog');
+  if (hubNpc && p && !p.classList.contains('hidden')) openNpcHub(hubNpc);
+}
+
+const QSTATUS_TAG = { active: ' · в процессе', ready: ' · готов к сдаче', done: ' · выполнен', offer: '' };
 
 export function openNpcHub(npc) {
   const panel = document.getElementById('npcDialog');
   if (!panel) return;
   hubNpc = npc;
+  closeBuy(); closeTrade(); closeTalk();                          // одно активное окно НПС: прячем возможные подокна
   const questBtns = (npc.quests || []).map((q, i) => {
-    const status = (S.quests.completed || []).includes(q.id) ? 'done'
-      : (S.quests.active && S.quests.active[q.id] != null) ? 'active' : 'offer';
-    const tag = status === 'active' ? ' · в процессе' : status === 'done' ? ' · выполнен' : '';
-    return `<button class="npc-act" data-act="quest" data-i="${i}">Квест: ${escHtml(q.title)}${tag}</button>`;
+    const status = questStatusOf(q);
+    const cls = status === 'ready' ? ' ready' : status === 'done' ? ' done' : '';
+    return `<button class="npc-act${cls}" data-act="quest" data-i="${i}">Квест: ${escHtml(q.title)}<span class="npc-qtag">${QSTATUS_TAG[status] || ''}</span></button>`;
   }).join('');
   const talkBtn = npc.dialogue ? `<button class="npc-act" data-act="talk">Поговорить</button>` : '';
   const buyBtn = (npc.sells && npc.sells.length) ? `<button class="npc-act" data-act="buy">Купить</button>` : '';
@@ -836,16 +900,15 @@ export function openNpcHub(npc) {
   panel.innerHTML = `<button class="popup-close" id="npcClose">✕</button>
     <h3>${escHtml(npc.name)}</h3>
     ${npc.description ? `<p class="npc-desc">${escHtml(npc.description)}</p>` : ''}
-    <div class="npc-msg" id="npcMsg"></div>
     <div class="npc-acts">${talkBtn}${questBtns}${buyBtn}${sellBtn}</div>`;
   panel.classList.remove('hidden');
-  panel.querySelector('#npcClose').addEventListener('click', () => { panel.classList.add('hidden'); hubNpc = null; });
+  panel.querySelector('#npcClose').addEventListener('click', closeNpcHub);
   panel.querySelectorAll('.npc-act').forEach(b => b.addEventListener('click', () => {
     const act = b.dataset.act;
-    if (act === 'talk') setHubMsg(npc.dialogue);
+    if (act === 'talk') openNpcTalk(npc.dialogue);                // реплика — в отдельном окне с «Назад»
     else if (act === 'quest') openQuestDialog(npc.quests[+b.dataset.i]);
     else if (act === 'buy') openBuy(npc);
-    else if (act === 'sell') openTrade();
+    else if (act === 'sell') { closeNpcHub(); openTrade(); }      // торговля — отдельное большое окно
   }));
 }
 
@@ -853,14 +916,19 @@ export function openNpcHub(npc) {
 export function openBuy(npc) {
   const panel = document.getElementById('buyPanel');
   if (!panel) return;
+  hideNpcHubPanel();                                   // прячем хаб (вернётся по «Назад»)
+  const fromHub = !!hubNpc;
   const rows = (npc.sells || []).map(id => {
-    const price = Math.max(1, (itemPrice(id) || 0) * 2);
+    const price = buyPrice(id);
     return `<div class="buy-row"><span class="buy-ic">${itemIcon(id)}</span><span class="buy-name">${escHtml(itemName(id))}</span><button class="buy-btn" data-id="${id}">${UI_SVG.coin} ${price}</button></div>`;
   }).join('');
-  panel.innerHTML = `<button class="popup-close" id="buyClose">✕</button><h3>Купить — ${escHtml(npc.name)}</h3>
+  const backBtn = fromHub ? `<button class="popup-back" id="buyBack" title="Назад">←</button>` : '';
+  panel.innerHTML = `${backBtn}<button class="popup-close" id="buyClose">✕</button><h3>Купить — ${escHtml(npc.name)}</h3>
     <div class="buy-list">${rows || '<div class="buy-empty">Нет товаров</div>'}</div>`;
   panel.classList.remove('hidden');
-  panel.querySelector('#buyClose').addEventListener('click', () => panel.classList.add('hidden'));
+  panel.querySelector('#buyClose').addEventListener('click', () => { panel.classList.add('hidden'); closeNpcHub(); });
+  const bk = panel.querySelector('#buyBack');
+  if (bk) bk.addEventListener('click', () => { panel.classList.add('hidden'); if (hubNpc) openNpcHub(hubNpc); });
   panel.querySelectorAll('.buy-btn').forEach(b => b.addEventListener('click', () => S.socket.emit('buyItem', { id: b.dataset.id })));
 }
 export function closeBuy() { const p = document.getElementById('buyPanel'); if (p) p.classList.add('hidden'); }

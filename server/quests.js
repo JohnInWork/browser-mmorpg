@@ -16,6 +16,9 @@ function talkTarget(def)   { return def.type === 'talk'   ? def.target : null; }
 function defaultState() { return { story: 0, progress: 0, completed: [], active: {} }; }
 function activeStory(p) { return QUESTS.story[p.quests.story] || null; }
 
+// Сколько единиц предмета id лежит в рюкзаке игрока (для gather-квестов: цель проверяется по факту в инвентаре).
+function invCount(p, id) { let n = 0; for (const s of p.inventory || []) if (s && s.id === id) n += s.qty || 1; return n; }
+
 // Завершить НПС-квест: выдать золото. Повторяемый — НЕ уходит в completed (можно взять снова).
 function finishNpc(p, id, def) {
   delete p.quests.active[id];
@@ -24,7 +27,26 @@ function finishNpc(p, id, def) {
   return { quest: def, done: true, reward: def.reward || 0, rewardItem: def.rewardItem || null, repeatable: !!def.repeatable };
 }
 
+// Готов ли НПС-квест к сдаче (цель достигнута, но игрок ещё не сдал его НПС).
+// kill — по счётчику убийств; gather — по фактическому наличию предметов в рюкзаке.
+function questReady(p, id) {
+  const d = npcDef(id);
+  if (!d || p.quests.active[id] == null) return false;
+  if (d.type === 'kill')   return p.quests.active[id] >= d.count;
+  if (d.type === 'gather') return invCount(p, gatherTarget(d)) >= d.count;
+  return false;   // talk завершается самим фактом разговора (recordTalk), отдельной сдачи нет
+}
+
+// Сдать готовый НПС-квест (игрок стоит у НПС-выдавшего). За gather забираем предметы. removeItems из players.js.
+function turnIn(p, id, removeItems) {
+  if (!questReady(p, id)) return null;
+  const d = npcDef(id);
+  if (d.type === 'gather' && removeItems) removeItems(p, gatherTarget(d), d.count);
+  return finishNpc(p, id, d);
+}
+
 // Засчитать убийство моба mobType: сюжет + активные НПС-квесты типа kill. Возвращает массив результатов.
+// СЮЖЕТ авто-продвигается; НПС-квесты только КОПЯТ прогресс (сдаются вручную у НПС) — ready=true при достижении цели.
 function recordKill(p, kind, name) {
   const out = [];
   const q = activeStory(p);
@@ -37,18 +59,19 @@ function recordKill(p, kind, name) {
     const d = npcDef(id);
     const tgt = d && killTarget(d);
     if (!d || (tgt !== kind && tgt !== name)) continue;   // совпадение по типу-спрайту ИЛИ по имени конкретного моба
+    if (p.quests.active[id] >= d.count) continue;          // цель уже набрана — ждёт сдачи у НПС
     p.quests.active[id]++;
-    if (p.quests.active[id] < d.count) out.push({ quest: d, done: false });
-    else out.push(finishNpc(p, id, d));
+    const ready = p.quests.active[id] >= d.count;
+    out.push({ quest: d, done: false, ready });            // НЕ завершаем — игрок сам сдаёт квест НПС
   }
   return out;
 }
 
-// Статус НПС-квеста для игрока: 'done' | 'active' | 'offer' | null
+// Статус НПС-квеста для игрока: 'done' | 'ready' | 'active' | 'offer' | null
 function npcStatus(p, id) {
   if (!npcDef(id)) return null;
   if (p.quests.completed.includes(id)) return 'done';
-  if (p.quests.active[id] != null) return 'active';
+  if (p.quests.active[id] != null) return questReady(p, id) ? 'ready' : 'active';
   return 'offer';
 }
 
@@ -59,26 +82,23 @@ function acceptNpc(p, id) {
   return true;
 }
 
-// Засчитать получение предмета itemId (qty шт.) — продвигает активные gather-квесты. Результат | null.
+// Получен предмет itemId — есть ли активный gather-квест на него (для обновления прогресса в панели).
+// Прогресс gather считается по факту наличия в рюкзаке, поэтому здесь НИЧЕГО не начисляем и не завершаем:
+// квест сдаётся вручную у НПС (turnIn). Возвращаем сам квест (если есть активный на этот предмет) | null.
 // Вызывается при ЛЮБОМ способе получить предмет: добыча, рыбалка, лут с моба, крафт.
 function recordGather(p, itemId, qty = 1) {
   for (const id in p.quests.active) {
     const d = npcDef(id);
     if (!d || gatherTarget(d) !== itemId) continue;
-    p.quests.active[id] += qty;
-    if (p.quests.active[id] < d.count) return { quest: d, done: false };
-    return finishNpc(p, id, d);
+    return { quest: d, done: false, ready: questReady(p, id) };
   }
   return null;
 }
 
-// Применить результат recordGather: выдать предмет-награду и разослать события клиенту (io+pid).
-// addItem — функция выдачи предмета (из players.js). inventoryUpdate шлёт вызывающий.
-function applyGatherResult(io, pid, p, q, addItem) {
+// Применить результат recordGather: только обновить прогресс квестов на клиенте (награда — при сдаче у НПС).
+function applyGatherResult(io, pid, p, q /* , addItem */) {
   if (!q) return false;
-  if (q.done && q.rewardItem && addItem) addItem(p, q.rewardItem.id, q.rewardItem.qty);
   io.to(pid).emit('questUpdate', clientState(p));
-  if (q.done) io.to(pid).emit('questDone', { title: q.quest.title, reward: q.reward });
   return true;
 }
 
@@ -101,4 +121,4 @@ function clientState(p) {
 // Определения квестов для клиента (сюжет + побочные + НПС с авторскими)
 function clientDefs() { return { story: QUESTS.story, side: QUESTS.side || [], npc: npcDefs() }; }
 
-module.exports = { QUESTS, setAuthored, npcDefs, npcDef, defaultState, activeStory, recordKill, recordGather, applyGatherResult, recordTalk, npcStatus, acceptNpc, clientState, clientDefs };
+module.exports = { QUESTS, setAuthored, npcDefs, npcDef, defaultState, activeStory, recordKill, recordGather, applyGatherResult, recordTalk, npcStatus, questReady, turnIn, acceptNpc, clientState, clientDefs };

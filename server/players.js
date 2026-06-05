@@ -4,6 +4,23 @@ const world = require('./world');
 const skills = require('./skills');
 const ITEMS = require('./data/items.json').items;
 
+// --- Экономика: категории продажи (см. BALANCE.md). Доля цены, которую даёт торговец. ---
+const SELL_PCT = { raw: 0.05, processed: 0.12, gear: 0.20, trophy: 0.30, special: 0 };
+const PROCESSED_IDS = new Set(['ingot', 'silverIngot', 'goldIngot', 'emptyFlask', 'waterFlask']);
+// Категория продажи предмета: берём из поля sellCat, иначе выводим по типу (на случай новых/отредактированных вещей).
+function sellCatOf(id) {
+  const d = ITEMS[id];
+  if (!d) return 'processed';
+  if (d.sellCat) return d.sellCat;
+  if (d.nosell || d.type === 'special') return 'special';
+  if (d.rarity === 'legendary') return 'trophy';
+  if (['armor', 'weapon', 'shield', 'tool'].includes(d.type)) return 'gear';
+  if (d.type === 'ingredient') return 'raw';
+  if (d.type === 'food') return id.startsWith('cooked') ? 'processed' : 'raw';
+  if (d.type === 'resource') return PROCESSED_IDS.has(id) ? 'processed' : 'raw';
+  return 'raw';
+}
+
 const COLORS = ['#e74c3c','#3498db','#2ecc71','#f1c40f','#9b59b6','#e67e22','#1abc9c','#ff6b9d'];
 
 const players = {}; // socketId -> player
@@ -435,4 +452,5 @@ function respawn(io, p) {
 
 module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, handItem, activateInv, wieldId, wieldHotbar, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
   bankMove, bankQuick, upgradeBank, bankStateOf, pourFlask, fillFlasks, invState, ITEMS,
-  ownsReturnStone, bindReturnStone, RETURN_STONE_ID, eatHotbar, moveHotbar, equipHotbar };
+  ownsReturnStone, bindReturnStone, RETURN_STONE_ID, eatHotbar, moveHotbar, equipHotbar,
+  SELL_PCT, sellCatOf };

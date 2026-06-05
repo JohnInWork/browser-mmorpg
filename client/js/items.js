@@ -141,3 +141,20 @@ export function itemIcon(id) {
 export function itemName(id) { return (ITEMS[id] && ITEMS[id].name) || id; }
 export function itemType(id) { return ITEMS[id] && ITEMS[id].type; }
 export function itemPrice(id) { return (ITEMS[id] && ITEMS[id].price) || 0; }
+// --- Экономика (зеркалит сервер, см. BALANCE.md). Покупка = полная цена; продажа = % по категории. ---
+const SELL_PCT = { raw: 0.05, processed: 0.12, gear: 0.20, trophy: 0.30, special: 0 };
+const PROCESSED_IDS = new Set(['ingot', 'silverIngot', 'goldIngot', 'emptyFlask', 'waterFlask']);
+export function sellCatOf(id) {
+  const d = ITEMS[id];
+  if (!d) return 'processed';
+  if (d.sellCat) return d.sellCat;
+  if (d.nosell || d.type === 'special') return 'special';
+  if (d.rarity === 'legendary') return 'trophy';
+  if (['armor', 'weapon', 'shield', 'tool'].includes(d.type)) return 'gear';
+  if (d.type === 'ingredient') return 'raw';
+  if (d.type === 'food') return id.startsWith('cooked') ? 'processed' : 'raw';
+  if (d.type === 'resource') return PROCESSED_IDS.has(id) ? 'processed' : 'raw';
+  return 'raw';
+}
+export function buyPrice(id) { return Math.max(1, itemPrice(id)); }
+export function sellPrice(id) { return Math.floor(itemPrice(id) * (SELL_PCT[sellCatOf(id)] || 0)); }

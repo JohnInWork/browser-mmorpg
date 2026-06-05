@@ -1,6 +1,6 @@
 // Сетевой слой клиента: подписка на события сервера и обновление состояния.
 import { S } from './state.js';
-import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, openSign, npcHubMessage, showDeathWindow } from './ui.js';
+import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, refreshNpcHub, openSign, npcHubMessage, showDeathWindow } from './ui.js';
 import { itemName } from './items.js';
 
 // Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
@@ -96,6 +96,7 @@ export function setupNet() {
     if (st.returnPoint !== undefined) S.returnPoint = st.returnPoint;
     if (st.returnCdUntil !== undefined) S.returnCdUntil = st.returnCdUntil;
     renderInventory(); renderHotbar(); renderEquipment(); updateStats(); updateGold(); renderTrade(); renderCraft(); renderBank();
+    renderQuests(); refreshNpcHub();   // прогресс gather-квестов считается по рюкзаку — обновляем панель и окно НПС
   });
 
   // Сундук-хранилище: пришло состояние банка → открыть/обновить панель
@@ -140,7 +141,7 @@ export function setupNet() {
   });
 
   // Квесты
-  socket.on('questUpdate', (st) => { S.quests = st; renderQuests(); });
+  socket.on('questUpdate', (st) => { S.quests = st; renderQuests(); refreshNpcHub(); });
   socket.on('questDone', ({ title, reward }) => { chatLoot(`Квест выполнен: ${title} (+${reward} золота)`); });
 
   socket.on('playerJoined', (p) => { S.players[p.id] = { ...p, rx: p.x, ry: p.y }; });
