@@ -803,6 +803,38 @@ export function render() {
     }
   }
 
+  // 1.5) БЕРЕГОВАЯ ОБВОДКА: рёбра тайлов суши, граничащих с водой/краем карты (тот же двойной контур).
+  if (outlineOn()) {
+    const ctx = S.ctx, hw = TW / 2, hh = TH / 2;
+    const isWater = (xx, yy) => {
+      if (xx < 0 || yy < 0 || xx >= S.mapW || yy >= S.mapH) return true;                 // за картой — как «вода» (край суши)
+      const t = S.MAP[yy][xx];
+      if (t === 2 || t === 32 || t === 37) return false;                                  // стены — не вода
+      return ((S.FLOOR[yy] && S.FLOOR[yy][xx]) || 0) === 1;                               // вода
+    };
+    ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    for (let y = vMinY; y <= vMaxY; y++) {
+      for (let x = vMinX; x <= vMaxX; x++) {
+        if (isWater(x, y)) continue;                                                      // только суша
+        const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
+        const T = [cx, cy - hh], R = [cx + hw, cy], B = [cx, cy + hh], L = [cx - hw, cy];
+        const segs = [];
+        if (isWater(x, y - 1)) segs.push([T, R]);                                         // верх-право
+        if (isWater(x + 1, y)) segs.push([R, B]);                                         // низ-право
+        if (isWater(x, y + 1)) segs.push([B, L]);                                         // низ-лево
+        if (isWater(x - 1, y)) segs.push([L, T]);                                         // верх-лево
+        if (!segs.length) continue;
+        for (const pass of [[OUTLINE.dark, 2.6, OUTLINE.darkA], [OUTLINE.light, 1.0, OUTLINE.lightA]]) {
+          ctx.strokeStyle = pass[0]; ctx.lineWidth = pass[1]; ctx.globalAlpha = pass[2];
+          ctx.beginPath();
+          for (const s of segs) { ctx.moveTo(s[0][0], s[0][1]); ctx.lineTo(s[1][0], s[1][1]); }
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
   // 2) ОБЪЕКТЫ (стены, деревья, мобы, игроки) — сортировка по глубине (x+y); только видимая область
   const drawables = [];
   for (let y = vMinY; y <= vMaxY; y++) {
