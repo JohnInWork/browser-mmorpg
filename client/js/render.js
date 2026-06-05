@@ -410,7 +410,7 @@ function drawTree(cx, cy, depleted, x, y) {
     return;
   }
   // тень под кроной
-  ctx.fillStyle = 'rgba(0,0,0,.22)';
+  ctx.fillStyle = 'rgba(0,0,0,.40)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 13 * z, 5 * z, 0, 0, Math.PI * 2); ctx.fill();
   // спрайт дерева из SVG (один из 2 вариантов, стабильно по клетке), ствол у точки клетки
   const img = treeImgs[treeVariant(x, y)];
@@ -564,7 +564,7 @@ function drawHpBar(cx, topY, hp, maxHp) {
 function drawChicken(cx, cy, m, s = 1) {
   const ctx = S.ctx, z = SCALE * 0.5 * s;   // курица мелкая; s — множитель размера из настроек моба
   // тень
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 3 * z, 14 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
   // спрайт курицы из того же SVG, что в вики (viewBox -20 -27 38 31, лапки внизу у cy)
   if (chickenReady) {
@@ -579,7 +579,7 @@ function drawChicken(cx, cy, m, s = 1) {
 function drawWolf(cx, cy, m, s = 1) {
   const ctx = S.ctx, z = SCALE * s;
   // тень
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 18 * z, 6 * z, 0, 0, Math.PI * 2); ctx.fill();
   // спрайт волка из SVG (квадратный viewBox 512×512, ступни ~внизу)
   const W = 44 * z, H = 44 * z, top = cy + 7 * z - H;
@@ -598,7 +598,7 @@ function drawWolf(cx, cy, m, s = 1) {
 function drawBear(cx, cy, m, s = 1) {
   const ctx = S.ctx, z = SCALE * s;
   // тень
-  ctx.fillStyle = 'rgba(0,0,0,.32)';
+  ctx.fillStyle = 'rgba(0,0,0,.50)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 5 * z, 24 * z, 8 * z, 0, 0, Math.PI * 2); ctx.fill();
   // спрайт медведя из SVG (босс — крупнее прочих)
   const W = 60 * z, H = 60 * z, top = cy + 9 * z - H;
@@ -619,7 +619,7 @@ function drawSpriteMob(cx, cy, m) {
   const ctx = S.ctx, z = SCALE;
   const tex = MOB_TEX_BY_ID[m.sprite], img = mobTexImg[m.sprite];
   const sz = (m.size || (tex && tex.size) || 46) * z, top = cy + 7 * z - sz;
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, sz * 0.4, sz * 0.16, 0, 0, Math.PI * 2); ctx.fill();
   if (img && img._ready) { ctx.save(); if (m.flash > 0) ctx.globalAlpha = 0.6; blit(img, cx - sz / 2, top, sz, sz); ctx.restore(); }
   if (m.aggressive) { ctx.fillStyle = '#ff5b5b'; ctx.font = `bold ${Math.round(13 * z)}px sans-serif`; ctx.textAlign = 'center'; ctx.fillText('!', cx, top + 4 * z); }
@@ -648,7 +648,7 @@ function drawMob(cx, cy, m) {
   if (m.sprite === 'bear') return drawBear(cx, cy, m, s);
   if (m.sprite && mobTexImg[m.sprite]) return drawSpriteMob(cx, cy, m);   // новая текстура (size — абсолютный)
   const ctx = S.ctx, z = SCALE;
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 4 * z, 15 * z, 7 * z, 0, 0, Math.PI * 2); ctx.fill();
   const r = 13 * z;
   ctx.fillStyle = m.flash > 0 ? '#ffffff' : m.color;
@@ -692,7 +692,7 @@ const CHAR_H = 59 * (SCALE / 1.6); // высота фигуры на экран�
 function drawPlayer(cx, cy, p, isMe) {
   const ctx = S.ctx;
   // тень под ногами
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 2, 12 * (SCALE / 1.6), 5 * (SCALE / 1.6), 0, 0, Math.PI * 2); ctx.fill();
   if (isMe) { ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = 2; ctx.stroke(); }
 
@@ -722,7 +722,7 @@ function npcMarker(m) {
 }
 function drawNpc(cx, cy, appearance, equipment, marker) {
   const ctx = S.ctx;
-  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fillStyle = 'rgba(0,0,0,.45)';
   ctx.beginPath(); ctx.ellipse(cx, cy + 2, 12 * (SCALE / 1.6), 5 * (SCALE / 1.6), 0, 0, Math.PI * 2); ctx.fill();
   const ent = getCharImage(appearance || DEFAULT_APPEARANCE, equipment);
   const H = CHAR_H, W = H * CHAR_RATIO, topY = cy + 5 - H * CHAR_FEET;
