@@ -751,6 +751,25 @@ export function renderQuests() {
 }
 
 // --- Диалог квеста от НПС (взять / отказаться / спасибо) ---
+// Строка цели квеста: что и сколько нужно сделать. cur — текущий прогресс (для активного).
+// Поддерживает авторский формат ({type,target,count}) и статический ({gather|kill|talk,count}).
+function questObjective(def, cur = 0) {
+  const cnt = def.count || 1;
+  if (def.type === 'gather' || (!def.type && def.gather)) {
+    const t = def.type ? def.target : def.gather;
+    return `🎯 Собрать: ${escHtml(itemName(t))} — ${cur}/${cnt}`;
+  }
+  if (def.type === 'kill' || (!def.type && def.kill)) {
+    const t = def.type ? def.target : def.kill;
+    return `🎯 Убить: ${escHtml(t)} — ${cur}/${cnt}`;
+  }
+  if (def.type === 'talk' || (!def.type && def.talk)) {
+    const t = def.type ? def.target : def.talk;
+    return `🎯 Поговорить с: ${escHtml(t)}`;
+  }
+  return '';
+}
+
 // arg: объект-определение квеста (def) ИЛИ строка-тип моба (легаси questgiver)
 export function openQuestDialog(arg) {
   let def;
@@ -764,13 +783,16 @@ export function openQuestDialog(arg) {
   const status = (S.quests.completed || []).includes(qid) ? 'done'
     : (S.quests.active && S.quests.active[qid] != null) ? 'active' : 'offer';
   let html = `<button class="popup-close" id="qdClose">✕</button><h3>${escHtml(def.title)}</h3>`;
+  const goalOffer = questObjective(def, 0);
   if (status === 'offer') {
     html += `<p class="qd-desc">${escHtml(def.desc)}</p>`
+      + (goalOffer ? `<div class="qd-goal">${goalOffer}</div>` : '')
       + `<div class="qd-reward">${rewardLine}</div>`
       + `<div class="qd-btns"><button id="qdAccept" class="qd-accept">Взять</button><button id="qdDecline">Отказаться</button></div>`;
   } else if (status === 'active') {
-    html += `<p class="qd-desc">${def.desc}</p>`
-      + `<div class="qd-prog">Прогресс: ${S.quests.active[qid]}/${def.count}</div>`
+    const goalActive = questObjective(def, S.quests.active[qid] || 0);
+    html += `<p class="qd-desc">${escHtml(def.desc)}</p>`
+      + (goalActive ? `<div class="qd-goal">${goalActive}</div>` : '')
       + `<div class="qd-btns"><button id="qdDecline">Закрыть</button></div>`;
   } else {
     html += `<p class="qd-desc">${def.thanks || 'Спасибо за помощь!'}</p>`

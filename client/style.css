@@ -331,6 +331,7 @@ body {
 #questDialog { left: 50%; right: auto; top: 90px; bottom: auto; transform: translateX(-50%); width: 330px; max-width: 92vw; }
 .qd-desc { font-size: 13px; line-height: 1.5; color: #dfe4ee; margin: 6px 0 10px; }
 .qd-reward, .qd-prog { font-size: 13px; color: #f1c40f; font-weight: 600; margin-bottom: 12px; }
+.qd-goal { font-size: 13px; color: #7ed957; font-weight: 600; margin: 0 0 10px; padding: 6px 9px; background: rgba(126,217,87,0.12); border-left: 3px solid #7ed957; border-radius: 4px; }
 .qd-btns { display: flex; gap: 8px; }
 .qd-btns button { flex: 1; padding: 9px; border: none; border-radius: 8px; background: #3a3a4e; color: #fff; font-weight: 700; cursor: pointer; font-size: 13px; }
 .qd-btns button:hover { filter: brightness(1.12); }
