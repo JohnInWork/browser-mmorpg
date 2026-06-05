@@ -803,19 +803,30 @@ export function render() {
     }
   }
 
-  // 1.5) БЕРЕГОВАЯ ОБВОДКА: рёбра тайлов суши, граничащих с водой/краем карты (тот же двойной контур).
+  // 1.5) ОБВОДКА ТАЙЛОВ: тонкая сетка по каждому тайлу + более сильный контур по берегу (суша↔вода).
   if (outlineOn()) {
     const ctx = S.ctx, hw = TW / 2, hh = TH / 2;
+    const isWall = (xx, yy) => { const t = S.MAP[yy][xx]; return t === 2 || t === 32 || t === 37; };
     const isWater = (xx, yy) => {
       if (xx < 0 || yy < 0 || xx >= S.mapW || yy >= S.mapH) return true;                 // за картой — как «вода» (край суши)
-      const t = S.MAP[yy][xx];
-      if (t === 2 || t === 32 || t === 37) return false;                                  // стены — не вода
+      if (isWall(xx, yy)) return false;                                                   // стены — не вода
       return ((S.FLOOR[yy] && S.FLOOR[yy][xx]) || 0) === 1;                               // вода
     };
     ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    // а) Сетка: контур каждого тайла (кроме клеток под стенами — там пол не рисуется). Одна линия — дёшево.
+    const grid = new Path2D();
     for (let y = vMinY; y <= vMaxY; y++) {
       for (let x = vMinX; x <= vMaxX; x++) {
-        if (isWater(x, y)) continue;                                                      // только суша
+        if (isWall(x, y)) continue;
+        const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
+        grid.moveTo(cx, cy - hh); grid.lineTo(cx + hw, cy); grid.lineTo(cx, cy + hh); grid.lineTo(cx - hw, cy); grid.closePath();
+      }
+    }
+    ctx.strokeStyle = OUTLINE.dark; ctx.lineWidth = 1.1; ctx.globalAlpha = 0.4; ctx.stroke(grid);
+    // б) Берег: рёбра суши у воды/края — двойной контур поверх сетки (акцент)
+    for (let y = vMinY; y <= vMaxY; y++) {
+      for (let x = vMinX; x <= vMaxX; x++) {
+        if (isWater(x, y) || isWall(x, y)) continue;                                      // только суша
         const cx = ox + isoX(x, y), cy = oy + isoY(x, y);
         const T = [cx, cy - hh], R = [cx + hw, cy], B = [cx, cy + hh], L = [cx - hw, cy];
         const segs = [];
