@@ -19,6 +19,7 @@ function stationAt(x, y) {
 }
 function chestAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 10; }
 function adminChestAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 34; }
+function boardAt(x, y) { return S.MAP && S.MAP[y] && S.MAP[y][x] === 55; }
 
 function isWalkable(x, y) {
   if (!S.MAP || x < 0 || y < 0 || x >= S.mapW || y >= S.mapH) return false;
@@ -221,6 +222,14 @@ export function setupInput() {
       S.path = ap.path; S.targetTile = t;
       return;
     }
+    // Клик по доске объявлений — подойти и открыть список генерируемых квестов
+    if (boardAt(t.x, t.y)) {
+      const ap = approachTo(t.x, t.y);
+      if (!ap) return;
+      S.pendingAction = { kind: 'board', x: t.x, y: t.y };
+      S.path = ap.path; S.targetTile = t;
+      return;
+    }
     // Клик по табличке — подойти и прочитать сообщение
     const sign = signAt(t.x, t.y);
     if (sign) {
@@ -333,6 +342,8 @@ function decideStep() {
       if (adjOrtho(me.x, me.y, a.x, a.y)) openQuestDialog(a.npc);
     } else if (a.kind === 'notice') {
       addFloater(me.x, me.y, a.text, a.color || '#fff'); // дошли до объекта — показать сообщение
+    } else if (a.kind === 'board') {
+      if (adjOrtho(me.x, me.y, a.x, a.y)) S.socket.emit('openBoard');  // дошли до доски — запросить квесты
     } else if (a.kind === 'sign') {
       openSign(a.text);                                  // дошли до таблички — показать текст
     } else if (a.kind === 'npc') {

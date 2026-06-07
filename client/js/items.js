@@ -141,8 +141,9 @@ export function itemIcon(id) {
 export function itemName(id) { return (ITEMS[id] && ITEMS[id].name) || id; }
 export function itemType(id) { return ITEMS[id] && ITEMS[id].type; }
 export function itemPrice(id) { return (ITEMS[id] && ITEMS[id].price) || 0; }
-// --- Экономика (зеркалит сервер, см. BALANCE.md). Покупка = полная цена; продажа = % по категории. ---
+// --- Экономика (зеркалит сервер, см. BALANCE.md). Покупка = price × BUY_MULT; продажа = % по категории. ---
 const SELL_PCT = { raw: 0.05, processed: 0.12, gear: 0.20, trophy: 0.30, special: 0 };
+const BUY_MULT = 2;   // наценка покупки (см. server/players.js)
 const PROCESSED_IDS = new Set(['ingot', 'silverIngot', 'goldIngot', 'emptyFlask', 'waterFlask']);
 export function sellCatOf(id) {
   const d = ITEMS[id];
@@ -156,5 +157,10 @@ export function sellCatOf(id) {
   if (d.type === 'resource') return PROCESSED_IDS.has(id) ? 'processed' : 'raw';
   return 'raw';
 }
-export function buyPrice(id) { return Math.max(1, itemPrice(id)); }
-export function sellPrice(id) { return Math.floor(itemPrice(id) * (SELL_PCT[sellCatOf(id)] || 0)); }
+export function buyPrice(id) { return Math.max(1, Math.floor(itemPrice(id) * BUY_MULT)); }
+export function sellPrice(id) {
+  const cat = sellCatOf(id);
+  const pct = SELL_PCT[cat];
+  if (cat === 'special' || !pct) return 0; // неотчуждаемое не продаётся
+  return Math.max(1, Math.floor(itemPrice(id) * pct)); // минимум 1, ничего не за 0
+}

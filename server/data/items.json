@@ -6,7 +6,7 @@
       "type": "tool",
       "cat": "tool",
       "gathers": "tree",
-      "price": 24,
+      "price": 120,
       "tags": [
         "инструмент",
         "рубка",
@@ -21,7 +21,7 @@
       "type": "tool",
       "cat": "tool",
       "gathers": "rock",
-      "price": 24,
+      "price": 120,
       "tags": [
         "инструмент",
         "добыча",
@@ -36,7 +36,7 @@
       "type": "tool",
       "cat": "tool",
       "gathers": "sand",
-      "price": 24,
+      "price": 120,
       "tags": [
         "инструмент",
         "копание",
@@ -51,7 +51,7 @@
       "type": "tool",
       "cat": "tool",
       "gathers": "fish",
-      "price": 24,
+      "price": 120,
       "tags": [
         "инструмент",
         "рыбалка",
@@ -80,7 +80,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 1,
+      "price": 5,
       "tags": [
         "материал",
         "крафт",
@@ -95,7 +95,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 6,
+      "price": 30,
       "tags": [
         "материал",
         "металл",
@@ -110,7 +110,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 14,
+      "price": 70,
       "tags": [
         "материал",
         "металл",
@@ -126,7 +126,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 2,
+      "price": 10,
       "tags": [
         "материал",
         "песок",
@@ -141,7 +141,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "tags": [
         "колба",
         "стекло",
@@ -156,7 +156,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "tags": [
         "колба",
         "вода",
@@ -172,7 +172,7 @@
       "type": "ingredient",
       "cat": "ingredient",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "tags": [
         "ингредиент",
         "мясо",
@@ -187,7 +187,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 6,
+      "price": 30,
       "heal": 10,
       "tags": [
         "еда",
@@ -204,7 +204,7 @@
       "cat": "armor",
       "slot": "helmet",
       "armor": 1,
-      "price": 24,
+      "price": 120,
       "tags": [
         "броня",
         "металл",
@@ -220,7 +220,7 @@
       "cat": "armor",
       "slot": "chest",
       "armor": 1,
-      "price": 32,
+      "price": 160,
       "tags": [
         "броня",
         "металл",
@@ -236,7 +236,7 @@
       "cat": "armor",
       "slot": "cloak",
       "armor": 1,
-      "price": 20,
+      "price": 100,
       "tags": [
         "броня",
         "ткань"
@@ -253,7 +253,7 @@
       "slot": "helmet",
       "armor": 2,
       "onHitHeal": 1,
-      "price": 480,
+      "price": 2400,
       "tags": [
         "броня",
         "легендарное",
@@ -270,7 +270,7 @@
       "slot": "mainHand",
       "hands": 1,
       "damage": 1,
-      "price": 15,
+      "price": 75,
       "tags": [
         "оружие",
         "дерево"
@@ -286,7 +286,7 @@
       "slot": "mainHand",
       "hands": 1,
       "damage": 1,
-      "price": 60,
+      "price": 300,
       "tags": [
         "оружие",
         "металл",
@@ -303,7 +303,7 @@
       "slot": "mainHand",
       "hands": 2,
       "damage": 2,
-      "price": 105,
+      "price": 525,
       "tags": [
         "оружие",
         "двуручное",
@@ -320,7 +320,7 @@
       "cat": "armor",
       "slot": "offHand",
       "armor": 1,
-      "price": 72,
+      "price": 360,
       "tags": [
         "щит",
         "металл",
@@ -335,7 +335,7 @@
       "type": "armor",
       "cat": "clothing",
       "slot": "chest",
-      "price": 24,
+      "price": 120,
       "tags": [
         "одежда",
         "ткань",
@@ -350,7 +350,7 @@
       "type": "armor",
       "cat": "clothing",
       "slot": "chest",
-      "price": 24,
+      "price": 120,
       "tags": [
         "одежда",
         "ткань"
@@ -364,7 +364,7 @@
       "type": "armor",
       "cat": "clothing",
       "slot": "pants",
-      "price": 20,
+      "price": 100,
       "tags": [
         "одежда",
         "ткань"
@@ -378,7 +378,7 @@
       "type": "armor",
       "cat": "clothing",
       "slot": "pants",
-      "price": 20,
+      "price": 100,
       "tags": [
         "одежда",
         "кожа"
@@ -392,7 +392,7 @@
       "type": "armor",
       "cat": "clothing",
       "slot": "pants",
-      "price": 20,
+      "price": 100,
       "tags": [
         "одежда",
         "ткань"
@@ -406,7 +406,7 @@
       "type": "armor",
       "cat": "clothing",
       "slot": "gloves",
-      "price": 16,
+      "price": 80,
       "tags": [
         "одежда",
         "ткань"
@@ -420,7 +420,7 @@
       "type": "armor",
       "cat": "clothing",
       "slot": "boots",
-      "price": 20,
+      "price": 100,
       "tags": [
         "одежда",
         "кожа"
@@ -434,7 +434,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 5,
+      "price": 25,
       "tags": [
         "материал",
         "кожа",
@@ -450,7 +450,7 @@
       "cat": "armor",
       "slot": "helmet",
       "armor": 1,
-      "price": 28,
+      "price": 140,
       "tags": [
         "броня",
         "кожа",
@@ -466,7 +466,7 @@
       "cat": "armor",
       "slot": "chest",
       "armor": 1,
-      "price": 40,
+      "price": 200,
       "tags": [
         "броня",
         "кожа",
@@ -482,7 +482,7 @@
       "cat": "armor",
       "slot": "gloves",
       "armor": 1,
-      "price": 24,
+      "price": 120,
       "tags": [
         "броня",
         "кожа",
@@ -498,7 +498,7 @@
       "cat": "armor",
       "slot": "pants",
       "armor": 1,
-      "price": 28,
+      "price": 140,
       "tags": [
         "броня",
         "кожа",
@@ -514,7 +514,7 @@
       "cat": "armor",
       "slot": "boots",
       "armor": 1,
-      "price": 24,
+      "price": 120,
       "tags": [
         "броня",
         "кожа",
@@ -529,7 +529,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 12,
+      "price": 60,
       "tags": [
         "материал",
         "серебро",
@@ -544,7 +544,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 28,
+      "price": 140,
       "tags": [
         "материал",
         "серебро",
@@ -561,7 +561,7 @@
       "cat": "armor",
       "slot": "helmet",
       "armor": 2,
-      "price": 104,
+      "price": 520,
       "tags": [
         "броня",
         "серебро",
@@ -577,7 +577,7 @@
       "cat": "armor",
       "slot": "chest",
       "armor": 2,
-      "price": 160,
+      "price": 800,
       "tags": [
         "броня",
         "серебро",
@@ -593,7 +593,7 @@
       "cat": "armor",
       "slot": "gloves",
       "armor": 2,
-      "price": 88,
+      "price": 440,
       "tags": [
         "броня",
         "серебро",
@@ -609,7 +609,7 @@
       "cat": "armor",
       "slot": "pants",
       "armor": 2,
-      "price": 120,
+      "price": 600,
       "tags": [
         "броня",
         "серебро",
@@ -625,7 +625,7 @@
       "cat": "armor",
       "slot": "boots",
       "armor": 2,
-      "price": 96,
+      "price": 480,
       "tags": [
         "броня",
         "серебро",
@@ -640,7 +640,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 15,
+      "price": 75,
       "heal": 10,
       "chance": 0.45,
       "minLevel": 14,
@@ -658,7 +658,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 24,
+      "price": 120,
       "heal": 20,
       "tags": [
         "рыба",
@@ -674,7 +674,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 32,
+      "price": 160,
       "heal": 16,
       "chance": 0.22,
       "minLevel": 26,
@@ -692,7 +692,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 51,
+      "price": 255,
       "heal": 30,
       "tags": [
         "рыба",
@@ -708,7 +708,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "heal": 3,
       "chance": 1,
       "minLevel": 1,
@@ -726,7 +726,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 5,
+      "price": 25,
       "heal": 7,
       "tags": [
         "рыба",
@@ -742,7 +742,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 32,
+      "price": 160,
       "heal": 16,
       "chance": 0.22,
       "minLevel": 26,
@@ -760,7 +760,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 51,
+      "price": 255,
       "heal": 30,
       "tags": [
         "рыба",
@@ -776,7 +776,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "heal": 3,
       "chance": 1,
       "minLevel": 1,
@@ -794,7 +794,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 5,
+      "price": 25,
       "heal": 7,
       "tags": [
         "рыба",
@@ -810,7 +810,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 15,
+      "price": 75,
       "heal": 10,
       "chance": 0.45,
       "minLevel": 14,
@@ -828,7 +828,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 24,
+      "price": 120,
       "heal": 20,
       "tags": [
         "рыба",
@@ -844,7 +844,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "heal": 3,
       "chance": 1,
       "minLevel": 1,
@@ -862,7 +862,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 5,
+      "price": 25,
       "heal": 7,
       "tags": [
         "рыба",
@@ -878,7 +878,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "heal": 3,
       "chance": 1,
       "minLevel": 1,
@@ -896,7 +896,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 5,
+      "price": 25,
       "heal": 7,
       "tags": [
         "рыба",
@@ -912,7 +912,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 32,
+      "price": 160,
       "heal": 16,
       "chance": 0.22,
       "minLevel": 26,
@@ -930,7 +930,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 51,
+      "price": 255,
       "heal": 30,
       "tags": [
         "рыба",
@@ -946,7 +946,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 7,
+      "price": 35,
       "heal": 6,
       "chance": 0.7,
       "minLevel": 6,
@@ -964,7 +964,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 11,
+      "price": 55,
       "heal": 12,
       "tags": [
         "рыба",
@@ -980,7 +980,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 15,
+      "price": 75,
       "heal": 10,
       "chance": 0.45,
       "minLevel": 14,
@@ -998,7 +998,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 24,
+      "price": 120,
       "heal": 20,
       "tags": [
         "рыба",
@@ -1014,7 +1014,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 15,
+      "price": 75,
       "heal": 10,
       "chance": 0.45,
       "minLevel": 14,
@@ -1032,7 +1032,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 24,
+      "price": 120,
       "heal": 20,
       "tags": [
         "рыба",
@@ -1048,7 +1048,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 3,
+      "price": 15,
       "heal": 3,
       "chance": 1,
       "minLevel": 1,
@@ -1066,7 +1066,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 5,
+      "price": 25,
       "heal": 7,
       "tags": [
         "рыба",
@@ -1082,7 +1082,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 70,
+      "price": 350,
       "heal": 26,
       "chance": 0.1,
       "minLevel": 40,
@@ -1100,7 +1100,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 112,
+      "price": 560,
       "heal": 48,
       "tags": [
         "рыба",
@@ -1119,7 +1119,7 @@
       "slot": "helmet",
       "armor": 4,
       "bonusVsPassive": 30,
-      "price": 600,
+      "price": 3000,
       "tags": [
         "броня",
         "легендарное",
@@ -1134,7 +1134,7 @@
       "type": "ingredient",
       "cat": "ingredient",
       "stackable": true,
-      "price": 6,
+      "price": 30,
       "tags": [
         "ингредиент",
         "мясо",
@@ -1149,7 +1149,7 @@
       "type": "food",
       "cat": "food",
       "stackable": true,
-      "price": 14,
+      "price": 70,
       "heal": 20,
       "tags": [
         "еда",
@@ -1165,7 +1165,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 18,
+      "price": 90,
       "tags": [
         "материал",
         "золото",
@@ -1180,7 +1180,7 @@
       "type": "resource",
       "cat": "material",
       "stackable": true,
-      "price": 42,
+      "price": 210,
       "tags": [
         "материал",
         "золото",
@@ -1197,7 +1197,7 @@
       "cat": "armor",
       "slot": "helmet",
       "armor": 3,
-      "price": 240,
+      "price": 1200,
       "tags": [
         "броня",
         "золото",
@@ -1213,7 +1213,7 @@
       "cat": "armor",
       "slot": "chest",
       "armor": 3,
-      "price": 360,
+      "price": 1800,
       "tags": [
         "броня",
         "золото",
@@ -1229,7 +1229,7 @@
       "cat": "armor",
       "slot": "gloves",
       "armor": 3,
-      "price": 192,
+      "price": 960,
       "tags": [
         "броня",
         "золото",
@@ -1245,7 +1245,7 @@
       "cat": "armor",
       "slot": "pants",
       "armor": 3,
-      "price": 264,
+      "price": 1320,
       "tags": [
         "броня",
         "золото",
@@ -1261,7 +1261,7 @@
       "cat": "armor",
       "slot": "boots",
       "armor": 3,
-      "price": 200,
+      "price": 1000,
       "tags": [
         "броня",
         "золото",
@@ -1277,7 +1277,7 @@
       "cat": "armor",
       "slot": "helmet",
       "armor": 1,
-      "price": 24,
+      "price": 120,
       "tags": [
         "броня",
         "одежда"
@@ -1292,7 +1292,7 @@
       "cat": "armor",
       "slot": "chest",
       "armor": 1,
-      "price": 28,
+      "price": 140,
       "tags": [
         "броня",
         "одежда"
@@ -1307,7 +1307,7 @@
       "cat": "armor",
       "slot": "pants",
       "armor": 1,
-      "price": 24,
+      "price": 120,
       "tags": [
         "броня",
         "одежда"
@@ -1322,7 +1322,7 @@
       "cat": "armor",
       "slot": "chest",
       "armor": 1,
-      "price": 24,
+      "price": 120,
       "tags": [
         "броня",
         "одежда"
@@ -1337,7 +1337,7 @@
       "cat": "armor",
       "slot": "pants",
       "armor": 1,
-      "price": 24,
+      "price": 120,
       "tags": [
         "броня",
         "одежда"

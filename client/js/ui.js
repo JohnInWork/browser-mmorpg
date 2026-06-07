@@ -482,6 +482,7 @@ export function closeInteractions() {
   closeTalk();
   closeNpcHub();
   closeCreative();
+  closeBoard();
   const qd = document.getElementById('questDialog'); if (qd) qd.classList.add('hidden');
 }
 export function renderCraft() {
@@ -853,6 +854,7 @@ export function openQuestDialog(arg) {
 
 // --- Окно разговора с НПС: имя, описание, кнопки (Поговорить / Квесты / Купить / Продать) ---
 let hubNpc = null;
+let boardState = null;   // последнее состояние доски объявлений (для перерисовки)
 
 // Реплика НПС — отдельное окно с кнопкой «Назад» к хабу. Используется для «Поговорить» и для текста talk-квеста.
 export function openNpcTalk(text) {
@@ -933,3 +935,58 @@ export function openBuy(npc) {
 }
 export function closeBuy() { const p = document.getElementById('buyPanel'); if (p) p.classList.add('hidden'); }
 export function closeNpcHub() { const p = document.getElementById('npcDialog'); if (p) p.classList.add('hidden'); hubNpc = null; }
+
+// --- Доска объявлений (генерируемые квесты: сдавать не нужно, ресурсы не забираются, награда — золото) ---
+const BOARD_VERB = { craft: 'Сделать', gather: 'Добыть', kill: 'Убить' };
+function boardQuestLabel(q) {
+  const verb = BOARD_VERB[q.type] || '?';
+  const what = q.type === 'kill' ? mobName(q.target) : itemName(q.target);
+  return `${verb} ${q.count} × ${escHtml(what)}`;
+}
+function boardQuestIcon(q) { return q.type === 'kill' ? mobIcon(q.target) : itemIcon(q.target); }
+
+export function openBoard(state) {
+  boardState = state || boardState;
+  const panel = document.getElementById('boardPanel');
+  if (!panel || !boardState) return;
+  const a = boardState.active;
+  let activeHtml;
+  if (a) {
+    const pct = Math.min(100, Math.round((a.progress / a.count) * 100));
+    activeHtml = `<div class="board-active">
+      <div class="board-active-h">Взятое объявление</div>
+      <div class="board-row"><span class="board-ic">${boardQuestIcon(a)}</span>
+        <span class="board-name">${boardQuestLabel(a)}</span></div>
+      <div class="board-bar"><div class="board-bar-fill" style="width:${pct}%"></div></div>
+      <div class="board-prog">${a.progress} / ${a.count} · награда ${UI_SVG.coin} ${a.reward} (придёт сама)</div>
+    </div>`;
+  } else {
+    activeHtml = `<div class="board-hint">Можно взять одно объявление. Сдавать не нужно — награда придёт сама.</div>`;
+  }
+  const slots = (boardState.slots || []).map(q =>
+    `<div class="board-row">
+      <span class="board-ic">${boardQuestIcon(q)}</span>
+      <span class="board-name">${boardQuestLabel(q)}</span>
+      <span class="board-rew">${UI_SVG.coin} ${q.reward}</span>
+      <button class="board-take" data-id="${q.id}"${a ? ' disabled' : ''}>Взять</button>
+    </div>`).join('');
+  // Сколько ждать до обновления (слоты пополняются только по таймеру)
+  const leftMs = Math.max(0, (boardState.nextRefresh || 0) - Date.now());
+  const mins = Math.ceil(leftMs / 60000);
+  const refreshLine = `<div class="board-refresh">Новые объявления — через ~${mins} мин</div>`;
+  panel.innerHTML = `<button class="popup-close" id="boardClose">✕</button>
+    <h3>Доска объявлений</h3>
+    ${activeHtml}
+    <div class="board-list">${slots || '<div class="board-empty">Все объявления разобраны — жди обновления</div>'}</div>
+    ${refreshLine}`;
+  panel.classList.remove('hidden');
+  panel.querySelector('#boardClose').addEventListener('click', closeBoard);
+  panel.querySelectorAll('.board-take').forEach(b => b.addEventListener('click', () => S.socket.emit('acceptBoardQuest', b.dataset.id)));
+}
+// Тихое обновление: перерисовать, только если доска сейчас открыта (прогресс во время добычи).
+export function updateBoard(state) {
+  boardState = state || boardState;
+  const p = document.getElementById('boardPanel');
+  if (p && !p.classList.contains('hidden')) openBoard(boardState);
+}
+export function closeBoard() { const p = document.getElementById('boardPanel'); if (p) p.classList.add('hidden'); }

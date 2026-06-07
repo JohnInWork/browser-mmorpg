@@ -1,6 +1,6 @@
 // Сетевой слой клиента: подписка на события сервера и обновление состояния.
 import { S } from './state.js';
-import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, refreshNpcHub, openSign, npcHubMessage, showDeathWindow } from './ui.js';
+import { addFloater, updateHpHud, updateTargetHud, updateGold, renderInventory, renderHotbar, renderEquipment, updateStats, renderTrade, renderCraft, openBank, renderBank, renderSkills, chatPlayerMsg, chatSystem, chatLoot, chatCombat, TYPE_NAMES, renderQuests, refreshNpcHub, openSign, npcHubMessage, showDeathWindow, openBoard, updateBoard } from './ui.js';
 import { itemName } from './items.js';
 
 // Запасной вывод слоя пола из эффективной карты (под объектами — трава), если сервер не прислал floor
@@ -143,6 +143,14 @@ export function setupNet() {
   // Квесты
   socket.on('questUpdate', (st) => { S.quests = st; renderQuests(); refreshNpcHub(); });
   socket.on('questDone', ({ title, reward }) => { chatLoot(`Квест выполнен: ${title} (+${reward} золота)`); });
+
+  // Доска объявлений
+  socket.on('boardState', (st) => { openBoard(st); });          // подошёл к доске / взял квест — показать окно
+  socket.on('boardUpdate', (st) => { updateBoard(st); });        // прогресс во время добычи — обновить, если открыто
+  socket.on('boardDone', ({ reward, quest }) => {
+    const what = quest && quest.type === 'kill' ? TYPE_NAMES[quest.target] || quest.target : (quest ? itemName(quest.target) : '');
+    chatLoot(`Объявление выполнено: ${quest ? quest.count + ' × ' + what : ''} (+${reward} золота)`);
+  });
 
   socket.on('playerJoined', (p) => { S.players[p.id] = { ...p, rx: p.x, ry: p.y }; });
   socket.on('playerMoved', ({ id, x, y }) => { const p = S.players[id]; if (p) { p.x = x; p.y = y; } });

@@ -6,6 +6,9 @@ const ITEMS = require('./data/items.json').items;
 
 // --- Экономика: категории продажи (см. BALANCE.md). Доля цены, которую даёт торговец. ---
 const SELL_PCT = { raw: 0.05, processed: 0.12, gear: 0.20, trophy: 0.30, special: 0 };
+// Наценка покупки у НПС: покупка = price × BUY_MULT (продажа НЕ зависит от этого). Поднимаем,
+// чтобы золото оставалось ценным, когда доход вырос (квесты с доски и т.п.).
+const BUY_MULT = 2;
 const PROCESSED_IDS = new Set(['ingot', 'silverIngot', 'goldIngot', 'emptyFlask', 'waterFlask']);
 // Категория продажи предмета: берём из поля sellCat, иначе выводим по типу (на случай новых/отредактированных вещей).
 function sellCatOf(id) {
@@ -74,6 +77,7 @@ function create(id) {
     engaging: null,    // id моба, на которого игрок сам идёт драться (он не бьёт первым)
     gathering: null,   // id ресурс-ноды (дерева), которую рубим
     quests: { story: 0, progress: 0, completed: [], active: {} }, // story-цепочка + npc-квесты (active: id→прогресс)
+    board: { slots: [], active: null, nextRefresh: 0 },           // доска объявлений: 3 слота + 1 взятое (см. board.js)
     skills: skills.defaultSkills(),  // навыки игрока (опыт/уровни)
     returnPoint: null,   // точка возврата камня: {location,x,y,name} | null
     returnCdUntil: 0,    // timestamp окончания кулдауна телепорта камнем
@@ -453,4 +457,4 @@ function respawn(io, p) {
 module.exports = { players, create, remove, count, respawn, addItem, hasItem, countItem, removeItems, craft, eat, activeTool, handItem, activateInv, wieldId, wieldHotbar, invToHotbar, hotbarToInv, equipItem, unequipItem, armorValue, weaponDamage, moveItem, splitStack, destroyStack,
   bankMove, bankQuick, upgradeBank, bankStateOf, pourFlask, fillFlasks, invState, ITEMS,
   ownsReturnStone, bindReturnStone, RETURN_STONE_ID, eatHotbar, moveHotbar, equipHotbar,
-  SELL_PCT, sellCatOf };
+  SELL_PCT, BUY_MULT, sellCatOf };

@@ -136,6 +136,10 @@ body {
 .npc-qblock { position: relative; display: flex; flex-direction: column; gap: 7px; padding: 12px; margin-top: 8px; background: #1f1f2a; border: 1px solid #3a3a4e; border-radius: 10px; }
 .q-remove { position: absolute; top: 8px; right: 8px; width: 22px; height: 22px; border: none; border-radius: 6px; background: #3a3a4e; color: #e0a0a0; cursor: pointer; font-size: 12px; }
 .q-remove:hover { background: #e74c3c; color: #fff; }
+.board-modal { display: block; width: 520px; }
+.board-modal .npc-h { margin-bottom: 8px; }
+.board-ed-hint { font-size: 12.5px; color: #aab0c0; line-height: 1.5; margin-bottom: 14px; }
+.board-modal .npc-qblock { margin-bottom: 10px; }
 .npc-addq { margin-top: 8px; padding: 8px; border: 1px dashed #4a4a5e; border-radius: 8px; background: transparent; color: #9ad0a0; cursor: pointer; font-size: 13px; width: 100%; }
 .npc-addq:hover { background: #1f2a1f; }
 .mob-sprites { display: flex; flex-direction: column; gap: 6px; }

@@ -5,6 +5,7 @@ const world = require('./world');
 const { players, addItem, activeTool } = require('./players');
 const { invState } = require('./players');
 const quests = require('./quests');
+const boardMod = require('./board');
 const skills = require('./skills');
 
 // тайл → параметры ноды (kind, инструмент, что даёт, запас, навык, нужный уровень, опыт за ресурс).
@@ -81,6 +82,7 @@ function start(io) {
         io.to(pid).emit('skillUpdate', { skill: 'fishing', ...skills.one(p, 'fishing'), leveledUp: fup.leveledUp });
         const fq = quests.recordGather(p, pick.id);                          // рыба тоже двигает квесты на сбор
         if (fq && fq.done && fq.rewardItem) addItem(p, fq.rewardItem.id, fq.rewardItem.qty);
+        boardMod.notify(io, pid, p, boardMod.recordGather(p, pick.id, 1));    // объявления доски на «добыть N»
         io.to(pid).emit('inventoryUpdate', invState(p));
         io.to(pid).emit('loot', { id: pick.id, qty: 1 });
         if (fq) {
@@ -97,6 +99,7 @@ function start(io) {
       io.to(pid).emit('skillUpdate', { skill: up.skill, ...skills.one(p, up.skill), leveledUp: up.leveledUp });
       const qg = quests.recordGather(p, n.gives);          // продвинуть НПС-квест на сбор (награда внутри)
       if (qg && qg.done && qg.rewardItem) addItem(p, qg.rewardItem.id, qg.rewardItem.qty); // награда-предмет
+      boardMod.notify(io, pid, p, boardMod.recordGather(p, n.gives, 1));   // объявления доски на «добыть N»
       io.to(pid).emit('inventoryUpdate', invState(p));      // включает золото-награду, если квест выполнен
       io.to(pid).emit('loot', { id: n.gives, qty: 1 });
       if (qg) {

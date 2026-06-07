@@ -9,6 +9,7 @@ const mobsMod = require('./mobs');
 const resources = require('./resources');
 const RECIPES = require('./data/recipes.json');
 const quests = require('./quests');
+const boardMod = require('./board');
 const skillsMod = require('./skills');
 const QUESTS = quests.QUESTS;
 const STATION_TILE = { smelter: cfg.TILES.SMELTER, anvil: cfg.TILES.ANVIL, campfire: cfg.TILES.CAMPFIRE, workbench: cfg.TILES.WORKBENCH };
@@ -23,6 +24,24 @@ function setup(io) {
       socket.isAdmin = true;                 // вход в редактор пока без пароля (локальная разработка)
       socket.emit('mapData', world.editorState());
       socket.emit('itemsData', { items: playersMod.ITEMS, recipes: RECIPES });  // данные для редактора предметов/крафта
+      socket.emit('boardData', { quests: boardMod.getPool() });                 // пул объявлений доски для редактора
+
+      // Редактор доски объявлений: записать пул на диск + обновить в памяти
+      socket.on('saveBoardData', (payload) => {
+        if (!socket.isAdmin || !payload || !Array.isArray(payload.quests)) { socket.emit('boardSaveResult', { ok: false }); return; }
+        try {
+          const file = path.join(__dirname, 'data', 'board.json');
+          const doc = JSON.parse(fs.readFileSync(file, 'utf8'));
+          doc.quests = payload.quests;
+          fs.writeFileSync(file, JSON.stringify(doc, null, 2));
+          boardMod.setPool(payload.quests);
+          socket.emit('boardSaveResult', { ok: true });
+          console.log('  💾 Доска объявлений сохранена админом');
+        } catch (e) {
+          console.error('  ⚠ Ошибка сохранения доски:', e.message);
+          socket.emit('boardSaveResult', { ok: false });
+        }
+      });
 
       // Редактор предметов и крафта: записываем на диск + обновляем живую игру без перезапуска
       socket.on('saveItemsData', (payload) => {
@@ -181,8 +200,10 @@ function setup(io) {
     const sellPrice = (id) => {
       const d = playersMod.ITEMS[id];
       if (!d) return 0;
-      const pct = playersMod.SELL_PCT[playersMod.sellCatOf(id)];
-      return Math.floor((d.price || 0) * (pct || 0));
+      const cat = playersMod.sellCatOf(id);
+      const pct = playersMod.SELL_PCT[cat];
+      if (cat === 'special' || !pct) return 0; // неотчуждаемое не продаётся
+      return Math.max(1, Math.floor((d.price || 0) * pct)); // минимум 1, ничего не за 0
     };
 
     // Продать выделенные предметы (массив индексов рюкзака)
@@ -201,8 +222,8 @@ function setup(io) {
       socket.emit('loot', { gold: g });
     });
 
-    // Цена покупки у НПС-продавца = стоимость предмета (price). Это золото, которое платит игрок.
-    const buyPrice = (id) => Math.max(1, (playersMod.ITEMS[id] && playersMod.ITEMS[id].price) || 0);
+    // Цена покупки у НПС-продавца = price × BUY_MULT (наценка). Это золото, которое платит игрок.
+    const buyPrice = (id) => Math.max(1, Math.floor(((playersMod.ITEMS[id] && playersMod.ITEMS[id].price) || 0) * playersMod.BUY_MULT));
     // НПС-продавец рядом, у которого товар id (Купить)
     const sellerNear = (id) => {
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -240,6 +261,7 @@ function setup(io) {
         socket.emit('loot', { id: r.out, qty: r.outQty || 1 });
         const q = quests.recordGather(player, r.out, r.outQty || 1);   // крафт двигает квесты на «принеси предмет»
         quests.applyGatherResult(io, socket.id, player, q, playersMod.addItem);
+        boardMod.notify(io, socket.id, player, boardMod.recordCraft(player, r.out, r.outQty || 1)); // объявления доски на «сделать N»
         socket.emit('inventoryUpdate', playersMod.invState(player));   // после возможной награды
         // Опыт навыка за крафт: костёр → кулинария, плавильня/наковальня → кузнечное дело
         const skill = station === 'campfire' ? 'cooking' : 'smithing';
@@ -455,6 +477,15 @@ function setup(io) {
       socket.emit('questUpdate', quests.clientState(player));
       socket.emit('questDone', { title: r.quest.title, reward: r.reward });
       if (giver.talkText || r.quest.thanks) socket.emit('talkResult', { x: giver.x, y: giver.y, completed: true, text: giver.talkText || r.quest.thanks });
+    });
+
+    // --- Доска объявлений ---
+    const nearBoard = () => nearTile(cfg.TILES.BOARD);
+    socket.on('openBoard', () => { if (nearBoard()) socket.emit('boardState', boardMod.state(player, Date.now())); });
+    socket.on('acceptBoardQuest', (slotId) => {
+      if (!nearBoard() || typeof slotId !== 'string') return;
+      boardMod.accept(player, slotId, Date.now());                 // взять (если уже есть взятое — откажет внутри)
+      socket.emit('boardState', boardMod.state(player, Date.now()));
     });
 
     // Поговорить с НПС (подошёл вплотную) — завершает активный talk-квест, если этот НПС его цель

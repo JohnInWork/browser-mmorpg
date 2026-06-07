@@ -4,6 +4,7 @@ const { rnd, adjOrtho } = require('./util');
 const { players, respawn, armorValue, addItem, invState, ITEMS, weaponDamage } = require('./players');
 const mobsMod = require('./mobs');
 const quests = require('./quests');
+const boardMod = require('./board');
 const skills = require('./skills');
 
 // Продвинуть квесты игрока по убийству моба (kind = спрайт/тип, name = имя конкретного моба)
@@ -22,6 +23,7 @@ function questProgress(io, pid, p, kind, name) {
   }
   if (changed) io.to(pid).emit('inventoryUpdate', invState(p)); // обновить золото/предметы
   io.to(pid).emit('questUpdate', quests.clientState(p));
+  boardMod.notify(io, pid, p, boardMod.recordKill(p, kind, name)); // объявления доски на «убить N»
 }
 
 // Выдать лут моба сразу в инвентарь убийце (каждый дроп — со своим шансом)

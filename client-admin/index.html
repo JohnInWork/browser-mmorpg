@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>MMORPG — Редактор карт (админ)</title>
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 </head>
 <body>
   <!-- Редактор (открывается сразу, без логина) -->
@@ -16,6 +16,7 @@
       <label class="sid-lbl">Связь <input id="sidInput" type="text" value="1" style="width:80px" placeholder="напр. Лес"></label>
       <button id="saveBtn">Сохранить</button>
       <button id="contentBtn" title="Редактор предметов, цен и крафта">⚙ Предметы и крафт</button>
+      <button id="boardBtn" title="Пул квестов для доски объявлений">📋 Доска</button>
       <span id="status"></span>
       <span class="hint">ЛКМ — рисовать · ПКМ — двигать · колесо — зум · лестницы связываются по «ID связи»</span>
     </div>
@@ -36,8 +37,10 @@
   <div id="npcOverlay" class="npc-overlay hidden"></div>
   <!-- Оверлей редактора предметов и крафта -->
   <div id="contentOverlay" class="npc-overlay hidden"></div>
+  <!-- Оверлей редактора доски объявлений -->
+  <div id="boardOverlay" class="npc-overlay hidden"></div>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script type="module" src="editor.js?v=51"></script>
+  <script type="module" src="editor.js?v=52"></script>
 </body>
 </html>

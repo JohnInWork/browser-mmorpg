@@ -155,7 +155,7 @@ const FISH_DEF = {
   fish14: { chance: 10, minLevel: 40, xp: 60 },
 };
 // Спрайты объектов из SVG-файлов (id тайла → картинка) — единый источник с игрой
-const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg'), 36: mkImg('/assets/return-stone.svg'), 42: mkImg('/assets/table.svg'), 43: mkImg('/assets/bed.png'), 44: mkImg('/assets/wardrobe.svg'), 45: mkImg('/assets/nightstand.svg'), 46: mkImg('/assets/chair.svg'), 47: mkImg('/assets/barrel.svg'), 48: mkImg('/assets/rug.svg'), 49: mkImg('/assets/table2.svg'), 50: mkImg('/assets/wardrobe2.svg'), 51: mkImg('/assets/wardrobe3.svg'), 52: mkImg('/assets/barrel2.svg'), 53: mkImg('/assets/barrel3.svg'), 54: mkImg('/assets/gold-ore.svg') };
+const OBJ_IMG = { 3: treeImgs[0], 5: mkImg('/assets/rock.svg'), 6: mkImg('/assets/ore.svg'), 7: anvilImg, 8: mkImg('/assets/smelter.svg'), 9: campfireImg, 10: chestImg, 11: mkImg('/assets/sandpile.svg'), 12: mkImg('/assets/well.svg'), 13: mkImg('/assets/stairs-down.svg'), 14: mkImg('/assets/stairs-up.svg'), 16: mkImg('/assets/portal-blue.svg'), 17: mkImg('/assets/portal-purple.svg'), 18: mkImg('/assets/portal-green.svg'), 19: mkImg('/assets/spawn.svg'), 24: mkImg('/assets/mountain.svg'), 25: mkImg('/assets/bush.svg'), 26: mkImg('/assets/boulder.svg'), 27: mkImg('/assets/fence.svg'), 28: mkImg('/assets/lamp.svg'), 29: mkImg('/assets/bridge.svg'), 30: mkImg('/assets/sign.svg'), 33: mkImg('/assets/workbench.svg'), 34: mkImg('/assets/admin-chest.svg'), 35: mkImg('/assets/silver-ore.svg'), 36: mkImg('/assets/return-stone.svg'), 42: mkImg('/assets/table.svg'), 43: mkImg('/assets/bed.png'), 44: mkImg('/assets/wardrobe.svg'), 45: mkImg('/assets/nightstand.svg'), 46: mkImg('/assets/chair.svg'), 47: mkImg('/assets/barrel.svg'), 48: mkImg('/assets/rug.svg'), 49: mkImg('/assets/table2.svg'), 50: mkImg('/assets/wardrobe2.svg'), 51: mkImg('/assets/wardrobe3.svg'), 52: mkImg('/assets/barrel2.svg'), 53: mkImg('/assets/barrel3.svg'), 54: mkImg('/assets/gold-ore.svg'), 55: mkImg('/assets/board.svg') };
 const FURN_SZ = { 42: 44, 43: 46, 44: 48, 45: 40, 46: 40, 47: 30, 48: 46, 49: 44, 50: 48, 51: 48, 52: 32, 53: 32 };  // размеры мебели/декора (как в игре)
 function objSprite(im, cx, cy, sz) { if (im && im._ready) { const W = sz * zoom, H = sz * zoom; ctx.drawImage(im, cx - W / 2, cy - H / 2 - 5 * zoom, W, H); } }
 function treeVariant(x, y) { let h = (Math.imul(x + 1, 73856093) ^ Math.imul(y + 1, 19349663)) >>> 0; h = (h ^ (h >>> 13)) >>> 0; return h & 1; }
@@ -200,7 +200,7 @@ const CATEGORIES = [
   { name: 'Ресурсы',  items: [ { id: 3, name: 'Дерево', color: '#2f7d32' }, { id: 6, name: 'Руда', color: '#c2641f' }, { id: 35, name: 'Серебро', color: '#c0c0c0' }, { id: 54, name: 'Золото', color: '#e8c14f' }, { id: 11, name: 'Песок', color: '#dcc480' } ] },
   { name: 'Природа',  items: [ { id: 5, name: 'Камень', color: '#828892' }, { id: 25, name: 'Куст', color: '#3f8a39' }, { id: 26, name: 'Валун', color: '#8a909a' } ] },
   { name: 'Верстаки', items: [ { id: 7, name: 'Наковальня', color: '#3a3f47' }, { id: 8, name: 'Плавильня', color: '#e8632a' }, { id: 9, name: 'Костёр', color: '#f4a23d' }, { id: 33, name: 'Верстак', color: '#a9743f' } ] },
-  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 30, name: 'Табличка', color: '#9a6b3a' }, { id: 34, name: 'Админ-сундук', color: '#ff5fb0' }, { id: 36, name: 'Камень возврата', color: '#7fd0e0' } ] },
+  { name: 'Объекты', items: [ { id: 10, name: 'Сундук', color: '#8a5a28' }, { id: 12, name: 'Колодец', color: '#9aa0aa' }, { id: 30, name: 'Табличка', color: '#9a6b3a' }, { id: 55, name: 'Доска объявлений', color: '#b5894e' }, { id: 34, name: 'Админ-сундук', color: '#ff5fb0' }, { id: 36, name: 'Камень возврата', color: '#7fd0e0' } ] },
   { name: 'Декор', items: [ { id: 42, name: 'Стол', color: '#a9743f' }, { id: 49, name: 'Стол 2', color: '#a9743f' }, { id: 43, name: 'Кровать', color: '#5b8def' }, { id: 44, name: 'Шкаф', color: '#8a5e30' }, { id: 50, name: 'Шкаф 2', color: '#8a5e30' }, { id: 51, name: 'Шкаф 3', color: '#8a5e30' }, { id: 45, name: 'Тумбочка', color: '#a9743f' }, { id: 46, name: 'Стул', color: '#a9743f' }, { id: 47, name: 'Бочка', color: '#9c6a34' }, { id: 52, name: 'Бочка 2', color: '#9c6a34' }, { id: 53, name: 'Бочка 3', color: '#9c6a34' }, { id: 48, name: 'Ковёр', color: '#cf5a3e' }, { id: 28, name: 'Фонарь', color: '#f0c24a' } ] },
   { name: 'Порталы', items: [ { id: 13, name: 'Лестн.↓', color: '#5b8def' }, { id: 14, name: 'Лестн.↑', color: '#8fd06a' }, { id: 16, name: 'Синий', color: '#5fa8e0' }, { id: 17, name: 'Фиолет.', color: '#a86fd0' }, { id: 18, name: 'Зелёный', color: '#5fe0a0' } ] },
   { name: 'Спавн', items: [ { id: 19, name: 'Точка спавна', color: '#e74c3c' } ] },
@@ -1527,5 +1527,81 @@ function openContentEditor() {
 }
 const contentBtnEl = document.getElementById('contentBtn');
 if (contentBtnEl) contentBtnEl.addEventListener('click', openContentEditor);
+
+// --- Редактор доски объявлений (пул генерируемых квестов) ---
+let BOARD_POOL = [];   // [{ type, target, count, reward }]
+socket.on('boardData', ({ quests }) => { BOARD_POOL = Array.isArray(quests) ? quests : []; });
+socket.on('boardSaveResult', ({ ok }) => {
+  statusEl.textContent = ok ? '✓ Доска объявлений сохранена' : '✗ Ошибка сохранения доски';
+  setTimeout(() => { statusEl.textContent = ''; }, 2400);
+});
+
+const BOARD_TYPES = [['craft', 'Сделать (крафт)'], ['gather', 'Добыть (своими руками)'], ['kill', 'Убить']];
+function boardQuestDefaults() { return { type: 'craft', target: 'ingot', count: 10, reward: 80 }; }
+
+// Один блок объявления (DOM). type craft/gather → выбор предмета; kill → выбор моба.
+function makeBoardBlock(q) {
+  q = { ...boardQuestDefaults(), ...q };
+  const el = document.createElement('div');
+  el.className = 'npc-qblock';
+  el.innerHTML = `
+    <button class="q-remove" title="Удалить объявление">✕</button>
+    <label class="npc-f">Тип<select class="bq-type">${optHtml(BOARD_TYPES, q.type)}</select></label>
+    <label class="npc-f bq-target-box"></label>
+    <label class="npc-f">Количество<input class="bq-count" type="number" min="1" value="${q.count}"></label>
+    <label class="npc-f">Награда — золото<input class="bq-reward" type="number" min="0" value="${q.reward}"></label>`;
+  const tbox = el.querySelector('.bq-target-box');
+  const typeSel = el.querySelector('.bq-type');
+  const renderTarget = (type) => {
+    if (type === 'kill') {
+      const ko = killTargetOpts(q.type === 'kill' ? q.target : '');
+      tbox.innerHTML = `Кого убить<select class="bq-target">${optHtml(ko, q.type === 'kill' ? q.target : ((ko[0] && ko[0][0]) || 'wolf'))}</select>`;
+    } else {
+      const label = type === 'craft' ? 'Что сделать' : 'Что добыть';
+      tbox.innerHTML = `${label}<select class="bq-target">${optHtml(allGameItemOpts(), (q.type === type) ? q.target : 'ingot')}</select>`;
+      enhanceIconSelect(tbox.querySelector('.bq-target'));
+    }
+  };
+  renderTarget(q.type);
+  typeSel.addEventListener('change', () => renderTarget(typeSel.value));
+  el.querySelector('.q-remove').addEventListener('click', () => el.remove());
+  return el;
+}
+function readBoardBlock(el) {
+  const v = (sel) => { const e = el.querySelector(sel); return e ? e.value : ''; };
+  return {
+    type: v('.bq-type'),
+    target: (v('.bq-target') || '').trim(),
+    count: Math.max(1, parseInt(v('.bq-count'), 10) || 1),
+    reward: Math.max(0, parseInt(v('.bq-reward'), 10) || 0),
+  };
+}
+function openBoardEditor() {
+  const ov = document.getElementById('boardOverlay');
+  ov.innerHTML = `
+    <div class="npc-modal board-modal">
+      <h2 class="npc-h">Доска объявлений — пул квестов</h2>
+      <p class="board-ed-hint">Эти квесты генерируются на доске у каждого игрока (3 случайных слота, обновление раз в 5 мин).
+        Сдавать не нужно, ресурсы не забираются — награда золотом приходит сама. Поставь тайл «Доска объявлений» на карту, чтобы игроки могли её открыть.</p>
+      <div id="boardQuests"></div>
+      <button id="boardAddQuest" class="npc-addq">+ Добавить объявление</button>
+      <div class="npc-btns">
+        <button class="m-cancel" id="boardCancel">Закрыть</button>
+        <button class="m-ok" id="boardSave">Сохранить</button>
+      </div>
+    </div>`;
+  ov.classList.remove('hidden');
+  const box = ov.querySelector('#boardQuests');
+  BOARD_POOL.forEach(q => box.appendChild(makeBoardBlock(q)));
+  ov.querySelector('#boardAddQuest').addEventListener('click', () => box.appendChild(makeBoardBlock(boardQuestDefaults())));
+  ov.querySelector('#boardCancel').addEventListener('click', () => { ov.classList.add('hidden'); ov.innerHTML = ''; });
+  ov.querySelector('#boardSave').addEventListener('click', () => {
+    BOARD_POOL = [...box.querySelectorAll('.npc-qblock')].map(readBoardBlock);
+    socket.emit('saveBoardData', { quests: BOARD_POOL });
+    ov.classList.add('hidden'); ov.innerHTML = '';
+  });
+}
+const boardBtnEl = document.getElementById('boardBtn');
+if (boardBtnEl) boardBtnEl.addEventListener('click', openBoardEditor);
 
 requestAnimationFrame(render);
