@@ -929,7 +929,7 @@ function render() {
       else if (t === 14) obj.push({ d: x + y + 0.1, k: 14, x, y });
       else if (t === 16 || t === 17 || t === 18) obj.push({ d: x + y + 0.1, k: t, x, y });
       else if (t === 19) obj.push({ d: x + y + 0.2, k: 19, x, y });
-      else if (t === 24 || t === 25 || t === 26 || t === 27 || t === 28 || t === 30 || t === 33 || t === 34 || t === 35 || t === 36) obj.push({ d: x + y + 0.1, k: t, x, y });
+      else if (t === 24 || t === 25 || t === 26 || t === 27 || t === 28 || t === 30 || t === 33 || t === 34 || t === 35 || t === 36 || t === 54 || t === 55) obj.push({ d: x + y + 0.1, k: t, x, y });
       else if (t >= 42 && t <= 53) obj.push({ d: x + y + 0.1, k: t, x, y });   // мебель / декор
     }
   obj.sort((a, b) => a.d - b.d);
@@ -960,6 +960,8 @@ function render() {
     else if (o.k === 33) objSprite(OBJ_IMG[33], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 34) objSprite(OBJ_IMG[34], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);
     else if (o.k === 35) objSprite(OBJ_IMG[35], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);
+    else if (o.k === 54) objSprite(OBJ_IMG[54], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 42);  // золотая руда
+    else if (o.k === 55) objSprite(OBJ_IMG[55], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), 44);  // доска объявлений
     else if (o.k >= 42 && o.k <= 53) objSprite(OBJ_IMG[o.k], panX + isoX(o.x, o.y), panY + isoY(o.x, o.y), FURN_SZ[o.k]);  // мебель / декор
     else if (o.k === 36) {                          // камень возврата + его имя над ним
       const sx = panX + isoX(o.x, o.y), sy = panY + isoY(o.x, o.y);
