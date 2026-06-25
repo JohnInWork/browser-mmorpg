@@ -137,6 +137,11 @@ let savedMobs = [];
 try { savedMobs = JSON.parse(localStorage.getItem('mmorpg_savedMobs') || '[]'); } catch (e) { savedMobs = []; }
 function persistSavedMobs() { try { localStorage.setItem('mmorpg_savedMobs', JSON.stringify(savedMobs)); } catch (e) {} }
 function mobLabelFor(m) { return (m && m.name) || (m && SPRITE_INFO[m.sprite] && SPRITE_INFO[m.sprite].name) || 'Моб'; }
+// Библиотека сохранённых НПС: создал НПС → он попадает сюда и появляется в палитре отдельной кнопкой (как мобы).
+let savedNpcs = [];
+try { savedNpcs = JSON.parse(localStorage.getItem('mmorpg_savedNpcs') || '[]'); } catch (e) { savedNpcs = []; }
+function persistSavedNpcs() { try { localStorage.setItem('mmorpg_savedNpcs', JSON.stringify(savedNpcs)); } catch (e) {} }
+function npcLabelFor(n) { return (n && n.name && n.name.trim()) || (n && n.enemy ? 'Враг' : 'НПС'); }
 // Библиотека сохранённых рыбных мест: настроил таблицу рыбы один раз → штампуешь его в любом месте.
 let savedSpots = [];
 try { savedSpots = JSON.parse(localStorage.getItem('mmorpg_savedSpots') || '[]'); } catch (e) { savedSpots = []; }
@@ -402,6 +407,37 @@ function spotAtEd(x, y) { return (LOCS[curLoc].spots || []).find(s => s.x === x 
 function removeNpc(x, y) { LOCS[curLoc].npcs = LOCS[curLoc].npcs.filter(n => !(n.x === x && n.y === y)); }
 function setNpc(x, y, data) { removeNpc(x, y); LOCS[curLoc].npcs.push({ ...data, x, y }); }
 function npcAt(x, y) { return LOCS[curLoc].npcs.find(n => n.x === x && n.y === y); }
+// Сколько расставлено НПС с таким именем (во всех локациях)
+function countNpcByName(name) { if (!name) return 0; let c = 0; for (const ln in LOCS) for (const n of (LOCS[ln].npcs || [])) if ((n.name || '').trim() === name) c++; return c; }
+// Применить правку НПС: one — только эта клетка; new — этот станет новым (+в библиотеку);
+// all — все копии с прежним именем (во всех локациях) + запись в библиотеке.
+function applyNpcEdit(scope, x, y, oldName, data) {
+  if (scope === 'one') { setNpc(x, y, data); return; }
+  if (scope === 'new') { setNpc(x, y, data); savedNpcs.push(libCopy(data)); persistSavedNpcs(); buildPalette(); return; }
+  if (scope === 'all') {
+    for (const ln in LOCS) { const arr = LOCS[ln].npcs || []; for (let i = 0; i < arr.length; i++) if ((arr[i].name || '').trim() === oldName) arr[i] = { ...libCopy(data), x: arr[i].x, y: arr[i].y }; }
+    let found = false;
+    for (let i = 0; i < savedNpcs.length; i++) if ((savedNpcs[i].name || '').trim() === oldName) { savedNpcs[i] = libCopy(data); found = true; }
+    if (!found) savedNpcs.push(libCopy(data));
+    persistSavedNpcs(); buildPalette();
+  }
+}
+// Модалка выбора области применения правки НПС (зеркало мобовской)
+function showNpcScopeChoice(oldName, copies, inLib, cb) {
+  const m = document.createElement('div');
+  m.className = 'npc-overlay'; m.style.zIndex = 95;
+  m.innerHTML = `<div class="npc-modal" style="display:block;width:440px;max-width:92vw">
+    <h3>НПС «${escHtml(oldName)}» изменён</h3>
+    <p class="npc-hint">На картах копий: <b>${copies}</b>${inLib ? ' · есть в библиотеке' : ''}. Куда применить изменения (новые параметры и имя)?</p>
+    <div class="npc-btns" style="flex-direction:column;align-items:stretch;gap:8px;margin-top:6px">
+      <button class="m-ok" data-s="all">Обновить везде — все копии и библиотеку</button>
+      <button class="m-cancel" data-s="new">Создать нового НПС — этот станет новым</button>
+      <button class="m-cancel" data-s="one">Изменить только этого</button>
+      <button class="m-cancel" data-s="cancel">Отмена</button>
+    </div></div>`;
+  document.body.appendChild(m);
+  m.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { const s = b.dataset.s; m.remove(); if (s !== 'cancel') cb(s); }));
+}
 socket.on('saveResult', ({ ok }) => {
   statusEl.textContent = ok ? '✓ Сохранено' : '✗ Ошибка';
   setTimeout(() => { statusEl.textContent = ''; }, 2000);
@@ -453,6 +489,15 @@ function drawIcon(c, id) {
     c.fillStyle = '#3a78c2'; c.beginPath(); c.moveTo(15, 13); c.lineTo(22, 25); c.lineTo(8, 25); c.closePath(); c.fill(); // тело
     c.fillStyle = '#e0a93b'; c.beginPath(); c.arc(23, 7, 3, 0, TAU); c.fill();              // звёздочка-«+» намёк
     c.fillStyle = '#1a1a24'; c.font = 'bold 7px sans-serif'; c.textAlign = 'center'; c.fillText('+', 23, 9.5); return;
+  }
+  if (typeof id === 'string' && id.startsWith('npcstamp:')) {   // сохранённый НПС — рисуем превью персонажа
+    const n = savedNpcs[+id.slice(9)];
+    const ent = n && getCharImage(n.appearance || DEFAULT_APPEARANCE, n.equipment || {});
+    if (ent && ent.ready) return void c.drawImage(ent.img, 5, 0, 20, 30);
+    if (ent && !ent._wired) { ent._wired = true; ent.img.addEventListener('load', () => { if (typeof refreshPaletteIcons === 'function') refreshPaletteIcons(); }, { once: true }); }
+    // фолбэк — человечек (пока картинка грузится)
+    c.fillStyle = '#f3cfa6'; c.beginPath(); c.arc(15, 9, 4.5, 0, TAU); c.fill();
+    c.fillStyle = (n && n.enemy) ? '#b14a3a' : '#3a78c2'; c.beginPath(); c.moveTo(15, 13); c.lineTo(22, 25); c.lineTo(8, 25); c.closePath(); c.fill(); return;
   }
   if (id === -1) { c.strokeStyle = '#e74c3c'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(9, 9); c.lineTo(21, 21); c.moveTo(21, 9); c.lineTo(9, 21); c.stroke(); return; }
   if (id === -3) { // указатель-курсор
@@ -561,6 +606,16 @@ function buildPalette() {
         items.appendChild(makeSwatch(sid, mobLabelFor(m), {
           title: 'ЛКМ — ставить · ПКМ — удалить из библиотеки',
           onContext: () => { if (confirm(`Удалить моба «${mobLabelFor(m)}» из библиотеки?`)) { savedMobs.splice(i, 1); persistSavedMobs(); if (selected === sid) selected = 'mob'; buildPalette(); } },
+        }));
+      });
+    }
+    // Сохранённые НПС → в группу «НПС» (выбрал — штампуешь его копии)
+    if (cat.name === 'НПС') {
+      savedNpcs.forEach((n, i) => {
+        const sid = 'npcstamp:' + i;
+        items.appendChild(makeSwatch(sid, npcLabelFor(n), {
+          title: 'ЛКМ — ставить · ПКМ — удалить из библиотеки',
+          onContext: () => { if (confirm(`Удалить НПС «${npcLabelFor(n)}» из библиотеки?`)) { savedNpcs.splice(i, 1); persistSavedNpcs(); if (selected === sid) selected = 'npc'; buildPalette(); } },
         }));
       });
     }
@@ -676,6 +731,9 @@ function paintAt(e, isClick) {
   if (selected === 'fishspot') { if (isClick) openSpotEditor(t.x, t.y, spotAtEd(t.x, t.y) || null, true); return; } // настроить рыбное место (в библиотеку)
   if (typeof selected === 'string' && selected.startsWith('mobstamp:')) {                              // штамп выбранного из библиотеки (можно протяжкой)
     const m = savedMobs[+selected.slice(9)]; if (m) setMob(t.x, t.y, JSON.parse(JSON.stringify(m))); return;
+  }
+  if (typeof selected === 'string' && selected.startsWith('npcstamp:')) {                              // штамп сохранённого НПС
+    const n = savedNpcs[+selected.slice(9)]; if (n) setNpc(t.x, t.y, JSON.parse(JSON.stringify(n))); return;
   }
   if (typeof selected === 'string' && selected.startsWith('spotstamp:')) {                             // штамп сохранённого рыбного места
     const s = savedSpots[+selected.slice(10)]; if (s) setSpot(t.x, t.y, JSON.parse(JSON.stringify(s))); return;
@@ -1183,8 +1241,21 @@ function openNpcEditor(x, y, existing) {
       data.respawn = Math.max(1, parseInt($('npcRespawn').value, 10) || 10);
       data.loot = [...lootBox.querySelectorAll('.mob-loot-row')].map(r => ({ id: r.querySelector('.l-item').value, qty: Math.max(1, parseInt(r.querySelector('.l-qty').value, 10) || 1), chance: Math.max(1, Math.min(100, parseInt(r.querySelector('.l-chance').value, 10) || 100)) / 100 })).filter(l => l.id);
     }
-    setNpc(x, y, data);
-    close();
+    if (!existing) {   // НОВЫЙ НПС → клетка + в библиотеку + выбран для штамповки (как у мобов)
+      setNpc(x, y, data);
+      savedNpcs.push(libCopy(data)); persistSavedNpcs();
+      selected = 'npcstamp:' + (savedNpcs.length - 1); buildPalette();
+      close(); return;
+    }
+    // Редактирование существующего: если он именованный и есть другие копии/запись в библиотеке — спросить область
+    const oldName = (existing && existing.name || '').trim();
+    const copies = countNpcByName(oldName);
+    const inLib = !!oldName && savedNpcs.some(n => (n.name || '').trim() === oldName);
+    if (oldName && (copies > 1 || inLib)) {
+      showNpcScopeChoice(oldName, copies, inLib, (scope) => { applyNpcEdit(scope, x, y, oldName, data); close(); });
+    } else {
+      setNpc(x, y, data); close();   // безымянный/единственный — просто обновить эту клетку
+    }
   });
 }
 
