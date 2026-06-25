@@ -37,6 +37,8 @@ export const ARMOR_TEX = {
   helmet: '/assets/iron-helmet.svg', chest: '/assets/iron-chest.svg',
   leatherHat: '/assets/leather-helmet.svg', leatherTunic: '/assets/leather-chest.svg',
   leatherMitts: '/assets/leather-gloves.svg', leatherLegs: '/assets/leather-pants.svg', leatherShoes: '/assets/leather-boots.svg',
+  banditHelmet: '/assets/bandit-helmet.svg', banditChest: '/assets/bandit-chest.svg',
+  banditGloves: '/assets/bandit-gloves.svg', banditLegs: '/assets/bandit-pants.svg', banditBoots: '/assets/bandit-boots.svg',
   silverHelmet: '/assets/silver-helmet.svg', silverChest: '/assets/silver-chest.svg',
   silverGloves: '/assets/silver-gloves.svg', silverLegs: '/assets/silver-legs.svg', silverBoots: '/assets/silver-boots.svg',
   goldHelmet: '/assets/gold-helmet.svg', goldChest: '/assets/gold-chest.svg',

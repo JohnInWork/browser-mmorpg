@@ -524,6 +524,81 @@
       "tier": 1,
       "sellCat": "gear"
     },
+    "banditHelmet": {
+      "name": "Капюшон бандита",
+      "type": "armor",
+      "cat": "armor",
+      "slot": "helmet",
+      "armor": 2,
+      "price": 180,
+      "tags": [
+        "броня",
+        "бандит"
+      ],
+      "desc": "Капюшон из набора брони бандита. Чуть крепче кожи.",
+      "tier": 1,
+      "sellCat": "gear"
+    },
+    "banditChest": {
+      "name": "Нагрудник бандита",
+      "type": "armor",
+      "cat": "armor",
+      "slot": "chest",
+      "armor": 2,
+      "price": 260,
+      "tags": [
+        "броня",
+        "бандит"
+      ],
+      "desc": "Нагрудник из набора брони бандита. Чуть крепче кожи.",
+      "tier": 1,
+      "sellCat": "gear"
+    },
+    "banditGloves": {
+      "name": "Перчатки бандита",
+      "type": "armor",
+      "cat": "armor",
+      "slot": "gloves",
+      "armor": 2,
+      "price": 150,
+      "tags": [
+        "броня",
+        "бандит"
+      ],
+      "desc": "Перчатки из набора брони бандита. Чуть крепче кожи.",
+      "tier": 1,
+      "sellCat": "gear"
+    },
+    "banditLegs": {
+      "name": "Поножи бандита",
+      "type": "armor",
+      "cat": "armor",
+      "slot": "pants",
+      "armor": 2,
+      "price": 180,
+      "tags": [
+        "броня",
+        "бандит"
+      ],
+      "desc": "Поножи из набора брони бандита. Чуть крепче кожи.",
+      "tier": 1,
+      "sellCat": "gear"
+    },
+    "banditBoots": {
+      "name": "Сапоги бандита",
+      "type": "armor",
+      "cat": "armor",
+      "slot": "boots",
+      "armor": 2,
+      "price": 150,
+      "tags": [
+        "броня",
+        "бандит"
+      ],
+      "desc": "Сапоги из набора брони бандита. Чуть крепче кожи.",
+      "tier": 1,
+      "sellCat": "gear"
+    },
     "silverOre": {
       "name": "Серебряная руда",
       "type": "resource",
