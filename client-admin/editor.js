@@ -1421,6 +1421,24 @@ socket.on('itemsSaveResult', ({ ok }) => {
 const CE_STATIONS = [['', '— не крафтится —'], ['smelter', 'Плавильня'], ['anvil', 'Наковальня'], ['campfire', 'Костёр'], ['workbench', 'Верстак']];
 const CE_LABELS = { armor: 'Защита', damage: 'Урон', hands: 'Рук (1/2)', heal: 'Лечит (HP)', stackable: 'Стакается', minLevel: 'Мин. уровень рыбалки', xp: 'Опыт за лов', chance: 'Базовый шанс (0–1)', bonusVsPassive: 'Доп. урон по мирным', onHitHeal: 'Лечит за удар (HP)', nosell: 'Нельзя продать', gathers: 'Добывает' };
 const CE_SKIP = new Set(['name', 'desc', 'price', 'tags', 'type', 'cat', 'slot', 'rarity']);
+// Категории для удобной навигации по списку предметов (выводятся из type предмета)
+const CE_CATS = [
+  ['all', 'Все'], ['armor', 'Броня'], ['weapon', 'Оружие'], ['shield', 'Щиты'],
+  ['tool', 'Инструменты'], ['material', 'Материалы'], ['fish', 'Рыба'], ['food', 'Еда'], ['other', 'Прочее'],
+];
+const CE_CAT_LABEL = Object.fromEntries(CE_CATS.map(([k, l]) => [k, l]));
+function ceCatOf(id) {
+  const it = ITEMS_DATA[id]; if (!it) return 'other';
+  switch (it.type) {
+    case 'armor': return 'armor';
+    case 'weapon': return 'weapon';
+    case 'shield': return 'shield';
+    case 'tool': return 'tool';
+    case 'resource': case 'ingredient': return 'material';
+    case 'food': return id.startsWith('fish') ? 'fish' : 'food';
+    default: return 'other';
+  }
+}
 const ceItemOpts = () => Object.keys(ITEMS_DATA).sort((a, b) => (ITEMS_DATA[a].name || a).localeCompare(ITEMS_DATA[b].name || b)).map(id => [id, ITEMS_DATA[id].name || id]);
 function ceFindRecipe(id) {
   for (const st of ['smelter', 'anvil', 'campfire', 'workbench']) {
@@ -1434,11 +1452,13 @@ function ceFindRecipe(id) {
 function openContentEditor() {
   const ov = document.getElementById('contentOverlay');
   let selId = Object.keys(ITEMS_DATA).sort()[0] || null;
+  let selCat = 'all';
   ov.innerHTML = `
     <div class="npc-modal ce-modal">
       <div class="ce-body">
         <div class="ce-list">
           <input id="ceSearch" type="text" placeholder="Поиск предмета…">
+          <div id="ceCats" class="ce-cats"></div>
           <div id="ceItems" class="ce-items"></div>
         </div>
         <div class="npc-right ce-form" id="ceForm"></div>
@@ -1452,18 +1472,54 @@ function openContentEditor() {
   ov.classList.remove('hidden');
   const $ = (id) => ov.querySelector('#' + id);
 
+  function renderCats() {
+    const box = $('ceCats'); box.innerHTML = '';
+    const counts = {}; for (const id in ITEMS_DATA) { const c = ceCatOf(id); counts[c] = (counts[c] || 0) + 1; }
+    counts.all = Object.keys(ITEMS_DATA).length;
+    CE_CATS.forEach(([key, label]) => {
+      const n = counts[key] || 0;
+      if (key !== 'all' && !n) return; // не показываем пустые категории
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'ce-cat' + (key === selCat ? ' active' : '');
+      chip.innerHTML = `${escHtml(label)}<span class="ce-cat-n">${n}</span>`;
+      chip.addEventListener('click', () => { selCat = key; renderCats(); renderList($('ceSearch').value); });
+      box.appendChild(chip);
+    });
+  }
+
+  function makeRow(id) {
+    const it = ITEMS_DATA[id];
+    const row = document.createElement('div');
+    row.className = 'ce-item' + (id === selId ? ' active' : '');
+    row.innerHTML = `<span class="ce-ic">${itemIcon(id)}</span><span class="ce-nm">${escHtml(it.name || id)}</span>`; row.title = id;
+    row.addEventListener('click', () => { commitForm(); selId = id; renderList($('ceSearch').value); renderForm(); });
+    return row;
+  }
+
   function renderList(filter = '') {
     const box = $('ceItems'); box.innerHTML = '';
     const f = filter.trim().toLowerCase();
-    Object.keys(ITEMS_DATA).sort((a, b) => (ITEMS_DATA[a].name || a).localeCompare(ITEMS_DATA[b].name || b)).forEach(id => {
+    const match = (id) => {
       const it = ITEMS_DATA[id];
-      if (f && !((it.name || '').toLowerCase().includes(f) || id.toLowerCase().includes(f))) return;
-      const row = document.createElement('div');
-      row.className = 'ce-item' + (id === selId ? ' active' : '');
-      row.innerHTML = `<span class="ce-ic">${itemIcon(id)}</span><span class="ce-nm">${escHtml(it.name || id)}</span>`; row.title = id;
-      row.addEventListener('click', () => { commitForm(); selId = id; renderList($('ceSearch').value); renderForm(); });
-      box.appendChild(row);
-    });
+      if (selCat !== 'all' && ceCatOf(id) !== selCat) return false;
+      if (f && !((it.name || '').toLowerCase().includes(f) || id.toLowerCase().includes(f))) return false;
+      return true;
+    };
+    const sortByName = (a, b) => (ITEMS_DATA[a].name || a).localeCompare(ITEMS_DATA[b].name || b);
+    if (selCat === 'all') {
+      // С группировкой по категориям, заголовок перед каждой группой
+      CE_CATS.filter(([k]) => k !== 'all').forEach(([key, label]) => {
+        const ids = Object.keys(ITEMS_DATA).filter(id => ceCatOf(id) === key && match(id)).sort(sortByName);
+        if (!ids.length) return;
+        const h = document.createElement('div'); h.className = 'ce-grp'; h.textContent = label;
+        box.appendChild(h);
+        ids.forEach(id => box.appendChild(makeRow(id)));
+      });
+    } else {
+      Object.keys(ITEMS_DATA).filter(match).sort(sortByName).forEach(id => box.appendChild(makeRow(id)));
+    }
+    if (!box.children.length) { const e = document.createElement('div'); e.className = 'ce-grp'; e.textContent = 'Ничего не найдено'; box.appendChild(e); }
   }
 
   function makeIngRow(ing) {
@@ -1525,7 +1581,7 @@ function openContentEditor() {
   $('ceSearch').addEventListener('input', () => renderList($('ceSearch').value));
   $('ceCancel').addEventListener('click', () => { ov.classList.add('hidden'); ov.innerHTML = ''; });
   $('ceSave').addEventListener('click', () => { commitForm(); for (const k in GAME_ITEMS) delete GAME_ITEMS[k]; Object.assign(GAME_ITEMS, ITEMS_DATA); socket.emit('saveItemsData', { items: ITEMS_DATA, recipes: RECIPES_DATA }); ov.classList.add('hidden'); ov.innerHTML = ''; });
-  renderList(); renderForm();
+  renderCats(); renderList(); renderForm();
 }
 const contentBtnEl = document.getElementById('contentBtn');
 if (contentBtnEl) contentBtnEl.addEventListener('click', openContentEditor);

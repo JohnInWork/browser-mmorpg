@@ -159,9 +159,16 @@ body {
 #contentBtn:hover { background:#4a5cf0; }
 .ce-modal { flex-direction: column; width: 900px; height: 86vh; gap: 0; }
 .ce-body { display:flex; gap:16px; flex:1; min-height:0; }
-.ce-list { width:240px; display:flex; flex-direction:column; gap:8px; min-height:0; }
+.ce-list { width:260px; display:flex; flex-direction:column; gap:8px; min-height:0; }
 #ceSearch { background:#1a1a24; border:1px solid #3a3a4e; color:#eee; border-radius:7px; padding:7px; font-size:13px; font-family:inherit; }
+.ce-cats { display:flex; flex-wrap:wrap; gap:5px; }
+.ce-cat { display:inline-flex; align-items:center; gap:5px; background:#1a1a24; border:1px solid #3a3a4e; color:#cfd6e4; border-radius:14px; padding:4px 10px; font-size:12px; font-family:inherit; cursor:pointer; line-height:1.2; }
+.ce-cat:hover { background:#2a2a38; }
+.ce-cat.active { background:#34506e; border-color:#4a78a8; color:#fff; }
+.ce-cat-n { font-size:10px; color:#8893a8; background:#0f0f16; border-radius:8px; padding:1px 5px; min-width:14px; text-align:center; }
+.ce-cat.active .ce-cat-n { color:#cfe0f4; background:#23394f; }
 .ce-items { overflow-y:auto; flex:1; border:1px solid #3a3a4e; border-radius:8px; }
+.ce-grp { padding:6px 10px 4px; font-size:11px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:#8893a8; background:#16161e; position:sticky; top:0; z-index:1; border-bottom:1px solid #2a2a38; }
 .ce-item { padding:7px 10px; font-size:13px; color:#cfd6e4; cursor:pointer; border-bottom:1px solid #2a2a38; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .ce-item:hover { background:#2a2a38; }
 .ce-item.active { background:#34506e; color:#fff; }
