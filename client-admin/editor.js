@@ -48,24 +48,37 @@ const rewardItemOpts = () => [['', '— нет —'], ...allGameItemOpts()];
 const socket = io({ query: { mode: 'admin' } });
 
 // --- Данные для конструктора НПС ---
-// Экипируемые предметы по слотам (id → имя). Только те, у кого есть визуал на персонаже.
-// Экипируемое по слотам — ТОЛЬКО id (только вещи с видом на теле). Названия берутся из реестра (устойчиво к переименованию).
-const EQUIP_ITEMS = {
-  helmet: ['', 'helmet', 'leatherHat', 'silverHelmet', 'goldHelmet', 'bearHelmet', 'wolfHelmet', 'monkHelmet'],
-  chest: ['', 'chest', 'leatherTunic', 'silverChest', 'goldChest', 'merchantRobe', 'forestTunic', 'monkChest', 'farmerChest'],
-  gloves: ['', 'leatherMitts', 'silverGloves', 'goldGloves', 'blueGloves'],
-  pants: ['', 'leatherLegs', 'silverLegs', 'goldLegs', 'goldPants', 'brownPants', 'redPants', 'monkPants', 'farmerLegs'],
-  boots: ['', 'leatherShoes', 'silverBoots', 'goldBoots', 'leatherBoots'],
-  cloak: ['', 'cloak'],
-  mainHand: ['', 'woodClub', 'ironSword', 'ironGreatsword'],
-  offHand: ['', 'ironShield'],
+// Экипируемое по слотам строится ДИНАМИЧЕСКИ из реестра предметов (единый источник правды):
+//   слоты брони — все вещи type:'armor' с этим slot; рука — type:'weapon'; щит — type:'shield'.
+// Так любая добавленная в игру вещь сразу появляется в списке экипировки НПС — без правки этого файла.
+// Хардкод ниже — только ФОЛБЭК на случай, если данные предметов ещё не пришли с сервера.
+const EQUIP_FALLBACK = {
+  helmet: ['helmet', 'leatherHat', 'silverHelmet', 'goldHelmet', 'bearHelmet', 'wolfHelmet', 'monkHelmet'],
+  chest: ['chest', 'leatherTunic', 'silverChest', 'goldChest', 'merchantRobe', 'forestTunic', 'monkChest', 'farmerChest'],
+  gloves: ['leatherMitts', 'silverGloves', 'goldGloves', 'blueGloves'],
+  pants: ['leatherLegs', 'silverLegs', 'goldLegs', 'goldPants', 'brownPants', 'redPants', 'monkPants', 'farmerLegs'],
+  boots: ['leatherShoes', 'silverBoots', 'goldBoots', 'leatherBoots'],
+  cloak: ['cloak'],
+  mainHand: ['woodClub', 'ironSword', 'ironGreatsword'],
+  offHand: ['ironShield'],
 };
 // Имя предмета из реестра (или '— нет —' для пустого id) — единый источник, меняется при переименовании.
 const regName = (id) => id ? ((GAME_ITEMS[id] && GAME_ITEMS[id].name) || id) : '— нет —';
-const equipOpts = (slot) => (EQUIP_ITEMS[slot] || []).map(id => [id, regName(id)]);
+// Подходит ли предмет в слот: оружие → рука, щит → лев. рука, остальное — броня с этим slot.
+function fitsSlot(it, slot) {
+  if (!it) return false;
+  if (slot === 'mainHand') return it.type === 'weapon';
+  if (slot === 'offHand') return it.type === 'shield';
+  return it.type === 'armor' && it.slot === slot;
+}
+function equipOpts(slot) {
+  let ids = Object.keys(GAME_ITEMS).filter(id => fitsSlot(GAME_ITEMS[id], slot));
+  if (!ids.length) ids = (EQUIP_FALLBACK[slot] || []).slice();   // данные ещё не загружены
+  ids.sort((a, b) => regName(a).localeCompare(regName(b)));
+  return [['', '— нет —'], ...ids.map(id => [id, regName(id)])];
+}
 const SLOT_NAMES = { helmet: 'Шлем', chest: 'Тело', gloves: 'Перчатки', pants: 'Ноги', boots: 'Обувь', cloak: 'Плащ', mainHand: 'Прав. рука', offHand: 'Лев. рука' };
 const EQUIP_ORDER = ['helmet', 'chest', 'gloves', 'pants', 'boots', 'cloak', 'mainHand', 'offHand'];
-const GATHER_TARGETS = [['wood', 'Древесина'], ['ore', 'Железная руда'], ['sand', 'Песок']];
 // Цели kill-квеста = ТВОИ созданные мобы (по имени) + враждебные НПС (по имени) + дефолтные мобы стартовой карты.
 // Засчёт на сервере матчится по имени конкретного моба ИЛИ по типу-спрайту (для дефолтных).
 function killTargetOpts(current) {
@@ -77,10 +90,6 @@ function killTargetOpts(current) {
   if (current && !seen.has(current)) out.push([current, current]);   // сохранить уже выбранную цель
   return out;
 }
-// Предметы, которые можно выдать в награду
-const REWARD_ITEMS = [['', '— нет —'], ['wood', 'Древесина'], ['ore', 'Железная руда'], ['sand', 'Песок'],
-  ['leather', 'Кожа'], ['silverOre', 'Серебряная руда'], ['silverIngot', 'Серебряный слиток'], ['ironSword', 'Железный меч'], ['ironShield', 'Железный щит'], ['bearHelmet', 'Медвежий шлем'], ['wolfHelmet', 'Волчий шлем'], ['helmet', 'Железный шлем'], ['chest', 'Железный нагрудник'], ['leatherHat', 'Кожаный капюшон'], ['leatherTunic', 'Кожаный нагрудник'], ['silverHelmet', 'Серебряный шлем'], ['silverChest', 'Серебряный нагрудник']];
-
 // --- DOM ---
 const paletteEl = document.getElementById('palette');
 const saveBtn = document.getElementById('saveBtn');
