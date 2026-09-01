@@ -1,53 +1,55 @@
-# Браузерная MMORPG
+**English** · [Русский](README.ru.md)
 
-Многопользовательская онлайн-RPG в браузере: изометрическая тайловая карта, игроки видят друг друга в реальном времени, бой с мобами, лут, инвентарь, экипировка и прокачка. Референс по духу и геймплею — RPG MO.
+# Browser MMORPG
 
-![Браузерная MMORPG](screenshots/gameplay.jpg)
+A multiplayer online RPG in the browser: an isometric tile map, players seeing each other in real time, fighting mobs, loot, inventory, gear and levelling. The reference in spirit and gameplay is RPG MO.
 
-## Архитектура
+![Browser MMORPG](screenshots/gameplay.jpg)
 
-- **Сервер** (`server/`) — Node.js + Socket.IO. Держит состояние мира: карту, мобов, игроков, бой, лут. Клиент ничего не решает сам.
-- **Клиент** (`client/`) — HTML5 Canvas и чистый JS, без движка. Рисует изометрию, спрайты и интерфейс.
-- **Редактор карт** (`client-admin/`) — отдельная админка на `/admin`, подробности ниже.
+## Architecture
 
-## Редактор карт — админка на `/admin`
+- **Server** (`server/`) — Node.js + Socket.IO. Holds the state of the world: the map, mobs, players, combat, loot. The client decides nothing on its own.
+- **Client** (`client/`) — HTML5 Canvas and plain JS, no engine. Draws the isometric view, sprites and interface.
+- **Map editor** (`client-admin/`) — a separate admin panel at `/admin`, described below.
 
-Мир не задан в коде: всё, что есть в игре, рисуется и настраивается в браузерной админке по адресу `<адрес сервера>/admin`. Изменения уходят на сервер и применяются вживую, без перезапуска и без правки json руками.
+## Map editor — the admin panel at `/admin`
 
-![Редактор карт](screenshots/editor.jpg)
+The world isn't defined in code: everything in the game is painted and configured in a browser admin panel at `<server address>/admin`. Changes are sent to the server and applied live, with no restart and no hand-editing of json.
 
-Что она умеет:
+![Map editor](screenshots/editor.jpg)
 
-- **Рисование мира кистью** — земля, стены, вода, ресурсы, природа, верстаки; несколько карт (поверхность, шахты, пустыня, лес) со связями между ними, лестницы и порталы соединяются по «ID связи».
-- **Конструктор мобов** — собрал моба, он попал в библиотеку и доступен на всех картах; правка расходится по всем копиям сразу.
-- **Конструктор НПС** — диалоги, торговля, враждебность; своя библиотека, как у мобов.
-- **Предметы и крафт** — реестр вещей, рецепты; списки экипировки в редакторе строятся из реестра по типу и слоту, поэтому новая вещь появляется в интерфейсе сама, без правки списков.
-- **Квесты** — цели kill-квестов выбираются из твоих же мобов и враждебных НПС.
-- **Рыбные места** — таблица рыбы настраивается один раз и ставится штампом.
-- Пипетка, ластик, зум колесом, перетаскивание карты правой кнопкой.
+What it can do:
 
-⚠️ **Админка сейчас ничем не закрыта** — сервер пускает в неё любого, кто знает адрес (`ADMIN_PASSWORD` в `server/config.js` объявлен, но не проверяется). Для локальной разработки это удобно, но перед публичным запуском замок обязателен.
+- **Paint the world with a brush** — ground, walls, water, resources, nature, workbenches; several maps (surface, mines, desert, forest) linked together, with stairs and portals joined by a "link ID".
+- **Mob builder** — build a mob once, it lands in the library and becomes available on every map; editing it propagates to all copies at once.
+- **NPC builder** — dialogue, trade, hostility; its own library, just like mobs.
+- **Items and crafting** — a registry of things and recipes; the gear lists in the editor are built from the registry by type and slot, so a new item shows up in the interface by itself, with no list to update.
+- **Quests** — kill-quest targets are picked from your own mobs and hostile NPCs.
+- **Fishing spots** — set the fish table once and stamp it around.
+- Eyedropper, eraser, wheel zoom, right-drag panning.
 
-## Что уже работает
+⚠️ **The admin panel is currently wide open** — the server lets in anyone who knows the address (`ADMIN_PASSWORD` is declared in `server/config.js` but never checked). Handy for local development, but a lock is mandatory before any public launch.
 
-- Изометрическая карта из тайлов, синхронизация движения игроков через WebSocket
-- Бой, мобы с респавном, дроп и подбор лута
-- Инвентарь, экипировка по слотам, характеристики и уровни
-- Реестр предметов как единственный источник правды — списки в редакторе строятся из него, а не хардкодом
-- Система баланса экономики (`BALANCE.md`): цена и цена продажи выводятся из связки «тир × категория»
+## What already works
 
-## Запуск
+- An isometric tile map with player movement synced over WebSocket
+- Combat, respawning mobs, loot drops and pickup
+- Inventory, gear slots, stats and levels
+- The item registry as the single source of truth — editor lists are built from it rather than hard-coded
+- An economy balance system (`BALANCE.md`): price and sell price follow from the tier × category pair
+
+## Running it
 
 ```bash
 cd server && npm install && node server.js
 ```
 
-Клиент открывается по адресу сервера, редактор карт — на `/admin`. Порт задаётся переменной `PORT` (по умолчанию 3000).
+The client opens at the server address, the map editor at `/admin`. The port is set by the `PORT` variable (3000 by default).
 
-## Стек
+## Stack
 
-Node.js, Socket.IO, HTML5 Canvas. Графика — SVG-ассеты в `client/assets/`.
+Node.js, Socket.IO, HTML5 Canvas. Graphics are SVG assets in `client/assets/`.
 
-## Статус
+## Status
 
-Рабочий прототип, играбельный по сети. Не сделано: аккаунты, сохранение прогресса и замок на админку — это нужно закрыть до любого публичного запуска.
+A working prototype, playable over the network. Not done yet: accounts, saved progress and a lock on the admin panel — all of which must be closed before any public launch.
