@@ -1,10 +1,17 @@
+# Dependencies and runtime output
 node_modules/
-.DS_Store
 *.log
+
+# Local tooling and OS files
+.DS_Store
 .playwright-mcp/
 *.bak*
 *.command
-/gen-*.js
+*.webloc
 
+# Local project notes and helpers
+/КОНТЕКСТ.md
+/КАК ВЕРНУТЬСЯ К ПРОЕКТУ.md
+/персонаж_основа.svg
+/gen-*.js
 *.zip
-.DS_Store

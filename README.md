@@ -41,7 +41,7 @@ What it can do:
 ## Running it
 
 ```bash
-cd server && npm install && node server.js
+cd server && npm ci && node server.js
 ```
 
 The client opens at the server address, the map editor at `/admin`. The port is set by the `PORT` variable (3000 by default).

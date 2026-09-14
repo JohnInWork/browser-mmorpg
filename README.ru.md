@@ -41,7 +41,7 @@
 ## Запуск
 
 ```bash
-cd server && npm install && node server.js
+cd server && npm ci && node server.js
 ```
 
 Клиент открывается по адресу сервера, редактор карт — на `/admin`. Порт задаётся переменной `PORT` (по умолчанию 3000).
